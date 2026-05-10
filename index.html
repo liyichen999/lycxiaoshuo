@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>lyc书阁 · 在线小说平台</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f8f5f0; color: #3e3a35; }
+    .app { max-width: 800px; margin: 0 auto; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #ddd6c8; margin-bottom: 20px; }
+    .header h1 { font-weight: 500; color: #5b4b3a; }
+    button { background: #8b7355; color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #6b5740; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .novel-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0ece4; padding: 12px 0; }
+    .novel-item:last-child { border-bottom: none; }
+    textarea, input[type="text"], input[type="email"], input[type="password"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ddd6c8; border-radius: 8px; margin: 8px 0; font-size: 14px; }
+    .comment { padding: 10px 0; border-top: 1px solid #f0ece4; }
+    .comment:first-of-type { border-top: none; }
+    a { color: #8b7355; text-decoration: none; cursor: pointer; }
+    .hidden { display: none !important; }
+  </style>
+  <!-- 引入 Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app" id="app">
+  <div id="loading">载入中...</div>
+</div>
+
+<script>
+  // ========== 你的专属 Supabase 配置 ==========
+  const SUPABASE_URL = 'https://srbitnvtpygegmethezb.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
+
+  // 使用 supabaseClient 避免与 CDN 全局 supabase 冲突
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ========== 应用状态 ==========
+  let currentUser = null;
+  let currentProfile = null;
+
+  const app = document.getElementById('app');
+
+  // 检查登录状态
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      currentUser = session.user;
+      fetchProfile();
+    } else {
+      renderAuth();
+    }
+  });
+
+  // 监听登录状态变化
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      currentUser = session.user;
+      fetchProfile();
+    } else {
+      currentUser = null;
+      currentProfile = null;
+      renderAuth();
+    }
+  });
+
+  async function fetchProfile() {
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', currentUser.id)
+      .single();
+    currentProfile = profile;
+    renderHome();
+  }
+
+  // ========== 界面：登录/注册 ==========
+  function renderAuth() {
+    app.innerHTML = `
+      <div class="card" style="max-width:400px; margin:60px auto;">
+        <h3 style="text-align:center; margin-bottom:20px;">lyc书阁</h3>
+        <form id="auth-form">
+          <input type="email" id="email" placeholder="邮箱" required>
+          <input type="password" id="password" placeholder="密码(至少6位)" required minlength="6">
+          <button type="submit" style="width:100%; margin-top:10px;">登录 / 注册</button>
+        </form>
+        <p style="text-align:center; margin-top:12px; font-size:13px; color:#8b7355;">
+          首次输入即自动创建账号
+        </p>
+      </div>
+    `;
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      // 尝试登录，失败则注册
+      const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        const { error: signUpError } = await supabaseClient.auth.signUp({ email, password });
+        if (signUpError) alert(signUpError.message);
+        else alert('注册成功！已自动登录');
+      }
+    });
+  }
+
+  // ========== 主界面 ==========
+  async function renderHome() {
+    const { data: novels } = await supabaseClient
+      .from('novels')
+      .select('*, profiles(username)')
+      .order('created_at', { ascending: false });
+
+    let novelsHtml = novels.length ? novels.map(n => `
+      <div class="novel-item">
+        <div>
+          <a onclick="renderNovelDetail(${n.id})"><strong>${escapeHtml(n.title)}</strong></a>
+          <div style="font-size:13px; color:#8b7355;">${escapeHtml(n.profiles?.username || '未知')} · ${n.genre || '未分类'} · ${n.status}</div>
+        </div>
+        <span style="font-size:13px; color:#aaa;">${new Date(n.updated_at).toLocaleDateString()}</span>
+      </div>
+    `).join('') : '<p>还没有人发布小说，成为第一个吧。</p>';
+
+    app.innerHTML = `
+      <div class="header">
+        <h1>📖 lyc书阁</h1>
+        <div>
+          <span style="margin-right:15px;">${escapeHtml(currentProfile?.username || currentUser.email)}</span>
+          <button onclick="renderNewNovel()">发布小说</button>
+          <button onclick="signOut()" style="background:#bbb; margin-left:8px;">退出</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>最近更新</h3>
+        ${novelsHtml}
+      </div>
+    `;
+  }
+
+  // 发布小说页面
+  function renderNewNovel() {
+    app.innerHTML = `
+      <div class="header">
+        <h1>📝 发布新小说</h1>
+        <button onclick="renderHome()">返回</button>
+      </div>
+      <div class="card">
+        <input type="text" id="title" placeholder="小说标题" required>
+        <input type="text" id="genre" placeholder="分类 (如 玄幻、悬疑)">
+        <textarea id="description" placeholder="简介..." rows="3"></textarea>
+        <button onclick="publishNovel()">立即发布</button>
+      </div>
+    `;
+  }
+
+  async function publishNovel() {
+    const title = document.getElementById('title').value.trim();
+    const genre = document.getElementById('genre').value.trim();
+    const description = document.getElementById('description').value.trim();
+    if (!title) return alert('标题不能为空');
+    const { error } = await supabaseClient.from('novels').insert({
+      title,
+      genre,
+      description,
+      author_id: currentUser.id,
+      status: '连载中'
+    });
+    if (error) alert(error.message);
+    else renderHome();
+  }
+
+  // 小说详情
+  async function renderNovelDetail(novelId) {
+    const { data: novel } = await supabaseClient
+      .from('novels')
+      .select('*, profiles(username)')
+      .eq('id', novelId)
+      .single();
+    if (!novel) return;
+
+    const { data: chapters } = await supabaseClient
+      .from('chapters')
+      .select('*')
+      .eq('novel_id', novelId)
+      .order('chapter_number');
+    const { data: comments } = await supabaseClient
+      .from('comments')
+      .select('*, profiles(username)')
+      .eq('novel_id', novelId)
+      .order('created_at', { ascending: false });
+
+    app.innerHTML = `
+      <div class="header">
+        <button onclick="renderHome()">← 返回</button>
+        <span>${escapeHtml(novel.title)}</span>
+      </div>
+      <div class="card">
+        <h2>${escapeHtml(novel.title)}</h2>
+        <p>作者：${escapeHtml(novel.profiles?.username)} | 状态：${novel.status} | 分类：${novel.genre || '无'}</p>
+        <p>${escapeHtml(novel.description || '暂无简介')}</p>
+        ${currentUser.id === novel.author_id ? `<button onclick="renderAddChapter(${novel.id})">添加章节</button>` : ''}
+      </div>
+      <div class="card">
+        <h3>章节列表</h3>
+        ${chapters.length ? chapters.map(ch => `<p><a onclick="readChapter(${ch.id})">第${ch.chapter_number}章 ${escapeHtml(ch.title)}</a></p>`).join('') : '暂无章节'}
+      </div>
+      <div class="card">
+        <h3>评论</h3>
+        ${comments.map(c => `<div class="comment"><strong>${escapeHtml(c.profiles?.username)}</strong>：${escapeHtml(c.content)}</div>`).join('')}
+        <textarea id="comment-input" placeholder="写下你的评论..." rows="2"></textarea>
+        <button onclick="addComment(${novel.id})">发表评论</button>
+      </div>
+    `;
+  }
+
+  async function addComment(novelId) {
+    const content = document.getElementById('comment-input').value.trim();
+    if (!content) return alert('评论不能为空');
+    const { error } = await supabaseClient.from('comments').insert({
+      novel_id: novelId,
+      user_id: currentUser.id,
+      content
+    });
+    if (error) alert(error.message);
+    else renderNovelDetail(novelId);
+  }
+
+  async function readChapter(chapterId) {
+    const { data: chapter } = await supabaseClient
+      .from('chapters')
+      .select('*, novels(title, author_id, id)')
+      .eq('id', chapterId)
+      .single();
+    if (!chapter) return;
+    app.innerHTML = `
+      <div class="header">
+        <button onclick="renderNovelDetail(${chapter.novels.id})">← 返回小说</button>
+        <span>${escapeHtml(chapter.title)}</span>
+      </div>
+      <div class="card">
+        <h3>${escapeHtml(chapter.title)}</h3>
+        <div style="white-space: pre-wrap; margin:15px 0;">${escapeHtml(chapter.content)}</div>
+      </div>
+    `;
+  }
+
+  function renderAddChapter(novelId) {
+    app.innerHTML = `
+      <div class="header">
+        <button onclick="renderNovelDetail(${novelId})">← 返回</button>
+        <h2>添加新章节</h2>
+      </div>
+      <div class="card">
+        <input type="text" id="chapter-title" placeholder="章节标题">
+        <input type="number" id="chapter-number" placeholder="章节序号（如1,2,3）">
+        <textarea id="chapter-content" placeholder="正文..." rows="12"></textarea>
+        <button onclick="addChapter(${novelId})">保存章节</button>
+      </div>
+    `;
+  }
+
+  async function addChapter(novelId) {
+    const title = document.getElementById('chapter-title').value.trim();
+    const number = parseInt(document.getElementById('chapter-number').value);
+    const content = document.getElementById('chapter-content').value.trim();
+    if (!title || !content || isNaN(number)) return alert('请填写完整信息');
+    const { error } = await supabaseClient.from('chapters').insert({
+      novel_id: novelId,
+      title,
+      chapter_number: number,
+      content
+    });
+    if (error) alert(error.message);
+    else {
+      await supabaseClient.from('novels').update({ updated_at: new Date() }).eq('id', novelId);
+      renderNovelDetail(novelId);
+    }
+  }
+
+  async function signOut() {
+    await supabaseClient.auth.signOut();
+  }
+
+  // 工具：防止 XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
