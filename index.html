@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>墨言书阁 · 小说社区</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background:#f5f2eb; color:#3b3226; }
+    .container { max-width:900px; margin:0 auto; padding:20px; }
+    /* 导航栏 */
+    .navbar { display:flex; justify-content:space-between; align-items:center; background:#fff; padding:12px 20px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+    .logo { font-size:1.5rem; font-weight:bold; color:#6b5b4a; cursor:pointer; }
+    .nav-actions { display:flex; gap:10px; align-items:center; }
+    .avatar-circle { width:34px; height:34px; border-radius:50%; background:#8b7355; color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; }
+    /* 卡片 */
+    .card { background:#fff; border-radius:12px; padding:20px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+    .flex-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    button { background:#8b7355; color:#fff; border:none; padding:8px 18px; border-radius:6px; cursor:pointer; font-size:14px; }
+    button.outline { background:transparent; border:1px solid #8b7355; color:#8b7355; }
+    button.danger { background:#b55; }
+    input,textarea,select { padding:10px; border:1px solid #ddd6c8; border-radius:6px; font-size:14px; }
+    /* 评分星 */
+    .stars { color:#e6b422; font-size:18px; }
+    /* 模态框 */
+    .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:100; }
+    .modal-content { background:#fff; border-radius:12px; padding:30px; min-width:340px; max-width:90%; position:relative; }
+    .close { position:absolute; top:10px; right:20px; font-size:20px; cursor:pointer; }
+    /* 隐藏 */
+    .hidden { display:none !important; }
+    hr { margin:15px 0; border:0.5px solid #eee; }
+    .tab { display:flex; gap:0; margin-bottom:15px; }
+    .tab button { flex:1; border-radius:0; background:#f0ece4; color:#3b3226; }
+    .tab button.active { background:#8b7355; color:#fff; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<!-- 登录/注册模态框 -->
+<div id="auth-modal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close" onclick="closeAuthModal()">&times;</span>
+    <h3 id="auth-title">登录 / 注册</h3>
+    <div class="tab" id="auth-tabs">
+      <button id="tab-email" class="active" onclick="switchAuthTab('email')">📧 邮箱</button>
+      <button id="tab-phone" onclick="switchAuthTab('phone')">📱 手机</button>
+    </div>
+    <input type="text" id="auth-account" placeholder="请输入邮箱或手机号">
+    <input type="text" id="auth-code" placeholder="验证码" style="margin-top:8px;">
+    <button onclick="sendCode()" id="send-code-btn" style="width:100%; margin:8px 0;">发送验证码</button>
+    <p style="font-size:12px; color:#888;">未注册将自动创建账号，稍后需设置用户名</p>
+    <div id="auth-error" style="color:red; font-size:13px; margin-top:5px;"></div>
+  </div>
+</div>
+
+<script>
+  // ===================== 配置 =====================
+  const SUPABASE_URL = 'https://srbibtnvtpygegmtehzb.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // 全局状态
+  let currentUser = null;
+  let currentProfile = null;
+  let authTab = 'email'; // 'email' 或 'phone'
+
+  // ===================== 路由 =====================
+  function navigate(hash) {
+    window.location.hash = hash;
+    render();
+  }
+
+  window.onhashchange = () => render();
+
+  async function render() {
+    const hash = window.location.hash || '#home';
+    // 先确保用户状态
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      currentUser = session.user;
+      const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+      currentProfile = profile;
+    } else {
+      currentUser = null;
+      currentProfile = null;
+    }
+
+    const app = document.getElementById('app');
+    if (hash === '#home') await renderHome(app);
+    else if (hash.startsWith('#novel/')) {
+      const novelId = hash.split('/')[1];
+      await renderNovelDetail(app, novelId);
+    }
+    else if (hash === '#profile') await renderProfile(app);
+    else if (hash === '#admin' && currentProfile?.role === 'admin') await renderAdmin(app);
+    else renderHome(app); // 默认
+  }
+
+  // ===================== 导航栏 =====================
+  async function renderNavbar() {
+    const nav = document.createElement('div');
+    nav.className = 'navbar';
+    nav.innerHTML = `
+      <div class="logo" onclick="navigate('#home')">📖 墨言书阁</div>
+      <div class="nav-actions" id="nav-actions"></div>
+    `;
+    const actions = nav.querySelector('#nav-actions');
+    if (currentUser && currentProfile) {
+      actions.innerHTML = `
+        ${currentProfile.role === 'admin' ? '<button class="outline" onclick="navigate(\'#admin\')">后台</button>' : ''}
+        <button class="outline" onclick="navigate('#profile')">个人中心</button>
+        <div class="avatar-circle" title="${escapeHtml(currentProfile.username)}">${escapeHtml(currentProfile.username[0])}</div>
+        <button onclick="signOut()">退出</button>
+      `;
+    } else {
+      actions.innerHTML = `<button onclick="openAuthModal()">登录 / 注册</button>`;
+    }
+    return nav;
+  }
+
+  // ===================== 首页 =====================
+  async function renderHome(container) {
+    container.innerHTML = '';
+    const nav = await renderNavbar();
+    container.appendChild(nav);
+
+    // 公告
+    const { data: announcements } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
+    const announcement = announcements?.[0];
+    if (announcement) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<strong>📢 公告：</strong>${escapeHtml(announcement.content)}<br><small>${new Date(announcement.created_at).toLocaleString()}</small>`;
+      container.appendChild(card);
+    }
+
+    // 推荐书籍（按平均评分 + 最近更新）
+    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username), ratings(score)').order('updated_at', { ascending: false }).limit(20);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<h3>📚 推荐小说</h3>`;
+    if (novels && novels.length) {
+      novels.forEach(n => {
+        const avg = n.ratings?.length ? (n.ratings.reduce((a,b)=>a+b.score,0)/n.ratings.length).toFixed(1) : '暂无';
+        const div = document.createElement('div');
+        div.className = 'flex-row';
+        div.style.justifyContent = 'space-between';
+        div.style.borderBottom = '1px solid #eee';
+        div.style.padding = '8px 0';
+        div.innerHTML = `
+          <div>
+            <a onclick="navigate('#novel/${n.id}')" style="font-weight:500; color:#8b7355; cursor:pointer;">${escapeHtml(n.title)}</a>
+            <div style="font-size:12px; color:#888;">${escapeHtml(n.profiles?.username)} · ${n.genre} · ⭐${avg}</div>
+          </div>
+          <span style="font-size:12px;">${new Date(n.updated_at).toLocaleDateString()}</span>
+        `;
+        card.appendChild(div);
+      });
+    } else {
+      card.innerHTML += '<p>还没有小说，赶紧来发布吧！</p>';
+    }
+    container.appendChild(card);
+  }
+
+  // ===================== 小说详情 =====================
+  async function renderNovelDetail(container, novelId) {
+    container.innerHTML = '';
+    const nav = await renderNavbar();
+    container.appendChild(nav);
+
+    const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
+    if (!novel) return container.innerHTML += '<p>小说不存在</p>';
+
+    const { data: chapters } = await supabaseClient.from('chapters').select('*').eq('novel_id', novelId).order('chapter_number');
+    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novelId).order('created_at', { ascending: false });
+    const { data: ratings } = await supabaseClient.from('ratings').select('score').eq('novel_id', novelId);
+    const avgRating = ratings?.length ? (ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1) : '暂无评分';
+    const userRating = currentUser ? ratings?.find(r=>r.user_id === currentUser.id) : null;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <h2>${escapeHtml(novel.title)}</h2>
+      <p>作者：${escapeHtml(novel.profiles?.username)} | 状态：${novel.status} | 分类：${novel.genre}</p>
+      <p>${escapeHtml(novel.description)}</p>
+      <div class="stars">⭐ ${avgRating} (${ratings?.length || 0}人评分)</div>
+      ${currentUser ? `
+        <div style="margin-top:10px;">
+          <label>我的评分：</label>
+          <select id="my-rating">
+            <option value="0">未评分</option>
+            <option value="1">1星</option><option value="2">2星</option><option value="3">3星</option>
+            <option value="4">4星</option><option value="5" ${userRating?.score===5?'selected':''}>5星</option>
+          </select>
+          <button onclick="rateNovel(${novel.id})">提交评分</button>
+        </div>
+      ` : '<p>登录后可评分</p>'}
+      ${currentUser?.id === novel.author_id ? `<button onclick="addChapter(${novel.id})">添加章节</button>` : ''}
+    `;
+    container.appendChild(card);
+
+    // 章节列表
+    const chapterCard = document.createElement('div');
+    chapterCard.className = 'card';
+    chapterCard.innerHTML = '<h3>📑 章节列表</h3>';
+    if (chapters?.length) {
+      chapters.forEach(ch => {
+        chapterCard.innerHTML += `<p><a onclick="readChapter(${ch.id})">第${ch.chapter_number}章 ${escapeHtml(ch.title)}</a></p>`;
+      });
+    } else {
+      chapterCard.innerHTML += '<p>暂无章节</p>';
+    }
+    container.appendChild(chapterCard);
+
+    // 评论区
+    const commentCard = document.createElement('div');
+    commentCard.className = 'card';
+    commentCard.innerHTML = '<h3>💬 评论</h3>';
+    comments?.forEach(c => {
+      commentCard.innerHTML += `<div><strong>${escapeHtml(c.profiles?.username)}</strong>：${escapeHtml(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div><hr>`;
+    });
+    if (currentUser) {
+      commentCard.innerHTML += `
+        <textarea id="new-comment" placeholder="写下你的评论..." rows="2"></textarea>
+        <button onclick="addComment(${novel.id})">发表评论</button>
+      `;
+    } else {
+      commentCard.innerHTML += '<p>请先登录发表评论</p>';
+    }
+    container.appendChild(commentCard);
+  }
+
+  async function rateNovel(novelId) {
+    const score = parseInt(document.getElementById('my-rating').value);
+    if (score === 0) {
+      // 取消评分
+      await supabaseClient.from('ratings').delete().eq('novel_id', novelId).eq('user_id', currentUser.id);
+      alert('已取消评分');
+    } else {
+      const { error } = await supabaseClient.from('ratings').upsert({ novel_id: novelId, user_id: currentUser.id, score }, { onConflict: 'novel_id,user_id' });
+      if (error) alert(error.message);
+      else alert('评分成功');
+    }
+    navigate(`#novel/${novelId}`);
+  }
+
+  async function addComment(novelId) {
+    const content = document.getElementById('new-comment').value.trim();
+    if (!content) return alert('评论不能为空');
+    const { error } = await supabaseClient.from('comments').insert({ novel_id: novelId, user_id: currentUser.id, content });
+    if (error) alert(error.message);
+    else navigate(`#novel/${novelId}`);
+  }
+
+  function readChapter(chapterId) {
+    supabaseClient.from('chapters').select('*, novels(id)').eq('id', chapterId).single().then(({data:ch})=>{
+      const div = document.createElement('div');
+      div.innerHTML = `<div class="card"><h3>${escapeHtml(ch.title)}</h3><pre>${escapeHtml(ch.content)}</pre><button onclick="navigate('#novel/${ch.novels.id}')">返回小说</button></div>`;
+      document.getElementById('app').appendChild(div);
+    });
+  }
+
+  function addChapter(novelId) {
+    const title = prompt('章节标题');
+    const content = prompt('正文（可换行）');
+    const num = prompt('章节序号');
+    if (title && content && num) {
+      supabaseClient.from('chapters').insert({ novel_id: novelId, title, content, chapter_number: parseInt(num) }).then(({error})=>{
+        if (error) alert(error.message);
+        else navigate(`#novel/${novelId}`);
+      });
+    }
+  }
+
+  // ===================== 个人中心 =====================
+  async function renderProfile(container) {
+    if (!currentUser) return navigate('#home');
+    container.innerHTML = '';
+    const nav = await renderNavbar();
+    container.appendChild(nav);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <h2>${escapeHtml(currentProfile.username)} 的个人中心</h2>
+      <p>角色：${currentProfile.role === 'admin' ? '管理员' : '用户'}</p>
+      <button onclick="changeUsername()">修改用户名</button>
+      <h3>我的评论</h3>
+    `;
+    const { data: myComments } = await supabaseClient.from('comments').select('*, novels(title)').eq('user_id', currentUser.id);
+    if (myComments?.length) {
+      myComments.forEach(c => {
+        card.innerHTML += `<p>对《${escapeHtml(c.novels.title)}》评论：${escapeHtml(c.content)}</p>`;
+      });
+    } else {
+      card.innerHTML += '<p>暂无评论</p>';
+    }
+    card.innerHTML += '<h3>我的评分</h3>';
+    const { data: myRatings } = await supabaseClient.from('ratings').select('*, novels(title)').eq('user_id', currentUser.id);
+    if (myRatings?.length) {
+      myRatings.forEach(r => {
+        card.innerHTML += `<p>《${escapeHtml(r.novels.title)}》：${r.score}星</p>`;
+      });
+    } else {
+      card.innerHTML += '<p>暂无评分</p>';
+    }
+    container.appendChild(card);
+  }
+
+  async function changeUsername() {
+    const newName = prompt('新用户名（唯一，管理员名 lyc 不可占用）');
+    if (!newName) return;
+    if (newName === 'lyc' && currentProfile.username !== 'lyc') return alert('该用户名为管理员保留，请选择其他');
+    const { data: exist } = await supabaseClient.from('profiles').select('id').eq('username', newName).maybeSingle();
+    if (exist && exist.id !== currentUser.id) return alert('用户名已存在');
+    const { error } = await supabaseClient.from('profiles').update({ username: newName }).eq('id', currentUser.id);
+    if (error) alert(error.message);
+    else {
+      alert('用户名已更新');
+      render();
+    }
+  }
+
+  // ===================== 管理员后台 =====================
+  async function renderAdmin(container) {
+    if (!currentProfile || currentProfile.role !== 'admin') return navigate('#home');
+    container.innerHTML = '';
+    const nav = await renderNavbar();
+    container.appendChild(nav);
+
+    const tabCard = document.createElement('div');
+    tabCard.className = 'card';
+    tabCard.innerHTML = `
+      <button onclick="renderAdminComments('${container.id}')">管理评论</button>
+      <button onclick="renderAdminAdmins()">管理管理员</button>
+      <button onclick="editAnnouncement()">编辑公告</button>
+    `;
+    container.appendChild(tabCard);
+    const contentDiv = document.createElement('div');
+    contentDiv.id = 'admin-content';
+    container.appendChild(contentDiv);
+    renderAdminComments('admin-content');
+  }
+
+  async function renderAdminComments(targetId) {
+    const target = document.getElementById(targetId);
+    target.innerHTML = '';
+    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username), novels(title)').order('created_at', { ascending: false });
+    if (comments?.length) {
+      comments.forEach(c => {
+        const div = document.createElement('div');
+        div.style.borderBottom = '1px solid #eee';
+        div.innerHTML = `${escapeHtml(c.profiles?.username)} 评《${escapeHtml(c.novels.title)}》：${escapeHtml(c.content)} <button class="danger" onclick="deleteComment(${c.id})">删除</button>`;
+        target.appendChild(div);
+      });
+    } else {
+      target.innerHTML = '<p>暂无评论</p>';
+    }
+  }
+
+  async function deleteComment(id) {
+    if (confirm('确认删除？')) {
+      await supabaseClient.from('comments').delete().eq('id', id);
+      renderAdminComments('admin-content');
+    }
+  }
+
+  async function renderAdminAdmins() {
+    const target = document.getElementById('admin-content');
+    target.innerHTML = '';
+    const { data: profiles } = await supabaseClient.from('profiles').select('*');
+    profiles.forEach(p => {
+      const div = document.createElement('div');
+      div.style.borderBottom = '1px solid #eee';
+      div.innerHTML = `${escapeHtml(p.username)} (${p.role}) `;
+      if (p.username !== 'lyc') {
+        div.innerHTML += `<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销管理员':'设为管理员'}</button>`;
+      }
+      target.appendChild(div);
+    });
+  }
+
+  async function toggleAdmin(userId) {
+    const { data: p } = await supabaseClient.from('profiles').select('role').eq('id', userId).single();
+    const newRole = p.role === 'admin' ? 'user' : 'admin';
+    await supabaseClient.from('profiles').update({ role: newRole }).eq('id', userId);
+    renderAdminAdmins();
+  }
+
+  async function editAnnouncement() {
+    const content = prompt('请输入公告内容');
+    if (content) {
+      await supabaseClient.from('announcements').insert({ content });
+      alert('公告已更新');
+    }
+  }
+
+  // ===================== 认证逻辑 =====================
+  function openAuthModal() {
+    document.getElementById('auth-modal').classList.remove('hidden');
+  }
+  function closeAuthModal() {
+    document.getElementById('auth-modal').classList.add('hidden');
+  }
+  function switchAuthTab(type) {
+    authTab = type;
+    document.getElementById('tab-email').classList.toggle('active', type==='email');
+    document.getElementById('tab-phone').classList.toggle('active', type==='phone');
+    document.getElementById('auth-account').placeholder = type==='email' ? '邮箱地址' : '手机号码';
+  }
+
+  async function sendCode() {
+    const account = document.getElementById('auth-account').value.trim();
+    if (!account) return;
+    let error;
+    if (authTab === 'email') {
+      const { error: e } = await supabaseClient.auth.signInWithOtp({ email: account });
+      error = e;
+    } else {
+      const { error: e } = await supabaseClient.auth.signInWithOtp({ phone: account });
+      error = e;
+    }
+    if (error) {
+      document.getElementById('auth-error').textContent = error.message;
+    } else {
+      document.getElementById('auth-error').textContent = '验证码已发送，请查收';
+    }
+  }
+
+  // 注意：用户输入验证码后需调用 verifyOtp，这里简化交互：我们增加一个“验证并登录”按钮
+  // 但上面已有发送验证码和验证码输入框，因此需要监听一个验证按钮（上面还没加，补上）
+  // 我们直接在模态框里加一个验证按钮。
+  // 修改模态框的 innerHTML（在上方静态部分），但因为是静态 HTML，我们这里动态添加按钮
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('auth-modal');
+    const verifyBtn = document.createElement('button');
+    verifyBtn.textContent = '验证并登录';
+    verifyBtn.style.width = '100%';
+    verifyBtn.onclick = verifyCode;
+    modal.querySelector('.modal-content').appendChild(verifyBtn);
+  });
+
+  async function verifyCode() {
+    const account = document.getElementById('auth-account').value.trim();
+    const code = document.getElementById('auth-code').value.trim();
+    if (!account || !code) return;
+    let verifyData;
+    if (authTab === 'email') {
+      verifyData = await supabaseClient.auth.verifyOtp({ email: account, token: code, type: 'email' });
+    } else {
+      verifyData = await supabaseClient.auth.verifyOtp({ phone: account, token: code, type: 'sms' });
+    }
+    if (verifyData.error) {
+      document.getElementById('auth-error').textContent = verifyData.error.message;
+    } else {
+      closeAuthModal();
+      // 检查是否新用户（profiles 表中没有记录或 username 为空）
+      const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', verifyData.data.user.id).single();
+      if (!profile || !profile.username) {
+        await setInitialUsername(verifyData.data.user.id);
+      }
+      render();
+    }
+  }
+
+  async function setInitialUsername(userId) {
+    let username = prompt('请设置您的用户名（不可重复，管理员名 lyc 已保留）');
+    if (!username) username = '用户' + Date.now().toString(36);
+    while (true) {
+      if (username === 'lyc') {
+        // 允许第一个注册lyc
+        const { data: lyc } = await supabaseClient.from('profiles').select('id').eq('username', 'lyc').maybeSingle();
+        if (!lyc) break; // 可以注册
+        username = prompt('lyc 已被占用，请换一个：');
+        continue;
+      }
+      const { data: exist } = await supabaseClient.from('profiles').select('id').eq('username', username).maybeSingle();
+      if (exist && exist.id !== userId) {
+        username = prompt('用户名已存在，请重新输入：');
+        continue;
+      }
+      break;
+    }
+    const { error } = await supabaseClient.from('profiles').update({ username }).eq('id', userId);
+    if (error) alert('设置失败：'+error.message);
+    else alert('用户名设置成功！');
+  }
+
+  async function signOut() {
+    await supabaseClient.auth.signOut();
+    render();
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // 初始渲染
+  render();
+</script>
+</body>
+</html>
