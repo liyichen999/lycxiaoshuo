@@ -25,6 +25,9 @@
     .hidden { display:none !important; }
     hr { margin:15px 0; border:0.5px solid #eee; }
     .back-link { display:inline-block; margin-bottom:15px; color:#8b7355; cursor:pointer; font-size:14px; }
+    a { color:#8b7355; cursor:pointer; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    pre { white-space:pre-wrap; font-family:inherit; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -292,7 +295,7 @@
         div.style.padding = '8px 0';
         div.innerHTML = `
           <div>
-            <a onclick="navigate('#novel/${n.id}')" style="font-weight:500; color:#8b7355; cursor:pointer;">${escapeHtml(n.title)}</a>
+            <a onclick="navigate('#novel/${n.id}')">${escapeHtml(n.title)}</a>
             <div style="font-size:12px; color:#888;">${escapeHtml(n.profiles?.username)} · ${n.genre} · ⭐${avg}</div>
           </div>
           <span style="font-size:12px;">${new Date(n.updated_at).toLocaleDateString()}</span>
@@ -454,7 +457,6 @@
   async function renderProfile(container) {
     if (!currentUser) return navigate('#home');
 
-    // 返回主页链接
     const backLink = document.createElement('div');
     backLink.className = 'back-link';
     backLink.textContent = '← 返回主页';
@@ -469,20 +471,18 @@
       <button onclick="changeUsername()">修改用户名</button>
       <h3 style="margin-top:15px;">我的评论</h3>
     `;
+
     const { data: myComments } = await supabaseClient.from('comments').select('*, novels(title)').eq('user_id', currentUser.id);
     if (myComments?.length) {
-      myComments.forEach(c => {
-        card.innerHTML += `<p>对《${escapeHtml(c.novels.title)}》评论：${escapeHtml(c.content)}</p>`;
-      });
+      myComments.forEach(c => card.innerHTML += `<p>对《${escapeHtml(c.novels.title)}》评论：${escapeHtml(c.content)}</p>`);
     } else {
       card.innerHTML += '<p>暂无评论</p>';
     }
+
     card.innerHTML += '<h3 style="margin-top:15px;">我的评分</h3>';
     const { data: myRatings } = await supabaseClient.from('ratings').select('*, novels(title)').eq('user_id', currentUser.id);
     if (myRatings?.length) {
-      myRatings.forEach(r => {
-        card.innerHTML += `<p>《${escapeHtml(r.novels.title)}》：${r.score}星</p>`;
-      });
+      myRatings.forEach(r => card.innerHTML += `<p>《${escapeHtml(r.novels.title)}》：${r.score}星</p>`);
     } else {
       card.innerHTML += '<p>暂无评分</p>';
     }
@@ -506,7 +506,6 @@
   async function renderAdmin(container) {
     if (!currentProfile || currentProfile.role !== 'admin') return navigate('#home');
 
-    // 返回主页链接
     const backLink = document.createElement('div');
     backLink.className = 'back-link';
     backLink.textContent = '← 返回主页';
@@ -521,6 +520,7 @@
       <button onclick="editAnnouncement()">编辑公告</button>
     `;
     container.appendChild(tabCard);
+
     const contentDiv = document.createElement('div');
     contentDiv.id = 'admin-content';
     container.appendChild(contentDiv);
