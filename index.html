@@ -8,12 +8,10 @@
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background:#f5f2eb; color:#3b3226; }
     .container { max-width:900px; margin:0 auto; padding:20px; }
-    /* 导航栏 */
     .navbar { display:flex; justify-content:space-between; align-items:center; background:#fff; padding:12px 20px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
     .logo { font-size:1.5rem; font-weight:bold; color:#6b5b4a; cursor:pointer; }
     .nav-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .avatar-circle { width:34px; height:34px; border-radius:50%; background:#8b7355; color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; }
-    /* 卡片 */
     .card { background:#fff; border-radius:12px; padding:20px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
     .flex-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:space-between; border-bottom:1px solid #f0ece4; padding:12px 0; }
     .flex-row:last-child { border-bottom:none; }
@@ -22,7 +20,6 @@
     button.danger { background:#b55; }
     input,textarea,select { width:100%; padding:10px; border:1px solid #ddd6c8; border-radius:6px; font-size:14px; margin-top:8px; }
     .stars { color:#e6b422; font-size:18px; }
-    /* 模态框 */
     .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:100; }
     .modal-content { background:#fff; border-radius:12px; padding:30px; min-width:340px; max-width:90%; position:relative; }
     .close { position:absolute; top:10px; right:20px; font-size:20px; cursor:pointer; }
@@ -72,10 +69,9 @@
 
   let currentUser = null;
   let currentProfile = null;
+  let isRendering = false; // 防重复渲染锁
 
-  // 防止重复渲染
-  let isRendering = false;
-
+  // ===================== 路由 =====================
   function navigate(hash) {
     window.location.hash = hash;
     render();
@@ -98,7 +94,7 @@
       currentProfile = null;
     }
 
-    // 导航栏
+    // 导航栏（只创建一次）
     const nav = document.createElement('div');
     nav.className = 'navbar';
     nav.innerHTML = `
@@ -122,7 +118,7 @@
     }
     app.appendChild(nav);
 
-    // 路由
+    // 路由分发
     const hash = window.location.hash || '#home';
     if (hash === '#home') await renderHome(app);
     else if (hash.startsWith('#novel/')) await renderNovelDetail(app, hash.split('/')[1]);
@@ -178,7 +174,7 @@
     if (signUpError) return err.textContent = signUpError.message;
     let userId = signUpData.user?.id;
     if (!userId) return err.textContent = '用户创建失败';
-    // 确保有 session（如果邮箱确认关闭则会自动登录）
+    // 确保有 session（如果邮箱确认已关闭，signUp 直接返回 session）
     if (!signUpData.session) {
       const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (loginError) return err.textContent = '注册成功但自动登录失败，请手动登录';
@@ -189,7 +185,7 @@
     const role = (email === '18631167199@163.com') ? 'admin' : 'user';
     const { error: upsertError } = await supabaseClient.from('profiles').upsert({ id: userId, username, email, role });
     if (upsertError) return err.textContent = '个人资料写入失败：' + upsertError.message;
-    // 退出，让用户手动登录
+    // 退出，要求手动登录
     await supabaseClient.auth.signOut();
     alert('注册成功！请登录');
     closeRegisterModal();
@@ -212,8 +208,11 @@
       annCard.innerHTML = `<strong>📢 公告：</strong>${escapeHtml(announcements[0].content)}<br><small>${new Date(announcements[0].created_at).toLocaleString()}</small>`;
       container.appendChild(annCard);
     }
-    // 小说列表
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
+    // 小说列表（关联作者名）
+    const { data: novels } = await supabaseClient
+      .from('novels')
+      .select('*, profiles(username)')
+      .order('updated_at', { ascending: false });
     const listCard = document.createElement('div');
     listCard.className = 'card';
     listCard.innerHTML = '<div class="section-title">📚 推荐小说</div>';
@@ -224,7 +223,7 @@
         item.innerHTML = `
           <div>
             <a onclick="navigate('#novel/${n.id}')" style="font-weight:500;">${escapeHtml(n.title)}</a>
-            <div style="font-size:12px; color:#888;">${escapeHtml(n.profiles?.username)} · ${n.genre || '未分类'} · ${n.status}</div>
+            <div style="font-size:12px; color:#888;">${escapeHtml(n.profiles?.username || '未知')} · ${n.genre || '未分类'} · ${n.status}</div>
           </div>
           <span style="font-size:12px; color:#aaa;">${new Date(n.updated_at).toLocaleDateString()}</span>
         `;
@@ -257,10 +256,11 @@
     const description = document.getElementById('new-description').value.trim();
     const err = document.getElementById('publish-error');
     if (!title) return err.textContent = '请输入小说标题';
-    const { data, error } = await supabaseClient.from('novels').insert({
-      title, genre, description, author_id: currentUser.id, status: '连载中'
-    }).select();
-    if (error) return err.textContent = error.message;
+    const { data, error } = await supabaseClient
+      .from('novels')
+      .insert({ title, genre, description, author_id: currentUser.id, status: '连载中' })
+      .select();
+    if (error) return err.textContent = '插入失败：' + error.message;
     if (data?.[0]) {
       alert('发布成功！');
       navigate('#home');
@@ -271,11 +271,27 @@
 
   // ===================== 小说详情 =====================
   async function renderNovelDetail(container, novelId) {
-    const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
+    const { data: novel } = await supabaseClient
+      .from('novels')
+      .select('*, profiles(username)')
+      .eq('id', novelId)
+      .single();
     if (!novel) return container.innerHTML += '<p>小说不存在</p>';
-    const { data: chapters } = await supabaseClient.from('chapters').select('*').eq('novel_id', novelId).order('chapter_number');
-    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novelId).order('created_at', { ascending: false });
-    const { data: ratings } = await supabaseClient.from('ratings').select('score').eq('novel_id', novelId);
+
+    const { data: chapters } = await supabaseClient
+      .from('chapters')
+      .select('*')
+      .eq('novel_id', novelId)
+      .order('chapter_number');
+    const { data: comments } = await supabaseClient
+      .from('comments')
+      .select('*, profiles(username)')
+      .eq('novel_id', novelId)
+      .order('created_at', { ascending: false });
+    const { data: ratings } = await supabaseClient
+      .from('ratings')
+      .select('score')
+      .eq('novel_id', novelId);
     const avg = ratings?.length ? (ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1) : '暂无评分';
     const userRating = currentUser ? ratings?.find(r=>r.user_id === currentUser.id) : null;
 
@@ -283,15 +299,19 @@
     infoCard.className = 'card';
     infoCard.innerHTML = `
       <h2>${escapeHtml(novel.title)}</h2>
-      <p>作者：${escapeHtml(novel.profiles?.username)} | 状态：${novel.status} | 分类：${novel.genre}</p>
-      <p>${escapeHtml(novel.description)}</p>
+      <p>作者：${escapeHtml(novel.profiles?.username)} | 状态：${novel.status} | 分类：${novel.genre || '未分类'}</p>
+      <p>${escapeHtml(novel.description || '暂无简介')}</p>
       <div class="stars">⭐ ${avg} (${ratings?.length || 0}人评分)</div>
       ${currentUser ? `
         <div style="margin-top:10px;">
           <label>我的评分：</label>
           <select id="my-rating" style="width:auto;">
             <option value="0">未评分</option>
-            ${[1,2,3,4,5].map(s=>`<option value="${s}" ${userRating?.score===s?'selected':''}>${s}星</option>`).join('')}
+            <option value="1" ${userRating?.score===1?'selected':''}>1星</option>
+            <option value="2" ${userRating?.score===2?'selected':''}>2星</option>
+            <option value="3" ${userRating?.score===3?'selected':''}>3星</option>
+            <option value="4" ${userRating?.score===4?'selected':''}>4星</option>
+            <option value="5" ${userRating?.score===5?'selected':''}>5星</option>
           </select>
           <button onclick="rateNovel(${novel.id})">提交评分</button>
         </div>
@@ -300,7 +320,7 @@
     `;
     container.appendChild(infoCard);
 
-    // 章节
+    // 章节列表
     const chapCard = document.createElement('div');
     chapCard.className = 'card';
     chapCard.innerHTML = '<h3>📑 章节列表</h3>';
@@ -311,7 +331,7 @@
     } else chapCard.innerHTML += '<p>暂无章节</p>';
     container.appendChild(chapCard);
 
-    // 评论
+    // 评论区
     const commCard = document.createElement('div');
     commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 评论</h3>';
@@ -364,7 +384,12 @@
     const content = prompt('正文');
     const num = prompt('章节序号');
     if (title && content && num) {
-      supabaseClient.from('chapters').insert({ novel_id: novelId, title, content, chapter_number: parseInt(num) }).then(({error})=>{
+      supabaseClient.from('chapters').insert({
+        novel_id: novelId,
+        title,
+        content,
+        chapter_number: parseInt(num)
+      }).then(({error})=>{
         if (error) alert(error.message);
         else navigate(`#novel/${novelId}`);
       });
@@ -439,7 +464,10 @@
     const target = document.getElementById('admin-content');
     if (!target) return;
     target.innerHTML = '';
-    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username), novels(title)').order('created_at', { ascending: false });
+    const { data: comments } = await supabaseClient
+      .from('comments')
+      .select('*, profiles(username), novels(title)')
+      .order('created_at', { ascending: false });
     if (comments?.length) {
       comments.forEach(c => {
         const div = document.createElement('div');
