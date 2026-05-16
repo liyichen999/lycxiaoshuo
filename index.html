@@ -30,6 +30,7 @@
     a:hover { text-decoration:underline; }
     pre { white-space:pre-wrap; font-family:inherit; }
     .section-title { font-size:1.2rem; font-weight:bold; margin-bottom:10px; color:#5b4b3a; }
+    .edit-btn { background:#b5a07e; font-size:12px; padding:4px 10px; margin-left:10px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -69,7 +70,7 @@
 
   let currentUser = null;
   let currentProfile = null;
-  let isRendering = false; // 防重复渲染锁
+  let isRendering = false;
 
   // ===================== 路由 =====================
   function navigate(hash) {
@@ -84,7 +85,6 @@
     const app = document.getElementById('app');
     app.innerHTML = '';
 
-    // 检查登录状态
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
       currentUser = session.user;
@@ -94,7 +94,6 @@
       currentProfile = null;
     }
 
-    // 导航栏（只创建一次）
     const nav = document.createElement('div');
     nav.className = 'navbar';
     nav.innerHTML = `
@@ -118,7 +117,6 @@
     }
     app.appendChild(nav);
 
-    // 路由分发
     const hash = window.location.hash || '#home';
     if (hash === '#home') await renderHome(app);
     else if (hash.startsWith('#novel/')) await renderNovelDetail(app, hash.split('/')[1]);
@@ -166,15 +164,12 @@
     err.textContent = '';
     if (!username || !email || !password) return err.textContent = '请填写所有字段';
     if (password.length < 6) return err.textContent = '密码至少6位';
-    // 唯一性检查
     const { data: exist } = await supabaseClient.from('profiles').select('id').or(`username.eq."${username}",email.eq."${email}"`).maybeSingle();
     if (exist) return err.textContent = '用户名或邮箱已被注册';
-    // 注册
     const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email, password });
     if (signUpError) return err.textContent = signUpError.message;
     let userId = signUpData.user?.id;
     if (!userId) return err.textContent = '用户创建失败';
-    // 确保有 session（如果邮箱确认已关闭，signUp 直接返回 session）
     if (!signUpData.session) {
       const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (loginError) return err.textContent = '注册成功但自动登录失败，请手动登录';
@@ -185,7 +180,6 @@
     const role = (email === '18631167199@163.com') ? 'admin' : 'user';
     const { error: upsertError } = await supabaseClient.from('profiles').upsert({ id: userId, username, email, role });
     if (upsertError) return err.textContent = '个人资料写入失败：' + upsertError.message;
-    // 退出，要求手动登录
     await supabaseClient.auth.signOut();
     alert('注册成功！请登录');
     closeRegisterModal();
@@ -200,7 +194,6 @@
 
   // ===================== 首页 =====================
   async function renderHome(container) {
-    // 公告
     const { data: announcements } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (announcements?.length) {
       const annCard = document.createElement('div');
@@ -208,7 +201,6 @@
       annCard.innerHTML = `<strong>📢 公告：</strong>${escapeHtml(announcements[0].content)}<br><small>${new Date(announcements[0].created_at).toLocaleString()}</small>`;
       container.appendChild(annCard);
     }
-    // 小说列表（关联作者名）
     const { data: novels } = await supabaseClient
       .from('novels')
       .select('*, profiles(username)')
@@ -396,7 +388,7 @@
     }
   }
 
-  // ===================== 个人中心 =====================
+  // ===================== 个人中心（新增我的小说列表）=====================
   async function renderProfile(container) {
     if (!currentUser) return navigate('#home');
     const back = document.createElement('div');
@@ -411,18 +403,80 @@
       <h2>${escapeHtml(currentProfile.username)} 的个人中心</h2>
       <p>角色：${currentProfile.role === 'admin' ? '管理员' : '用户'}</p>
       <button onclick="changeUsername()">修改用户名</button>
-      <h3 style="margin-top:15px;">我的评论</h3>
+      <h3 style="margin-top:15px;">📖 我发布的小说</h3>
+      <div id="my-novels-list" style="margin-top:10px;">加载中...</div>
+      <h3 style="margin-top:15px;">💬 我的评论</h3>
+      <div id="my-comments-list" style="margin-top:10px;"></div>
+      <h3 style="margin-top:15px;">⭐ 我的评分</h3>
+      <div id="my-ratings-list" style="margin-top:10px;"></div>
     `;
-    const { data: myComments } = await supabaseClient.from('comments').select('*, novels(title)').eq('user_id', currentUser.id);
-    if (myComments?.length) {
-      myComments.forEach(c => card.innerHTML += `<p>对《${escapeHtml(c.novels.title)}》评论：${escapeHtml(c.content)}</p>`);
-    } else card.innerHTML += '<p>暂无评论</p>';
-    card.innerHTML += '<h3 style="margin-top:15px;">我的评分</h3>';
-    const { data: myRatings } = await supabaseClient.from('ratings').select('*, novels(title)').eq('user_id', currentUser.id);
-    if (myRatings?.length) {
-      myRatings.forEach(r => card.innerHTML += `<p>《${escapeHtml(r.novels.title)}》：${r.score}星</p>`);
-    } else card.innerHTML += '<p>暂无评分</p>';
     container.appendChild(card);
+
+    // 加载我发布的小说
+    const { data: myNovels } = await supabaseClient
+      .from('novels')
+      .select('*')
+      .eq('author_id', currentUser.id)
+      .order('updated_at', { ascending: false });
+    const novelsDiv = document.getElementById('my-novels-list');
+    novelsDiv.innerHTML = '';
+    if (myNovels?.length) {
+      myNovels.forEach(n => {
+        novelsDiv.innerHTML += `
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f0ece4; padding:8px 0;">
+            <a onclick="navigate('#novel/${n.id}')">${escapeHtml(n.title)}</a>
+            <button class="edit-btn" onclick="editNovel(${n.id})">编辑</button>
+          </div>`;
+      });
+    } else {
+      novelsDiv.innerHTML = '<p>你还没有发布过小说</p>';
+    }
+
+    // 我的评论
+    const { data: myComments } = await supabaseClient
+      .from('comments')
+      .select('*, novels(title)')
+      .eq('user_id', currentUser.id);
+    const commentsDiv = document.getElementById('my-comments-list');
+    if (myComments?.length) {
+      commentsDiv.innerHTML = myComments.map(c => `<p>对《${escapeHtml(c.novels.title)}》评论：${escapeHtml(c.content)}</p>`).join('');
+    } else {
+      commentsDiv.innerHTML = '<p>暂无评论</p>';
+    }
+
+    // 我的评分
+    const { data: myRatings } = await supabaseClient
+      .from('ratings')
+      .select('*, novels(title)')
+      .eq('user_id', currentUser.id);
+    const ratingsDiv = document.getElementById('my-ratings-list');
+    if (myRatings?.length) {
+      ratingsDiv.innerHTML = myRatings.map(r => `<p>《${escapeHtml(r.novels.title)}》：${r.score}星</p>`).join('');
+    } else {
+      ratingsDiv.innerHTML = '<p>暂无评分</p>';
+    }
+  }
+
+  async function editNovel(novelId) {
+    const { data: novel } = await supabaseClient.from('novels').select('*').eq('id', novelId).single();
+    if (!novel) return alert('小说不存在');
+    const newTitle = prompt('修改标题', novel.title);
+    if (newTitle === null) return; // 取消
+    const newGenre = prompt('修改分类', novel.genre || '');
+    if (newGenre === null) return;
+    const newDesc = prompt('修改简介', novel.description || '');
+    if (newDesc === null) return;
+    const { error } = await supabaseClient.from('novels').update({
+      title: newTitle,
+      genre: newGenre,
+      description: newDesc,
+      updated_at: new Date()
+    }).eq('id', novelId);
+    if (error) alert(error.message);
+    else {
+      alert('修改成功');
+      navigate('#profile'); // 刷新个人中心
+    }
   }
 
   async function changeUsername() {
