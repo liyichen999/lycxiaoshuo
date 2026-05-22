@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>lyc书库 · 小说社区</title>
-  <!-- Markdown 解析库 -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -41,10 +40,10 @@
     .follow-btn { background:#4a6fa5; font-size:12px; padding:4px 12px; }
     .follow-btn.following { background:#aaa; }
     pre { white-space:pre-wrap; font-family:inherit; }
-    /* Markdown 公告样式 */
     .announcement-body h1, .announcement-body h2, .announcement-body h3 { font-size:1.1rem; margin:10px 0 5px; }
     .announcement-body p { margin:5px 0; }
     .announcement-body ul, .announcement-body ol { margin:5px 0 5px 20px; }
+    .nav-chapter { display:flex; justify-content:space-between; margin-top:15px; }
     @media (max-width: 600px) {
       .navbar { padding:10px 15px; }
       .logo { font-size:1.2rem; }
@@ -57,7 +56,6 @@
 <body>
 <div class="container" id="app"></div>
 
-<!-- 底部导航栏 -->
 <nav class="bottom-nav" id="bottom-nav">
   <button onclick="navigate('#home')" class="active"><span class="nav-icon">🏠</span>首页</button>
   <button onclick="openSearch()"><span class="nav-icon">🔍</span>搜索</button>
@@ -66,7 +64,6 @@
   <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><span class="nav-icon">⚙️</span>后台</button>
 </nav>
 
-<!-- 登录/注册模态框 -->
 <div id="login-modal" class="modal hidden">
   <div class="modal-content">
     <span class="close" onclick="closeLoginModal()">&times;</span>
@@ -90,7 +87,6 @@
   </div>
 </div>
 
-<!-- 通用表单模态框 -->
 <div id="form-modal" class="modal hidden">
   <div class="modal-content">
     <span class="close" onclick="closeFormModal()">&times;</span>
@@ -101,7 +97,6 @@
   </div>
 </div>
 
-<!-- 确认模态框 -->
 <div id="confirm-modal" class="modal hidden">
   <div class="modal-content" style="text-align:center;">
     <p id="confirm-message"></p>
@@ -122,6 +117,7 @@
   let isRendering = false;
   let formCallback = null;
 
+  // 路由
   function navigate(hash) { window.location.hash = hash; render(); }
   window.onhashchange = () => render();
 
@@ -195,12 +191,11 @@
     currentProfile = data || null;
   }
 
-  // 模态框函数
+  // 模态框管理
   function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
   function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
   function openRegisterModal() { document.getElementById('register-modal').classList.remove('hidden'); }
   function closeRegisterModal() { document.getElementById('register-modal').classList.add('hidden'); }
-
   function openFormModal(title, html, cb) {
     document.getElementById('form-title').textContent = title;
     document.getElementById('form-body').innerHTML = html;
@@ -209,7 +204,6 @@
     formCallback = cb;
   }
   function closeFormModal() { document.getElementById('form-modal').classList.add('hidden'); formCallback = null; }
-
   async function submitForm() {
     if (formCallback) {
       const err = document.getElementById('form-error');
@@ -217,7 +211,6 @@
       try { await formCallback(); closeFormModal(); } catch (e) { err.textContent = e.message; }
     }
   }
-
   function showConfirm(message, onConfirm) {
     document.getElementById('confirm-message').textContent = message;
     document.getElementById('confirm-modal').classList.remove('hidden');
@@ -228,6 +221,7 @@
   }
   function closeConfirmModal() { document.getElementById('confirm-modal').classList.add('hidden'); }
 
+  // 登录/注册
   async function login() {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
@@ -275,9 +269,8 @@
     render();
   }
 
-  // 首页（含 Markdown 公告）
+  // 首页（Markdown公告、搜索、推荐）
   async function renderHome(container) {
-    // 公告（Markdown 渲染）
     const { data: announcements } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (announcements?.length) {
       const annCard = document.createElement('div'); annCard.className = 'card';
@@ -287,17 +280,16 @@
       container.appendChild(annCard);
     }
 
-    // 搜索框
     const searchDiv = document.createElement('div'); searchDiv.className = 'card';
     searchDiv.innerHTML = `
       <div style="display:flex; gap:8px;">
-        <input type="text" id="search-input" placeholder="搜索小说标题或作者..." style="flex:1;">
-        <button onclick="searchNovels()">搜索</button>
+        <input type="text" id="search-input" placeholder="搜索小说、作者或用户...">
+        <button onclick="performSearch()">搜索</button>
       </div>
       <div id="search-results" style="margin-top:10px;"></div>`;
     container.appendChild(searchDiv);
 
-    // 推荐算法
+    // 推荐
     let novels;
     if (currentUser) {
       const { data: follows } = await supabaseClient.from('follows').select('following_id').eq('follower_id', currentUser.id);
@@ -319,34 +311,60 @@
       const { data: allNovels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
       novels = allNovels || [];
     }
-    displayNovels(novels);
+    displaySearchResults(novels, []);
   }
 
-  function displayNovels(novels) {
+  // 搜索（小说 + 用户）
+  async function performSearch() {
+    const keyword = document.getElementById('search-input').value.trim().toLowerCase();
+    if (!keyword) {
+      // 空搜索，显示默认推荐
+      const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
+      displaySearchResults(novels || [], []);
+      return;
+    }
+    // 搜索小说
+    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
+    const filteredNovels = novels.filter(n => n.title.toLowerCase().includes(keyword) || (n.profiles?.username?.toLowerCase().includes(keyword)));
+    // 搜索用户
+    const { data: profiles } = await supabaseClient.from('profiles').select('*').ilike('username', `%${keyword}%`);
+    const matchedUsers = profiles || [];
+    displaySearchResults(filteredNovels, matchedUsers);
+  }
+
+  function displaySearchResults(novels, users) {
     const resultsDiv = document.getElementById('search-results');
     if (!resultsDiv) return;
     resultsDiv.innerHTML = '';
-    if (!novels.length) { resultsDiv.innerHTML = '<p style="text-align:center; color:#888;">暂无小说</p>'; return; }
-    novels.forEach(n => {
-      const item = document.createElement('div'); item.className = 'flex-row';
-      item.innerHTML = `
-        <div style="flex:1;">
-          <a onclick="navigate('#novel/${n.id}')" style="font-weight:500;">${escapeHtml(n.title)}</a>
-          <div class="meta">${escapeHtml(n.profiles?.username || '未知')} · ${n.genre || '未分类'} · ${n.status}</div>
-        </div>
-        <span style="font-size:12px; color:#aaa;">${new Date(n.updated_at).toLocaleDateString()}</span>`;
-      resultsDiv.appendChild(item);
-    });
+    
+    // 显示匹配的用户
+    if (users && users.length) {
+      resultsDiv.innerHTML += '<h4 style="margin-bottom:8px;">👥 用户</h4>';
+      users.forEach(u => {
+        resultsDiv.innerHTML += `<div style="padding:8px 0;"><a onclick="navigate('#user/${escapeHtml(u.username)}')">${escapeHtml(u.username)}</a></div>`;
+      });
+      resultsDiv.innerHTML += '<hr style="margin:10px 0;">';
+    }
+
+    // 显示小说
+    if (novels && novels.length) {
+      resultsDiv.innerHTML += '<h4 style="margin-bottom:8px;">📚 小说</h4>';
+      novels.forEach(n => {
+        const item = document.createElement('div'); item.className = 'flex-row';
+        item.innerHTML = `
+          <div style="flex:1;">
+            <a onclick="navigate('#novel/${n.id}')" style="font-weight:500;">${escapeHtml(n.title)}</a>
+            <div class="meta">${escapeHtml(n.profiles?.username || '未知')} · ${n.genre || '未分类'} · ${n.status}</div>
+          </div>
+          <span style="font-size:12px; color:#aaa;">${new Date(n.updated_at).toLocaleDateString()}</span>`;
+        resultsDiv.appendChild(item);
+      });
+    } else if (!users || !users.length) {
+      resultsDiv.innerHTML = '<p style="text-align:center; color:#888;">无匹配结果</p>';
+    }
   }
 
-  async function searchNovels() {
-    const keyword = document.getElementById('search-input').value.trim().toLowerCase();
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
-    const filtered = keyword ? novels.filter(n => n.title.toLowerCase().includes(keyword) || (n.profiles?.username?.toLowerCase().includes(keyword))) : novels;
-    displayNovels(filtered);
-  }
-
-  // 小说详情（含关注）
+  // 小说详情
   async function renderNovelDetail(container, novelId) {
     const { data: novel, error } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
     if (error || !novel) { container.innerHTML += '<p>小说不存在</p>'; return; }
@@ -481,20 +499,33 @@
     });
   }
 
-  // 章节内容（评论区）
+  // 章节内容（含上一章/下一章、评论区）
   async function renderChapterContent(container, chapterId) {
     const { data: chapter, error } = await supabaseClient.from('chapters').select('*, novels!inner(id, title, author_id)').eq('id', chapterId).single();
     if (error || !chapter) return container.innerHTML += '<p>章节不存在</p>';
+    
+    // 获取所有章节以便导航
+    const { data: allChapters } = await supabaseClient.from('chapters').select('id,chapter_number').eq('novel_id', chapter.novels.id).order('chapter_number');
+    const currentIdx = allChapters.findIndex(ch => ch.id === chapterId);
+    const prevChapter = currentIdx > 0 ? allChapters[currentIdx - 1] : null;
+    const nextChapter = currentIdx < allChapters.length - 1 ? allChapters[currentIdx + 1] : null;
+
     const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', chapter.novels.id).order('created_at', { ascending: true });
+
     const contentCard = document.createElement('div'); contentCard.className = 'card';
     contentCard.innerHTML = `
       <a class="back-link" onclick="navigate('#novel/${chapter.novels.id}/chapters')">← 返回章节列表</a>
       <h2>${escapeHtml(chapter.title)}</h2>
       <pre>${escapeHtml(chapter.content)}</pre>
-      ${currentUser?.id === chapter.novels.author_id ? `<div class="btn-group">
+      <div class="nav-chapter">
+        <button onclick="navigate('#chapter/${prevChapter.id}')" ${prevChapter ? '' : 'disabled'}>← 上一章</button>
+        <button onclick="navigate('#chapter/${nextChapter.id}')" ${nextChapter ? '' : 'disabled'}>下一章 →</button>
+      </div>
+      ${currentUser?.id === chapter.novels.author_id ? `<div class="btn-group" style="margin-top:12px;">
         <button class="outline" onclick="editChapterModal(${chapter.id}, ${chapter.novels.id})">编辑章节</button>
         <button class="danger" onclick="deleteChapter(${chapter.id}, ${chapter.novels.id})">删除章节</button>
-      </div>` : ''}`;
+      </div>` : ''}
+    `;
     container.appendChild(contentCard);
 
     const commentCard = document.createElement('div'); commentCard.className = 'card';
@@ -534,11 +565,21 @@
       <a class="back-link" onclick="history.back()">← 返回</a>
       <h2>${escapeHtml(profile.username)} 的主页</h2>
       <p>${escapeHtml(profile.role || '用户')} · 关注者 ${followers?.length || 0} · 关注中 ${following?.length || 0}</p>
-      ${!isOwner && currentUser ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollow('${profile.id}')">${isFollowing?'已关注':'+ 关注'}</button>` : ''}
+      ${!isOwner && currentUser ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${profile.id}')">${isFollowing?'已关注':'+ 关注'}</button>` : ''}
       <h3 style="margin-top:15px;">📖 发布的小说</h3>
       ${novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${escapeHtml(n.title)}</a></p>`).join('') : '<p>暂无作品</p>'}
     `;
     container.appendChild(card);
+  }
+
+  async function toggleFollowUser(userId) {
+    if (!currentUser) return alert('请先登录');
+    const { data: follow } = await supabaseClient.from('follows').select('*').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
+    if (follow) await supabaseClient.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', userId);
+    else await supabaseClient.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
+    // 刷新当前用户主页
+    const username = window.location.hash.split('/')[1];
+    navigate(`#user/${username}`);
   }
 
   // 发布小说
@@ -659,7 +700,6 @@
     renderAdminAdmins();
   }
 
-  // 编辑公告（支持 Markdown）
   function editAnnouncementModal() {
     openFormModal('编辑公告（支持 Markdown）', `
       <textarea id="announce-content" rows="6" placeholder="输入公告内容，支持 Markdown 语法..."></textarea>
@@ -678,7 +718,6 @@
     return div.innerHTML;
   }
 
-  // 标记 marked 配置（可选）
   if (typeof marked !== 'undefined') {
     marked.setOptions({ breaks: true, gfm: true });
   }
