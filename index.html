@@ -4,23 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>lyc书库 · 小说社区</title>
+  <!-- Markdown 解析库 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background:#f5f2eb; color:#3b3226; padding-bottom:70px; } /* 底部导航留空 */
+    body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background:#f5f2eb; color:#3b3226; padding-bottom:70px; }
     .container { max-width:900px; margin:0 auto; padding:20px; }
-
-    /* 底部导航栏 */
     .bottom-nav { position:fixed; bottom:0; left:0; width:100%; background:#fff; border-top:1px solid #e0d7c6; display:flex; justify-content:space-around; align-items:center; padding:10px 0; z-index:99; box-shadow:0 -2px 8px rgba(0,0,0,0.05); }
     .bottom-nav button { background:none; border:none; color:#8b7355; font-size:13px; display:flex; flex-direction:column; align-items:center; gap:2px; padding:5px; }
     .bottom-nav button.active { color:#3b3226; font-weight:bold; }
     .bottom-nav button .nav-icon { font-size:18px; }
-
-    /* 顶部导航栏（保留logo和用户头像） */
     .navbar { display:flex; justify-content:space-between; align-items:center; background:#fff; padding:12px 20px; border-radius:12px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
     .logo { font-size:1.5rem; font-weight:bold; color:#6b5b4a; cursor:pointer; }
     .user-badge { display:flex; align-items:center; gap:8px; }
     .avatar-circle { width:34px; height:34px; border-radius:50%; background:#8b7355; color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; }
-
     .card { background:#fff; border-radius:12px; padding:20px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
     .flex-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:space-between; padding:12px 0; border-bottom:1px solid #f0ece4; }
     .flex-row:last-child { border-bottom:none; }
@@ -44,6 +41,10 @@
     .follow-btn { background:#4a6fa5; font-size:12px; padding:4px 12px; }
     .follow-btn.following { background:#aaa; }
     pre { white-space:pre-wrap; font-family:inherit; }
+    /* Markdown 公告样式 */
+    .announcement-body h1, .announcement-body h2, .announcement-body h3 { font-size:1.1rem; margin:10px 0 5px; }
+    .announcement-body p { margin:5px 0; }
+    .announcement-body ul, .announcement-body ol { margin:5px 0 5px 20px; }
     @media (max-width: 600px) {
       .navbar { padding:10px 15px; }
       .logo { font-size:1.2rem; }
@@ -89,7 +90,7 @@
   </div>
 </div>
 
-<!-- 通用表单模态框（编辑小说、章节、公告） -->
+<!-- 通用表单模态框 -->
 <div id="form-modal" class="modal hidden">
   <div class="modal-content">
     <span class="close" onclick="closeFormModal()">&times;</span>
@@ -124,7 +125,6 @@
   function navigate(hash) { window.location.hash = hash; render(); }
   window.onhashchange = () => render();
 
-  // 更新底部导航激活状态
   function updateBottomNav() {
     const hash = window.location.hash || '#home';
     const buttons = document.querySelectorAll('#bottom-nav button');
@@ -136,7 +136,6 @@
   }
 
   function openSearch() {
-    // 跳转到首页并聚焦搜索框
     navigate('#home');
     setTimeout(() => {
       const inp = document.getElementById('search-input');
@@ -154,7 +153,6 @@
     if (session) { currentUser = session.user; await fetchProfile(); }
     else { currentUser = null; currentProfile = null; }
 
-    // 顶部导航栏
     const nav = document.createElement('div'); nav.className = 'navbar';
     nav.innerHTML = `<div class="logo" onclick="navigate('#home')">📖 lyc书库</div>`;
     if (currentUser && currentProfile) {
@@ -168,11 +166,9 @@
     }
     app.appendChild(nav);
 
-    // 管理员底部按钮显示
     const adminBtn = document.getElementById('admin-nav');
     if (currentProfile?.role === 'admin') adminBtn.classList.remove('hidden');
     else adminBtn.classList.add('hidden');
-
     updateBottomNav();
 
     const hash = window.location.hash || '#home';
@@ -199,7 +195,7 @@
     currentProfile = data || null;
   }
 
-  // 模态框
+  // 模态框函数
   function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
   function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
   function openRegisterModal() { document.getElementById('register-modal').classList.remove('hidden'); }
@@ -232,7 +228,6 @@
   }
   function closeConfirmModal() { document.getElementById('confirm-modal').classList.add('hidden'); }
 
-  // 登录/注册
   async function login() {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
@@ -280,13 +275,15 @@
     render();
   }
 
-  // 首页（推荐算法）
+  // 首页（含 Markdown 公告）
   async function renderHome(container) {
-    // 公告
+    // 公告（Markdown 渲染）
     const { data: announcements } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (announcements?.length) {
       const annCard = document.createElement('div'); annCard.className = 'card';
-      annCard.innerHTML = `<strong>📢 公告：</strong>${escapeHtml(announcements[0].content)}<br><small>${new Date(announcements[0].created_at).toLocaleString()}</small>`;
+      const contentHtml = marked.parse(announcements[0].content);
+      annCard.innerHTML = `<strong>📢 公告</strong><br><small>${new Date(announcements[0].created_at).toLocaleString()}</small>
+        <div class="announcement-body" style="margin-top:8px;">${contentHtml}</div>`;
       container.appendChild(annCard);
     }
 
@@ -300,21 +297,15 @@
       <div id="search-results" style="margin-top:10px;"></div>`;
     container.appendChild(searchDiv);
 
-    // 获取推荐数据
+    // 推荐算法
     let novels;
     if (currentUser) {
-      // 获取关注作者ID列表
       const { data: follows } = await supabaseClient.from('follows').select('following_id').eq('follower_id', currentUser.id);
       const followedIds = follows?.map(f => f.following_id) || [];
-      // 获取用户评分过的小说类型偏好
       const { data: ratings } = await supabaseClient.from('ratings').select('novels(genre)').eq('user_id', currentUser.id).gte('score', 3);
       const preferredGenres = ratings?.map(r => r.novels?.genre).filter(Boolean) || [];
-
-      // 查询全部小说
       const { data: allNovels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
       novels = allNovels || [];
-
-      // 排序：关注作者优先，其次同类型
       novels.sort((a, b) => {
         const aFollowed = followedIds.includes(a.author_id) ? 1 : 0;
         const bFollowed = followedIds.includes(b.author_id) ? 1 : 0;
@@ -355,20 +346,17 @@
     displayNovels(filtered);
   }
 
-  // 小说详情（含关注按钮）
+  // 小说详情（含关注）
   async function renderNovelDetail(container, novelId) {
     const { data: novel, error } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
     if (error || !novel) { container.innerHTML += '<p>小说不存在</p>'; return; }
     const { data: ratings } = await supabaseClient.from('ratings').select('score').eq('novel_id', novelId);
     const avg = ratings?.length ? (ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1) : '暂无评分';
-    
-    // 是否关注作者
     let isFollowing = false;
     if (currentUser && currentUser.id !== novel.author_id) {
       const { data: f } = await supabaseClient.from('follows').select('*').eq('follower_id', currentUser.id).eq('following_id', novel.author_id).maybeSingle();
       isFollowing = !!f;
     }
-
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = `
       <a class="back-link" onclick="navigate('#home')">← 返回首页</a>
@@ -392,12 +380,8 @@
   async function toggleFollow(authorId) {
     if (!currentUser) return alert('请先登录');
     const { data: follow } = await supabaseClient.from('follows').select('*').eq('follower_id', currentUser.id).eq('following_id', authorId).maybeSingle();
-    if (follow) {
-      await supabaseClient.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', authorId);
-    } else {
-      await supabaseClient.from('follows').insert({ follower_id: currentUser.id, following_id: authorId });
-    }
-    // 刷新当前小说详情
+    if (follow) await supabaseClient.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', authorId);
+    else await supabaseClient.from('follows').insert({ follower_id: currentUser.id, following_id: authorId });
     const novelId = window.location.hash.split('/')[1];
     navigate(`#novel/${novelId}`);
   }
@@ -545,7 +529,6 @@
     const { data: following } = await supabaseClient.from('follows').select('following_id', { count: 'exact' }).eq('follower_id', profile.id);
     const isOwner = currentUser?.id === profile.id;
     const isFollowing = currentUser ? !!followers?.find(f => f.follower_id === currentUser.id) : false;
-
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = `
       <a class="back-link" onclick="history.back()">← 返回</a>
@@ -676,8 +659,12 @@
     renderAdminAdmins();
   }
 
+  // 编辑公告（支持 Markdown）
   function editAnnouncementModal() {
-    openFormModal('编辑公告', `<textarea id="announce-content" rows="4" placeholder="公告内容..."></textarea>`, async () => {
+    openFormModal('编辑公告（支持 Markdown）', `
+      <textarea id="announce-content" rows="6" placeholder="输入公告内容，支持 Markdown 语法..."></textarea>
+      <small style="color:#888;">支持 **加粗**、[链接](url)、- 列表、# 标题等</small>
+    `, async () => {
       const content = document.getElementById('announce-content').value.trim();
       if (!content) throw new Error('公告不能为空');
       await supabaseClient.from('announcements').insert({ content });
@@ -689,6 +676,11 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  // 标记 marked 配置（可选）
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({ breaks: true, gfm: true });
   }
 
   render();
