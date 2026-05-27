@@ -306,7 +306,7 @@
     if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
   }
 
-  // ========== 小说详情 ==========
+  // ========== 小说详情（评分+小说总评论区） ==========
   async function novelDetail(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
@@ -461,51 +461,58 @@
     });
   }
 
-  // ========== 章节内容（稳定分步查询） ==========
+  // ========== 章节内容（安全分步查询+本章独立评论区） ==========
   async function chapterContent(container, chapterId) {
-    // 查询章节
-    const { data: chapter, error: chapterError } = await supabaseClient
-      .from('chapters')
-      .select('*')
-      .eq('id', chapterId)
-      .single();
-    if (chapterError || !chapter) {
-      console.error('章节查询失败:', chapterError);
+    // 第一步：获取章节
+    let chapter;
+    try {
+      const { data, error } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).single();
+      if (error) throw error;
+      chapter = data;
+    } catch (e) {
+      console.error('章节查询失败:', e);
       container.innerHTML += '<p>章节不存在</p>';
       return;
     }
-
-    // 查询所属小说
-    const { data: novel, error: novelError } = await supabaseClient
-      .from('novels')
-      .select('id, title, author_id')
-      .eq('id', chapter.novel_id)
-      .single();
-    if (novelError || !novel) {
-      console.error('小说查询失败:', novelError);
-      container.innerHTML += '<p>所属小说不存在</p>';
+    if (!chapter || !chapter.novel_id) {
+      container.innerHTML += '<p>章节数据无效</p>';
       return;
     }
 
-    // 获取所有章节用于导航
-    const { data: allChapters } = await supabaseClient
-      .from('chapters')
-      .select('id, chapter_number')
-      .eq('novel_id', novel.id)
-      .order('chapter_number');
+    // 第二步：获取小说
+    let novel;
+    try {
+      const { data, error } = await supabaseClient.from('novels').select('id, title, author_id').eq('id', chapter.novel_id).single();
+      if (error) throw error;
+      novel = data;
+    } catch (e) {
+      console.error('小说查询失败:', e);
+      container.innerHTML += '<p>所属小说不存在</p>';
+      return;
+    }
+    if (!novel) {
+      container.innerHTML += '<p>小说信息缺失</p>';
+      return;
+    }
+
+    // 第三步：获取所有章节（用于上下章）
+    let allChapters = [];
+    try {
+      const { data, error } = await supabaseClient.from('chapters').select('id, chapter_number').eq('novel_id', novel.id).order('chapter_number');
+      if (!error) allChapters = data || [];
+    } catch (e) { console.warn('获取章节列表失败:', e); }
     const idx = allChapters.findIndex(ch => ch.id === chapterId);
     const prev = idx > 0 ? allChapters[idx - 1] : null;
     const next = idx < allChapters.length - 1 ? allChapters[idx + 1] : null;
 
-    // 本章评论区
-    const { data: comments } = await supabaseClient
-      .from('comments')
-      .select('*, profiles(username)')
-      .eq('novel_id', novel.id)
-      .eq('chapter_id', chapterId)
-      .order('created_at', { ascending: true });
+    // 第四步：获取本章评论
+    let comments = [];
+    try {
+      const { data, error } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novel.id).eq('chapter_id', chapterId).order('created_at', { ascending: true });
+      if (!error) comments = data || [];
+    } catch (e) { console.warn('获取评论失败:', e); }
 
-    // 渲染正文
+    // 渲染正文卡片
     const contentCard = document.createElement('div');
     contentCard.className = 'card';
     contentCard.innerHTML = `
@@ -523,11 +530,11 @@
     `;
     container.appendChild(contentCard);
 
-    // 渲染评论区
+    // 渲染评论区卡片
     const commCard = document.createElement('div');
     commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 本章评论区</h3>';
-    if (comments?.length) {
+    if (comments.length) {
       comments.forEach(c => {
         commCard.innerHTML += `
           <div style="margin-bottom:8px;">
@@ -536,7 +543,7 @@
           </div>`;
       });
     } else {
-      commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
+      commCard.innerHTML += '<p style="color:#888;">暂无评论，快来抢沙发吧！</p>';
     }
     if (user) {
       commCard.innerHTML += `
@@ -544,7 +551,7 @@
         <button onclick="addChapterComment('${novel.id}', '${chapterId}')" style="margin-top:6px;">发表评论</button>
       `;
     } else {
-      commCard.innerHTML += '<p style="margin-top:8px;">登录后可评论</p>';
+      commCard.innerHTML += '<p style="margin-top:8px;">请先登录后评论</p>';
     }
     container.appendChild(commCard);
   }
