@@ -65,7 +65,6 @@
 <div id="modal-container"></div>
 
 <script>
-  // ===================== 配置 =====================
   const SUPABASE_URL = 'https://srbibtnvtpygegmtehzb.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -107,7 +106,10 @@
       if (parts.length === 3 && parts[2] === 'chapters') await chapterList(app, parts[1]);
       else await novelDetail(app, parts[1]);
     }
-    else if (hash.startsWith('#chapter/')) await chapterContent(app, hash.split('/')[1]);
+    else if (hash.startsWith('#chapter/')) {
+      const chapterId = hash.split('/')[1];
+      await chapterContent(app, chapterId);
+    }
     else if (hash.startsWith('#user/')) await userPage(app, hash.split('/')[1]);
     else if (hash === '#new-novel') await newNovel(app);
     else if (hash === '#profile') await myProfile(app);
@@ -304,7 +306,7 @@
     if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
   }
 
-  // ========== 小说详情（含评分和总评论区） ==========
+  // ========== 小说详情 ==========
   async function novelDetail(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
@@ -352,7 +354,7 @@
       </div>`;
     container.appendChild(infoCard);
 
-    // 小说总评论区（chapter_id 为空）
+    // 小说总评论区
     const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novelId).is('chapter_id', null).order('created_at', { ascending: false });
     const commCard = document.createElement('div'); commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 小说评论区</h3>';
@@ -372,8 +374,7 @@
       alert('已取消评分');
     } else {
       const { error } = await supabaseClient.from('ratings').upsert({ novel_id: novelId, user_id: user.id, score }, { onConflict: 'novel_id,user_id' });
-      if (error) alert(error.message);
-      else alert('评分成功');
+      if (error) alert(error.message); else alert('评分成功');
     }
     navigate(`#novel/${novelId}`);
   }
@@ -460,50 +461,103 @@
     });
   }
 
-  // ========== 章节内容（分步查询修复，含独立评论区） ==========
+  // ========== 章节内容（稳定分步查询） ==========
   async function chapterContent(container, chapterId) {
-    const { data: chapter, error } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).single();
-    if (error || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
+    // 查询章节
+    const { data: chapter, error: chapterError } = await supabaseClient
+      .from('chapters')
+      .select('*')
+      .eq('id', chapterId)
+      .single();
+    if (chapterError || !chapter) {
+      console.error('章节查询失败:', chapterError);
+      container.innerHTML += '<p>章节不存在</p>';
+      return;
+    }
 
-    const { data: novel } = await supabaseClient.from('novels').select('id, title, author_id').eq('id', chapter.novel_id).single();
-    if (!novel) { container.innerHTML += '<p>所属小说不存在</p>'; return; }
+    // 查询所属小说
+    const { data: novel, error: novelError } = await supabaseClient
+      .from('novels')
+      .select('id, title, author_id')
+      .eq('id', chapter.novel_id)
+      .single();
+    if (novelError || !novel) {
+      console.error('小说查询失败:', novelError);
+      container.innerHTML += '<p>所属小说不存在</p>';
+      return;
+    }
 
-    const { data: allChapters } = await supabaseClient.from('chapters').select('id, chapter_number').eq('novel_id', novel.id).order('chapter_number');
+    // 获取所有章节用于导航
+    const { data: allChapters } = await supabaseClient
+      .from('chapters')
+      .select('id, chapter_number')
+      .eq('novel_id', novel.id)
+      .order('chapter_number');
     const idx = allChapters.findIndex(ch => ch.id === chapterId);
-    const prev = idx > 0 ? allChapters[idx-1] : null;
-    const next = idx < allChapters.length-1 ? allChapters[idx+1] : null;
+    const prev = idx > 0 ? allChapters[idx - 1] : null;
+    const next = idx < allChapters.length - 1 ? allChapters[idx + 1] : null;
 
-    // 本章节的评论区（chapter_id = 当前章节ID）
-    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novel.id).eq('chapter_id', chapterId).order('created_at', { ascending: true });
+    // 本章评论区
+    const { data: comments } = await supabaseClient
+      .from('comments')
+      .select('*, profiles(username)')
+      .eq('novel_id', novel.id)
+      .eq('chapter_id', chapterId)
+      .order('created_at', { ascending: true });
 
-    const contentCard = document.createElement('div'); contentCard.className = 'card';
+    // 渲染正文
+    const contentCard = document.createElement('div');
+    contentCard.className = 'card';
     contentCard.innerHTML = `
-      <a onclick="navigate('#novel/${novel.id}/chapters')" style="font-size:12px;">← 章节列表</a>
+      <a onclick="navigate('#novel/${novel.id}/chapters')" style="font-size:12px;">← 返回章节列表</a>
       <h2>${esc(chapter.title)}</h2>
       <pre>${esc(chapter.content)}</pre>
       <div class="nav-chapter">
-        <button onclick="navigate('#chapter/${prev.id}')" ${prev?'':'disabled'}>← 上一章</button>
-        <button onclick="navigate('#chapter/${next.id}')" ${next?'':'disabled'}>下一章 →</button>
+        <button onclick="navigate('#chapter/${prev.id}')" ${prev ? '' : 'disabled'}>← 上一章</button>
+        <button onclick="navigate('#chapter/${next.id}')" ${next ? '' : 'disabled'}>下一章 →</button>
       </div>
-      ${user?.id === novel.author_id ? `<div class="btn-group" style="margin-top:10px;"><button class="outline" onclick="editChapter(${chapter.id},${novel.id})">编辑</button><button class="danger" onclick="deleteChapter(${chapter.id},${novel.id})">删除</button></div>` : ''}
+      ${user?.id === novel.author_id ? `<div class="btn-group" style="margin-top:10px;">
+        <button class="outline" onclick="editChapter(${chapter.id}, ${novel.id})">编辑章节</button>
+        <button class="danger" onclick="deleteChapter(${chapter.id}, ${novel.id})">删除章节</button>
+      </div>` : ''}
     `;
     container.appendChild(contentCard);
 
-    const commCard = document.createElement('div'); commCard.className = 'card';
+    // 渲染评论区
+    const commCard = document.createElement('div');
+    commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 本章评论区</h3>';
     if (comments?.length) {
-      comments.forEach(c => commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${esc(c.profiles?.username)}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`);
-    } else commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
+      comments.forEach(c => {
+        commCard.innerHTML += `
+          <div style="margin-bottom:8px;">
+            <strong>${esc(c.profiles?.username || '匿名')}</strong>：${esc(c.content)}
+            <small style="color:#aaa;">${new Date(c.created_at).toLocaleString()}</small>
+          </div>`;
+      });
+    } else {
+      commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
+    }
     if (user) {
-      commCard.innerHTML += `<textarea id="chapter-comment" rows="3" placeholder="写下你对本章的评论..." style="margin-top:8px;"></textarea><button onclick="addChapterComment(${novel.id}, '${chapterId}')" style="margin-top:6px;">发表评论</button>`;
-    } else commCard.innerHTML += '<p>登录后可评论</p>';
+      commCard.innerHTML += `
+        <textarea id="chapter-comment" placeholder="写下你对本章的评论..." rows="3" style="margin-top:8px;"></textarea>
+        <button onclick="addChapterComment('${novel.id}', '${chapterId}')" style="margin-top:6px;">发表评论</button>
+      `;
+    } else {
+      commCard.innerHTML += '<p style="margin-top:8px;">登录后可评论</p>';
+    }
     container.appendChild(commCard);
   }
 
   async function addChapterComment(novelId, chapterId) {
     const content = document.getElementById('chapter-comment').value.trim();
     if (!content) return alert('评论不能为空');
-    await supabaseClient.from('comments').insert({ novel_id: novelId, user_id: user.id, content, chapter_id: chapterId });
+    await supabaseClient.from('comments').insert({
+      novel_id: novelId,
+      user_id: user.id,
+      content,
+      chapter_id: chapterId
+    });
     navigate(`#chapter/${chapterId}`);
   }
 
