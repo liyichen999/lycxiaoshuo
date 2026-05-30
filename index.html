@@ -65,7 +65,6 @@
 <div id="modal-container"></div>
 
 <script>
-  // ===================== 配置 =====================
   const SUPABASE_URL = 'https://srbibtnvtpygegmtehzb.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -461,10 +460,10 @@
     });
   }
 
-  // ========== 章节内容（完全重构，绝对安全） ==========
+  // ========== 章节内容（完全安全版，已修复空指针） ==========
   async function chapterContent(container, chapterId) {
-    console.log('chapterContent called with chapterId:', chapterId);
-    // 第一步：获取章节，使用 maybeSingle，如果出错或 null 则终止
+    console.log('chapterContent 开始加载:', chapterId);
+    // 第一步：获取章节
     let chapter;
     try {
       const { data, error } = await supabaseClient
@@ -484,11 +483,11 @@
       return;
     }
     if (!chapter.novel_id) {
-      container.innerHTML += '<p>章节数据异常（缺少小说ID）</p>';
+      container.innerHTML += '<p>章节数据异常</p>';
       return;
     }
 
-    // 第二步：获取小说信息
+    // 第二步：获取小说
     let novel;
     try {
       const { data, error } = await supabaseClient
@@ -500,7 +499,7 @@
       novel = data;
     } catch (e) {
       console.error('小说查询失败:', e);
-      container.innerHTML += '<p>加载小说信息失败</p>';
+      container.innerHTML += '<p>小说加载失败</p>';
       return;
     }
     if (!novel) {
@@ -517,10 +516,11 @@
         .eq('novel_id', novel.id)
         .order('chapter_number');
       if (!error) allChapters = data || [];
-    } catch (e) { console.warn('获取章节列表失败:', e); }
+    } catch (e) { console.warn('章节列表获取失败:', e); }
+
     const idx = allChapters.findIndex(ch => ch.id === chapterId);
-    const prev = idx > 0 ? allChapters[idx - 1] : null;
-    const next = idx < allChapters.length - 1 ? allChapters[idx + 1] : null;
+    const prev = (idx > 0 && allChapters[idx - 1]) ? allChapters[idx - 1] : null;
+    const next = (idx < allChapters.length - 1 && allChapters[idx + 1]) ? allChapters[idx + 1] : null;
 
     // 第四步：获取本章评论
     let comments = [];
@@ -532,9 +532,9 @@
         .eq('chapter_id', chapterId)
         .order('created_at', { ascending: true });
       if (!error) comments = data || [];
-    } catch (e) { console.warn('获取评论失败:', e); }
+    } catch (e) { console.warn('评论获取失败:', e); }
 
-    // 渲染正文卡片
+    // 渲染正文
     const contentCard = document.createElement('div');
     contentCard.className = 'card';
     contentCard.innerHTML = `
@@ -542,8 +542,8 @@
       <h2>${esc(chapter.title)}</h2>
       <pre>${esc(chapter.content)}</pre>
       <div class="nav-chapter">
-        <button onclick="navigate('#chapter/${prev.id}')" ${prev ? '' : 'disabled'}>← 上一章</button>
-        <button onclick="navigate('#chapter/${next.id}')" ${next ? '' : 'disabled'}>下一章 →</button>
+        <button onclick="navigate('#chapter/${prev ? prev.id : ''}')" ${prev ? '' : 'disabled'}>← 上一章</button>
+        <button onclick="navigate('#chapter/${next ? next.id : ''}')" ${next ? '' : 'disabled'}>下一章 →</button>
       </div>
       ${user?.id === novel.author_id ? `<div class="btn-group" style="margin-top:10px;">
         <button class="outline" onclick="editChapter(${chapter.id}, ${novel.id})">编辑章节</button>
