@@ -50,7 +50,6 @@
     .nav-chapter { display:flex; justify-content:space-between; margin-top:15px; }
     .follow-btn { background:#4a6fa5; font-size:12px; padding:4px 12px; }
     .follow-btn.following { background:#aaa; }
-    /* 帖子样式 */
     .post-item { border-bottom:1px solid #f0ece4; padding:12px 0; }
     .post-item:last-child { border-bottom:none; }
     .post-title { font-weight:bold; }
@@ -82,6 +81,10 @@
 
   let user = null, profile = null;
   let rendering = false;
+
+  const BANNED_WORDS = ['广告', '赌博', '色情', '敏感词'];
+
+  function containsBanned(text) { return BANNED_WORDS.some(w => text.includes(w)); }
 
   function navigate(hash) { window.location.hash = hash; }
   window.onhashchange = () => render();
@@ -250,7 +253,7 @@
 
   async function signOut() { await supabaseClient.auth.signOut(); user = null; profile = null; render(); }
 
-  // ========== 首页（原样） ==========
+  // ========== 首页 ==========
   async function home(container) {
     const { data: ann } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (ann?.length) {
@@ -311,7 +314,7 @@
     if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
   }
 
-  // ========== 小说详情（保留） ==========
+  // ========== 小说详情 ==========
   async function novelDetail(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
@@ -571,7 +574,7 @@
 
   // ========== 社区帖子列表 ==========
   async function communityList(container) {
-    const { data: posts, error } = await supabaseClient.from('posts').select('*, profiles(username)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
+    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = '<h2>💬 社区</h2>';
     if (user) card.innerHTML += `<button onclick="openNewPostModal()" style="margin-bottom:10px;">+ 发帖</button>`;
@@ -589,22 +592,22 @@
   }
 
   function openNewPostModal() {
-    openGenericForm('发布帖子', `<input id="post-title" placeholder="标题"><textarea id="post-content" rows="4" placeholder="内容..." style="margin-top:6px;"></textarea>`, async () => {
+    openGenericForm('发布帖子', `<input id="post-title" placeholder="标题（至少2个字）"><textarea id="post-content" rows="4" placeholder="内容（至少3个字）" style="margin-top:6px;"></textarea>`, async () => {
       const title = document.getElementById('post-title').value.trim();
       const content = document.getElementById('post-content').value.trim();
-      if (!title || !content) throw new Error('请填写完整');
+      if (title.length < 2 || content.length < 3) throw new Error('标题至少2字，内容至少3字');
+      if (containsBanned(title) || containsBanned(content)) throw new Error('内容包含违规词，请修改');
       const { error } = await supabaseClient.from('posts').insert({ author_id: user.id, title, content });
       if (error) throw error;
       alert('发布成功'); navigate('#community');
     });
   }
 
-  // ========== 帖子详情（含点赞、回复、嵌套） ==========
+  // ========== 帖子详情（支持换行） ==========
   async function postDetail(container, postId) {
     const { data: post } = await supabaseClient.from('posts').select('*, profiles(username)').eq('id', postId).single();
     if (!post) return container.innerHTML += '<p>帖子不存在</p>';
 
-    // 当前用户的投票状态
     let userVote = null;
     if (user) {
       const { data: vote } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
@@ -616,7 +619,7 @@
       <a onclick="navigate('#community')" style="font-size:12px;">← 社区</a>
       <h2>${esc(post.title)}</h2>
       <div class="post-meta">${esc(post.profiles?.username)} · ${new Date(post.created_at).toLocaleString()}</div>
-      <div style="margin:10px 0;">${esc(post.content)}</div>
+      <div style="margin:10px 0;">${esc(post.content).replace(/\n/g, '<br>')}</div>
       <div class="vote-btns">
         <button onclick="votePost(${post.id}, 'like')" class="${userVote === 'like' ? 'active' : ''}">👍 ${post.like_count || 0}</button>
         <button onclick="votePost(${post.id}, 'dislike')" class="${userVote === 'dislike' ? 'active' : ''}">👎 ${post.dislike_count || 0}</button>
@@ -625,29 +628,35 @@
     `;
     container.appendChild(card);
 
-    // 回复列表（含嵌套）
     const { data: replies } = await supabaseClient.from('post_replies').select('*, profiles(username)').eq('post_id', postId).order('created_at', { ascending: true });
     const replyCard = document.createElement('div'); replyCard.className = 'card';
     replyCard.innerHTML = '<h3>回复</h3>';
     if (replies?.length) {
       const rootReplies = replies.filter(r => !r.parent_id);
-      rootReplies.forEach(r => {
-        replyCard.appendChild(renderReply(r, replies));
-      });
+      rootReplies.forEach(r => replyCard.appendChild(renderReply(r, replies)));
     } else replyCard.innerHTML += '<p>暂无回复</p>';
     if (user) {
-      replyCard.innerHTML += `<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="addReply(${post.id}, null)" style="margin-top:6px;">回复</button>`;
+      replyCard.innerHTML += `<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="addTopReply(${post.id})" style="margin-top:6px;">回复</button>`;
     }
     container.appendChild(replyCard);
   }
 
+  window.addTopReply = async function(postId) {
+    const content = document.getElementById('reply-content').value.trim();
+    if (!content || content.length < 1) return alert('内容不能为空');
+    if (containsBanned(content)) return alert('包含违规词');
+    await supabaseClient.from('post_replies').insert({ post_id: postId, author_id: user.id, content, parent_id: null });
+    navigate(`#post/${postId}`);
+  };
+
+  // 递归渲染回复，支持换行
   function renderReply(reply, allReplies, depth = 0) {
     const div = document.createElement('div');
     div.className = 'reply-item';
     div.style.marginLeft = depth > 0 ? '20px' : '0';
     div.innerHTML = `
       <strong>${esc(reply.profiles?.username)}</strong> <small>${new Date(reply.created_at).toLocaleString()}</small>
-      <div>${esc(reply.content)}</div>
+      <div>${esc(reply.content).replace(/\n/g, '<br>')}</div>
       ${user ? `<a onclick="openReplyForm(${reply.id})" style="font-size:12px;">回复</a>` : ''}
       ${(profile?.role === 'admin') ? `<a onclick="deleteReply(${reply.id})" class="danger" style="font-size:12px; margin-left:8px;">删除</a>` : ''}
       <div id="reply-form-${reply.id}" style="display:none; margin-top:6px;"></div>
@@ -662,55 +671,19 @@
   window.openReplyForm = function(replyId) {
     const formDiv = document.getElementById(`reply-form-${replyId}`);
     formDiv.style.display = 'block';
-    formDiv.innerHTML = `<textarea id="child-reply-${replyId}" rows="2" placeholder="回复..."></textarea><button onclick="addReplyChild(${replyId})" style="margin-top:4px;">提交</button>`;
+    formDiv.innerHTML = `<textarea id="child-reply-${replyId}" rows="2" placeholder="回复..."></textarea><button onclick="addChildReply(${replyId})" style="margin-top:4px;">提交</button>`;
   };
 
-  window.addReplyChild = async function(parentId) {
+  window.addChildReply = async function(parentId) {
     const content = document.getElementById(`child-reply-${parentId}`).value.trim();
     if (!content) return alert('内容不能为空');
+    if (containsBanned(content)) return alert('包含违规词');
     const { data: parent } = await supabaseClient.from('post_replies').select('post_id').eq('id', parentId).single();
     if (!parent) return;
     await supabaseClient.from('post_replies').insert({ post_id: parent.post_id, author_id: user.id, content, parent_id: parentId });
     navigate(`#post/${parent.post_id}`);
   };
 
-  async function addReply(postId, parentId = null) {
-    const content = document.getElementById('reply-content').value.trim();
-    if (!content) return alert('内容不能为空');
-    await supabaseClient.from('post_replies').insert({ post_id: postId, author_id: user.id, content, parent_id: parentId });
-    navigate(`#post/${postId}`);
-  }
-
-  async function votePost(postId, type) {
-    if (!user) return alert('请先登录');
-    // 检查是否已投票
-    const { data: existing } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
-    if (existing) {
-      if (existing.vote_type === type) {
-        // 取消投票
-        await supabaseClient.from('post_votes').delete().eq('id', existing.id);
-        await supabaseClient.rpc('update_post_count', { postid: postId, type: existing.vote_type, change: -1 });
-      } else {
-        // 切换投票类型
-        await supabaseClient.from('post_votes').update({ vote_type: type }).eq('id', existing.id);
-        await supabaseClient.rpc('update_post_count', { postid: postId, type: existing.vote_type, change: -1 });
-        await supabaseClient.rpc('update_post_count', { postid: postId, type: type, change: 1 });
-      }
-    } else {
-      await supabaseClient.from('post_votes').insert({ post_id: postId, user_id: user.id, vote_type: type });
-      await supabaseClient.rpc('update_post_count', { postid: postId, type: type, change: 1 });
-    }
-    navigate(`#post/${postId}`);
-  }
-
-  // 需要在Supabase中创建RPC函数（见下）
-  // 如果不想用RPC，可以在应用层更新like_count/dislike_count，但更简单的是直接查询投票数，此处改为应用层更新：
-  async function updateVoteCounts(postId) {
-    const { data: likes } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('vote_type', 'like');
-    const { data: dislikes } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('vote_type', 'dislike');
-    await supabaseClient.from('posts').update({ like_count: likes.length, dislike_count: dislikes.length }).eq('id', postId);
-  }
-  // 修改votePost为应用层更新：
   async function votePost(postId, type) {
     if (!user) return alert('请先登录');
     const { data: existing } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
@@ -725,6 +698,12 @@
     }
     await updateVoteCounts(postId);
     navigate(`#post/${postId}`);
+  }
+
+  async function updateVoteCounts(postId) {
+    const { data: likes } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('vote_type', 'like');
+    const { data: dislikes } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('vote_type', 'dislike');
+    await supabaseClient.from('posts').update({ like_count: (likes||[]).length, dislike_count: (dislikes||[]).length }).eq('id', postId);
   }
 
   async function togglePin(postId) {
@@ -761,7 +740,6 @@
     if (posts?.length) posts.forEach(p => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
     else c.innerHTML = '<p>暂无帖子</p>';
   }
-  // adminComments, adminNovels, adminAdmins 保持原样但略加调整
   async function adminComments() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data } = await supabaseClient.from('comments').select('*, profiles(username), novels(title)').order('created_at', { ascending: false });
