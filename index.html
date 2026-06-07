@@ -6,60 +6,60 @@
   <title>lyc书库 · 小说社区</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background:#f5f2eb; color:#3b3226; padding-bottom:70px; }
-    .container { max-width:800px; margin:0 auto; padding:15px; }
-    .navbar { display:flex; justify-content:space-between; align-items:center; background:#fff; padding:10px 15px; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 6px rgba(0,0,0,0.05); }
-    .logo { font-size:1.3rem; font-weight:bold; color:#6b5b4a; cursor:pointer; }
-    .user-badge { display:flex; align-items:center; gap:6px; }
-    .avatar-circle { width:30px; height:30px; border-radius:50%; background:#8b7355; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; overflow:hidden; }
-    .avatar-circle img { width:100%; height:100%; object-fit:cover; }
-    .card { background:#fff; border-radius:10px; padding:15px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,0.05); }
-    .novel-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap:12px; }
-    .novel-card { background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.05); cursor:pointer; transition:transform 0.2s; }
-    .novel-card:hover { transform:translateY(-2px); }
-    .novel-cover { width:100%; height:180px; object-fit:cover; background:#f0ece4; }
-    .novel-info { padding:8px; }
-    .novel-title { font-weight:bold; font-size:13px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .novel-desc { font-size:11px; color:#888; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .novel-author { font-size:11px; color:#aaa; margin-top:2px; }
-    .flex-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f0ece4; }
-    .flex-row:last-child { border-bottom:none; }
-    button { background:#8b7355; color:#fff; border:none; padding:6px 14px; border-radius:5px; cursor:pointer; font-size:13px; }
-    button.outline { background:transparent; border:1px solid #8b7355; color:#8b7355; }
-    button.danger { background:#b55; }
-    input,textarea,select { width:100%; padding:8px; border:1px solid #ddd6c8; border-radius:5px; font-size:14px; margin-top:6px; }
-    .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:100; }
-    .modal-content { background:#fff; border-radius:12px; padding:25px; min-width:300px; max-width:90%; position:relative; animation: fadeIn 0.2s; }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-    .close { position:absolute; top:10px; right:15px; font-size:18px; cursor:pointer; color:#8b7355; }
-    .hidden { display:none !important; }
-    a { color:#8b7355; cursor:pointer; text-decoration:none; }
-    .meta { font-size:12px; color:#888; }
-    .btn-group { display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
-    .bottom-nav { position:fixed; bottom:0; left:0; width:100%; background:#fff; border-top:1px solid #e0d7c6; display:flex; justify-content:space-around; padding:8px 0; z-index:99; }
-    .bottom-nav button { background:none; border:none; color:#8b7355; font-size:12px; display:flex; flex-direction:column; align-items:center; gap:2px; }
-    .bottom-nav button.active { color:#3b3226; font-weight:bold; }
-    pre { white-space:pre-wrap; font-family:inherit; }
-    .rank-list { list-style:none; }
-    .rank-list li { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #f0ece4; }
-    .rank-list li:last-child { border-bottom:none; }
-    .rank-num { font-size:18px; font-weight:bold; color:#8b7355; width:24px; text-align:center; }
-    .chapter-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f0ece4; }
-    .chapter-item:last-child { border-bottom:none; }
-    .nav-chapter { display:flex; justify-content:space-between; margin-top:15px; }
-    .follow-btn { background:#4a6fa5; font-size:12px; padding:4px 12px; }
-    .follow-btn.following { background:#aaa; }
-    .post-item { border-bottom:1px solid #f0ece4; padding:12px 0; }
-    .post-item:last-child { border-bottom:none; }
-    .post-title { font-weight:bold; }
-    .post-meta { font-size:12px; color:#888; }
-    .vote-btns { display:flex; gap:8px; align-items:center; }
-    .vote-btns button { background:transparent; border:1px solid #ddd; color:#555; padding:2px 8px; font-size:12px; }
-    .vote-btns button.active { background:#8b7355; color:#fff; border-color:#8b7355; }
-    .reply-item { margin-left:20px; margin-top:10px; padding:8px 0; border-bottom:1px solid #f0ece4; }
-    .reply-item:last-child { border-bottom:none; }
-    @media (max-width:400px) { .novel-grid { grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); } }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f2eb;color:#3b3226;padding-bottom:70px}
+    .container{max-width:800px;margin:0 auto;padding:15px}
+    .navbar{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:10px 15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
+    .logo{font-size:1.3rem;font-weight:bold;color:#6b5b4a;cursor:pointer}
+    .user-badge{display:flex;align-items:center;gap:6px}
+    .avatar-circle{width:30px;height:30px;border-radius:50%;background:#8b7355;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;overflow:hidden}
+    .avatar-circle img{width:100%;height:100%;object-fit:cover}
+    .card{background:#fff;border-radius:10px;padding:15px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
+    .novel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+    .novel-card{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.05);cursor:pointer;transition:transform 0.2s}
+    .novel-card:hover{transform:translateY(-2px)}
+    .novel-cover{width:100%;height:180px;object-fit:cover;background:#f0ece4}
+    .novel-info{padding:8px}
+    .novel-title{font-weight:bold;font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .novel-desc{font-size:11px;color:#888;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .novel-author{font-size:11px;color:#aaa;margin-top:2px}
+    .flex-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4}
+    .flex-row:last-child{border-bottom:none}
+    button{background:#8b7355;color:#fff;border:none;padding:6px 14px;border-radius:5px;cursor:pointer;font-size:13px}
+    button.outline{background:transparent;border:1px solid #8b7355;color:#8b7355}
+    button.danger{background:#b55}
+    input,textarea,select{width:100%;padding:8px;border:1px solid #ddd6c8;border-radius:5px;font-size:14px;margin-top:6px}
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100}
+    .modal-content{background:#fff;border-radius:12px;padding:25px;min-width:300px;max-width:90%;position:relative;animation:fadeIn 0.2s}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .close{position:absolute;top:10px;right:15px;font-size:18px;cursor:pointer;color:#8b7355}
+    .hidden{display:none !important}
+    a{color:#8b7355;cursor:pointer;text-decoration:none}
+    .meta{font-size:12px;color:#888}
+    .btn-group{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+    .bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:#fff;border-top:1px solid #e0d7c6;display:flex;justify-content:space-around;padding:8px 0;z-index:99}
+    .bottom-nav button{background:none;border:none;color:#8b7355;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px}
+    .bottom-nav button.active{color:#3b3226;font-weight:bold}
+    pre{white-space:pre-wrap;font-family:inherit}
+    .rank-list{list-style:none}
+    .rank-list li{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0ece4}
+    .rank-list li:last-child{border-bottom:none}
+    .rank-num{font-size:18px;font-weight:bold;color:#8b7355;width:24px;text-align:center}
+    .chapter-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ece4}
+    .chapter-item:last-child{border-bottom:none}
+    .nav-chapter{display:flex;justify-content:space-between;margin-top:15px}
+    .follow-btn{background:#4a6fa5;font-size:12px;padding:4px 12px}
+    .follow-btn.following{background:#aaa}
+    .post-item{border-bottom:1px solid #f0ece4;padding:12px 0}
+    .post-item:last-child{border-bottom:none}
+    .post-title{font-weight:bold}
+    .post-meta{font-size:12px;color:#888}
+    .vote-btns{display:flex;gap:8px;align-items:center}
+    .vote-btns button{background:transparent;border:1px solid #ddd;color:#555;padding:2px 8px;font-size:12px}
+    .vote-btns button.active{background:#8b7355;color:#fff;border-color:#8b7355}
+    .reply-item{margin-left:20px;margin-top:10px;padding:8px 0;border-bottom:1px solid #f0ece4}
+    .reply-item:last-child{border-bottom:none}
+    @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -81,9 +81,7 @@
 
   let user = null, profile = null;
   let rendering = false;
-
-  const BANNED_WORDS = ['广告', '赌博', '色情', '敏感词'];
-
+  const BANNED_WORDS = ['广告','赌博','色情','敏感词'];
   function containsBanned(text) { return BANNED_WORDS.some(w => text.includes(w)); }
 
   function navigate(hash) { window.location.hash = hash; }
@@ -100,7 +98,7 @@
     const nav = document.createElement('div'); nav.className = 'navbar';
     nav.innerHTML = `<span class="logo" onclick="navigate('#home')">📖 lyc书库</span>`;
     if (user && profile) {
-      const avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">` : profile.username[0];
+      const avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='${profile.username[0]}'">` : profile.username[0];
       nav.innerHTML += `<div class="user-badge">
         <a onclick="navigate('#user/${esc(profile.username)}')" style="display:flex;align-items:center;gap:4px;">
           <div class="avatar-circle">${avatarHtml}</div> ${esc(profile.username)}
@@ -142,38 +140,17 @@
   function openModal(type, data) {
     const container = document.getElementById('modal-container');
     if (type === 'login') {
-      container.innerHTML = `<div class="modal"><div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span><h3>登录</h3>
-        <input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;">
-        <button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div>
-      </div></div>`;
+      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
     } else if (type === 'register') {
-      container.innerHTML = `<div class="modal"><div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span><h3>注册</h3>
-        <input id="ruser" placeholder="用户名"><input id="remail" placeholder="邮箱" style="margin-top:8px;"><input id="rpass" type="password" placeholder="密码(6位+)" style="margin-top:8px;">
-        <button onclick="doRegister()" style="width:100%;margin-top:12px;">注册</button><div id="err" style="color:red;"></div>
-      </div></div>`;
+      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>注册</h3><input id="ruser" placeholder="用户名"><input id="remail" placeholder="邮箱" style="margin-top:8px;"><input id="rpass" type="password" placeholder="密码(6位+)" style="margin-top:8px;"><button onclick="doRegister()" style="width:100%;margin-top:12px;">注册</button><div id="err" style="color:red;"></div></div></div>`;
     } else if (type === 'change-password') {
-      container.innerHTML = `<div class="modal"><div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span><h3>修改密码</h3>
-        <input id="newpw" type="password" placeholder="新密码(至少6位)"><button onclick="changePassword()" style="width:100%;margin-top:12px;">确认修改</button><div id="err" style="color:red;"></div>
-      </div></div>`;
+      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>修改密码</h3><input id="newpw" type="password" placeholder="新密码(至少6位)"><button onclick="changePassword()" style="width:100%;margin-top:12px;">确认修改</button><div id="err" style="color:red;"></div></div></div>`;
     } else if (type === 'upload-avatar') {
-      container.innerHTML = `<div class="modal"><div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span><h3>上传头像</h3>
-        <input type="file" id="avatar-file" accept="image/*"><button onclick="uploadAvatar()" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div>
-      </div></div>`;
+      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传头像</h3><input type="file" id="avatar-file" accept="image/*"><button onclick="uploadAvatar()" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
     } else if (type === 'upload-cover') {
-      container.innerHTML = `<div class="modal"><div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span><h3>上传封面</h3>
-        <input type="file" id="cover-file" accept="image/*"><button onclick="uploadCover('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div>
-      </div></div>`;
+      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传封面</h3><input type="file" id="cover-file" accept="image/*"><button onclick="uploadCover('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
     } else if (type === 'edit-bio') {
-      container.innerHTML = `<div class="modal"><div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span><h3>编辑个人简介</h3>
-        <textarea id="bio-text" rows="4" placeholder="介绍一下自己...">${esc(profile?.bio || '')}</textarea>
-        <button onclick="saveBio()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div>
-      </div></div>`;
+      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑个人简介</h3><textarea id="bio-text" rows="4" placeholder="介绍一下自己...">${esc(profile?.bio||'')}</textarea><button onclick="saveBio()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
     }
   }
   function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
@@ -290,7 +267,7 @@
         card.onclick = () => navigate(`#novel/${n.id}`);
         const coverUrl = n.cover_url || placeholder;
         card.innerHTML = `<img class="novel-cover" src="${coverUrl}" loading="lazy" onerror="this.onerror=null;this.src='${placeholder}'" alt="封面">
-          <div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description || '暂无简介')}</div><div class="novel-author">${esc(n.profiles?.username)}</div></div>`;
+          <div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${esc(n.profiles?.username)}</div></div>`;
         grid.appendChild(card);
       });
     } else grid.innerHTML = '<p style="color:#888;">还没有小说，快来发布吧！</p>';
@@ -330,7 +307,7 @@
     infoCard.innerHTML = `
       <a onclick="navigate('#home')" style="font-size:12px;">← 首页</a>
       <div style="display:flex; gap:15px; margin-top:10px; flex-wrap:wrap;">
-        <img src="${novel.cover_url || 'data:image/svg+xml,...'}" style="width:100px;height:140px;object-fit:cover;border-radius:8px; background:#f0ece4;">
+        <img src="${novel.cover_url || 'data:image/svg+xml,...'}" style="width:100px;height:140px;object-fit:cover;border-radius:8px; background:#f0ece4;" onerror="this.src='${placeholder}'">
         <div style="flex:1; min-width:200px;">
           <h2>${esc(novel.title)}</h2>
           <p>作者：<a onclick="navigate('#user/${esc(novel.profiles.username)}')">${esc(novel.profiles.username)}</a>
@@ -342,20 +319,7 @@
             ${user?.id === novel.author_id ? `<button class="outline" onclick="openModal('upload-cover','${novelId}')">🖼️ 上传封面</button><button class="outline" onclick="editNovel(${novel.id})">✏️ 编辑</button><button class="danger" onclick="deleteNovel(${novel.id})">🗑️ 删除</button>` : ''}
             ${profile?.role === 'admin' && user?.id !== novel.author_id ? `<button class="danger" onclick="deleteNovel(${novel.id})">管理员删除</button>` : ''}
           </div>
-          ${user ? `
-            <div style="margin-top:10px;">
-              <label>我的评分：</label>
-              <select id="my-rating" style="width:auto;">
-                <option value="0">未评分</option>
-                <option value="1" ${userRating?.score===1?'selected':''}>1星</option>
-                <option value="2" ${userRating?.score===2?'selected':''}>2星</option>
-                <option value="3" ${userRating?.score===3?'selected':''}>3星</option>
-                <option value="4" ${userRating?.score===4?'selected':''}>4星</option>
-                <option value="5" ${userRating?.score===5?'selected':''}>5星</option>
-              </select>
-              <button onclick="rateNovel(${novel.id})">提交评分</button>
-            </div>
-          ` : '<p>登录后可评分</p>'}
+          ${user ? `<div style="margin-top:10px;"><label>我的评分：</label><select id="my-rating" style="width:auto;"><option value="0">未评分</option><option value="1" ${userRating?.score===1?'selected':''}>1星</option><option value="2" ${userRating?.score===2?'selected':''}>2星</option><option value="3" ${userRating?.score===3?'selected':''}>3星</option><option value="4" ${userRating?.score===4?'selected':''}>4星</option><option value="5" ${userRating?.score===5?'selected':''}>5星</option></select><button onclick="rateNovel(${novel.id})">提交评分</button></div>` : '<p>登录后可评分</p>'}
         </div>
       </div>`;
     container.appendChild(infoCard);
@@ -366,7 +330,7 @@
       comments.forEach(c => commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${esc(c.profiles?.username)}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`);
     } else commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
     if (user) {
-      commCard.innerHTML += `<textarea id="novel-comment" placeholder="写下你对这个小说的看法..." rows="3"></textarea><button onclick="addNovelComment(${novel.id})" style="margin-top:6px;">发表评论</button>`;
+      commCard.innerHTML += `<textarea id="novel-comment" placeholder="写下你的看法..." rows="3"></textarea><button onclick="addNovelComment(${novel.id})" style="margin-top:6px;">发表评论</button>`;
     } else commCard.innerHTML += '<p>登录后可评论</p>';
     container.appendChild(commCard);
   }
@@ -417,10 +381,7 @@
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = `<a onclick="navigate('#novel/${novelId}')" style="font-size:12px;">← 详情</a><h2>${esc(novel.title)} · 章节</h2>`;
     if (chapters?.length) {
-      chapters.forEach(ch => {
-        card.innerHTML += `<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>
-          ${user?.id === novel.author_id ? `<div><button class="outline" style="padding:2px 8px; font-size:11px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 8px; font-size:11px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>` : ''}</div>`;
-      });
+      chapters.forEach(ch => card.innerHTML += `<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>${user?.id===novel.author_id?`<div><button class="outline" style="padding:2px 8px;font-size:11px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 8px;font-size:11px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>`:''}</div>`);
     } else card.innerHTML += '<p>暂无章节</p>';
     if (user?.id === novel.author_id) card.innerHTML += `<button onclick="addChapter(${novelId})" style="margin-top:10px;">+ 新章节</button>`;
     container.appendChild(card);
@@ -455,36 +416,31 @@
     });
   }
 
-  // ========== 章节内容（修复空指针） ==========
+  // ========== 章节内容 ==========
   async function chapterContent(container, chapterId) {
     const { data: chapter, error: chapterError } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).maybeSingle();
     if (chapterError || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
     if (!chapter.novel_id) { container.innerHTML += '<p>章节数据异常</p>'; return; }
-
     const { data: novel } = await supabaseClient.from('novels').select('id, title, author_id').eq('id', chapter.novel_id).maybeSingle();
     if (!novel) { container.innerHTML += '<p>所属小说不存在</p>'; return; }
-
     const { data: allChapters } = await supabaseClient.from('chapters').select('id, chapter_number').eq('novel_id', novel.id).order('chapter_number');
     const list = allChapters || [];
     const idx = list.findIndex(ch => ch.id === chapterId);
-    const prev = idx > 0 ? list[idx - 1] : null;
-    const next = idx < list.length - 1 ? list[idx + 1] : null;
-
+    const prev = idx > 0 ? list[idx-1] : null;
+    const next = idx < list.length-1 ? list[idx+1] : null;
     const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novel.id).eq('chapter_id', chapterId).order('created_at', { ascending: true });
-
     const contentCard = document.createElement('div'); contentCard.className = 'card';
     contentCard.innerHTML = `
       <a onclick="navigate('#novel/${novel.id}/chapters')" style="font-size:12px;">← 返回章节列表</a>
       <h2>${esc(chapter.title)}</h2>
       <pre>${esc(chapter.content)}</pre>
       <div class="nav-chapter">
-        <button onclick="navigate('#chapter/${prev?.id || ''}')" ${prev ? '' : 'disabled'}>← 上一章</button>
-        <button onclick="navigate('#chapter/${next?.id || ''}')" ${next ? '' : 'disabled'}>下一章 →</button>
+        <button onclick="navigate('#chapter/${prev?.id||''}')" ${prev?'':'disabled'}>← 上一章</button>
+        <button onclick="navigate('#chapter/${next?.id||''}')" ${next?'':'disabled'}>下一章 →</button>
       </div>
       ${user?.id === novel.author_id ? `<div class="btn-group" style="margin-top:10px;"><button class="outline" onclick="editChapter(${chapter.id},${novel.id})">编辑</button><button class="danger" onclick="deleteChapter(${chapter.id},${novel.id})">删除</button></div>` : ''}
     `;
     container.appendChild(contentCard);
-
     const commCard = document.createElement('div'); commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 本章评论区</h3>';
     if (comments?.length) {
@@ -516,8 +472,7 @@
       <a onclick="history.back()" style="font-size:12px;">← 返回</a>
       <div style="display:flex; gap:15px; margin-top:10px; align-items:center;">
         <div class="avatar-circle" style="width:60px;height:60px;font-size:24px;">${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : p.username[0]}</div>
-        <div><h2>${esc(p.username)}</h2><p>${esc(p.bio || '这个人很懒，什么都没写')}</p><p class="meta">关注者 ${followers || 0} · 关注中 ${following || 0}</p>
-        ${user && user.id !== p.id ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${p.id}')">${isFollowing?'已关注':'+ 关注'}</button>` : ''}</div>
+        <div><h2>${esc(p.username)}</h2><p>${esc(p.bio||'这个人很懒，什么都没写')}</p><p class="meta">关注者 ${followers||0} · 关注中 ${following||0}</p>${user && user.id !== p.id ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${p.id}')">${isFollowing?'已关注':'+ 关注'}</button>` : ''}</div>
       </div>
       <h3 style="margin-top:15px;">📖 作品</h3>${novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>'}
     `;
@@ -539,8 +494,7 @@
     card.innerHTML = `
       <div style="display:flex; gap:15px; align-items:center;">
         <div class="avatar-circle" style="width:60px;height:60px;font-size:24px; cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : profile.username[0]}</div>
-        <div><h2>${esc(profile.username)}</h2><p>${esc(profile.bio || '编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p>
-        <button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button></div>
+        <div><h2>${esc(profile.username)}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button></div>
       </div>
       <h3 style="margin-top:15px;">📖 我的小说</h3><div id="my-novels"></div>
       <h3 style="margin-top:15px;">💬 我的评论</h3><div id="my-comments"></div>
@@ -581,10 +535,7 @@
     if (posts?.length) {
       posts.forEach(p => {
         const div = document.createElement('div'); div.className = 'post-item';
-        div.innerHTML = `
-          ${p.is_pinned ? '<span style="background:#8b7355;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">置顶</span> ' : ''}
-          <a onclick="navigate('#post/${p.id}')" class="post-title">${esc(p.title)}</a>
-          <div class="post-meta">${esc(p.profiles?.username)} · ${new Date(p.created_at).toLocaleString()} · 👍 ${p.like_count || 0} · 👎 ${p.dislike_count || 0}</div>`;
+        div.innerHTML = `${p.is_pinned?'<span style="background:#8b7355;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">置顶</span> ':''}<a onclick="navigate('#post/${p.id}')" class="post-title">${esc(p.title)}</a><div class="post-meta">${esc(p.profiles?.username)} · ${new Date(p.created_at).toLocaleString()} · 👍 ${p.like_count||0} · 👎 ${p.dislike_count||0}</div>`;
         card.appendChild(div);
       });
     } else card.innerHTML += '<p>暂无帖子</p>';
@@ -603,7 +554,7 @@
     });
   }
 
-  // ========== 帖子详情（支持换行） ==========
+  // ========== 帖子详情（回复功能已完全修复） ==========
   async function postDetail(container, postId) {
     const { data: post } = await supabaseClient.from('posts').select('*, profiles(username)').eq('id', postId).single();
     if (!post) return container.innerHTML += '<p>帖子不存在</p>';
@@ -621,9 +572,9 @@
       <div class="post-meta">${esc(post.profiles?.username)} · ${new Date(post.created_at).toLocaleString()}</div>
       <div style="margin:10px 0;">${esc(post.content).replace(/\n/g, '<br>')}</div>
       <div class="vote-btns">
-        <button onclick="votePost(${post.id}, 'like')" class="${userVote === 'like' ? 'active' : ''}">👍 ${post.like_count || 0}</button>
-        <button onclick="votePost(${post.id}, 'dislike')" class="${userVote === 'dislike' ? 'active' : ''}">👎 ${post.dislike_count || 0}</button>
-        ${profile?.role === 'admin' ? `<button onclick="togglePin(${post.id})">${post.is_pinned ? '取消置顶' : '置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>` : ''}
+        <button onclick="votePost(${post.id}, 'like')" class="${userVote==='like'?'active':''}">👍 ${post.like_count||0}</button>
+        <button onclick="votePost(${post.id}, 'dislike')" class="${userVote==='dislike'?'active':''}">👎 ${post.dislike_count||0}</button>
+        ${profile?.role==='admin' ? `<button onclick="togglePin(${post.id})">${post.is_pinned?'取消置顶':'置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>` : ''}
       </div>
     `;
     container.appendChild(card);
@@ -636,20 +587,20 @@
       rootReplies.forEach(r => replyCard.appendChild(renderReply(r, replies)));
     } else replyCard.innerHTML += '<p>暂无回复</p>';
     if (user) {
-      replyCard.innerHTML += `<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="addTopReply(${post.id})" style="margin-top:6px;">回复</button>`;
+      replyCard.innerHTML += `<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="window.addTopReply(${post.id})" style="margin-top:6px;">回复</button>`;
     }
     container.appendChild(replyCard);
   }
 
+  // 以下全局函数确保回复功能可用
   window.addTopReply = async function(postId) {
     const content = document.getElementById('reply-content').value.trim();
-    if (!content || content.length < 1) return alert('内容不能为空');
+    if (!content) return alert('内容不能为空');
     if (containsBanned(content)) return alert('包含违规词');
     await supabaseClient.from('post_replies').insert({ post_id: postId, author_id: user.id, content, parent_id: null });
     navigate(`#post/${postId}`);
   };
 
-  // 递归渲染回复，支持换行
   function renderReply(reply, allReplies, depth = 0) {
     const div = document.createElement('div');
     div.className = 'reply-item';
@@ -657,21 +608,19 @@
     div.innerHTML = `
       <strong>${esc(reply.profiles?.username)}</strong> <small>${new Date(reply.created_at).toLocaleString()}</small>
       <div>${esc(reply.content).replace(/\n/g, '<br>')}</div>
-      ${user ? `<a onclick="openReplyForm(${reply.id})" style="font-size:12px;">回复</a>` : ''}
-      ${(profile?.role === 'admin') ? `<a onclick="deleteReply(${reply.id})" class="danger" style="font-size:12px; margin-left:8px;">删除</a>` : ''}
+      ${user ? `<a onclick="window.openReplyForm(${reply.id})" style="font-size:12px;">回复</a>` : ''}
+      ${profile?.role==='admin' ? `<a onclick="window.deleteReply(${reply.id})" class="danger" style="font-size:12px; margin-left:8px;">删除</a>` : ''}
       <div id="reply-form-${reply.id}" style="display:none; margin-top:6px;"></div>
     `;
     const children = allReplies.filter(r => r.parent_id === reply.id);
-    if (children.length) {
-      children.forEach(ch => div.appendChild(renderReply(ch, allReplies, depth + 1)));
-    }
+    if (children.length) children.forEach(ch => div.appendChild(renderReply(ch, allReplies, depth + 1)));
     return div;
   }
 
   window.openReplyForm = function(replyId) {
     const formDiv = document.getElementById(`reply-form-${replyId}`);
     formDiv.style.display = 'block';
-    formDiv.innerHTML = `<textarea id="child-reply-${replyId}" rows="2" placeholder="回复..."></textarea><button onclick="addChildReply(${replyId})" style="margin-top:4px;">提交</button>`;
+    formDiv.innerHTML = `<textarea id="child-reply-${replyId}" rows="2" placeholder="回复..."></textarea><button onclick="window.addChildReply(${replyId})" style="margin-top:4px;">提交</button>`;
   };
 
   window.addChildReply = async function(parentId) {
@@ -684,15 +633,19 @@
     navigate(`#post/${parent.post_id}`);
   };
 
+  window.deleteReply = async function(replyId) {
+    if (!confirm('删除回复？')) return;
+    const { data: reply } = await supabaseClient.from('post_replies').select('post_id').eq('id', replyId).single();
+    await supabaseClient.from('post_replies').delete().eq('id', replyId);
+    navigate(`#post/${reply.post_id}`);
+  };
+
   async function votePost(postId, type) {
     if (!user) return alert('请先登录');
     const { data: existing } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
     if (existing) {
-      if (existing.vote_type === type) {
-        await supabaseClient.from('post_votes').delete().eq('id', existing.id);
-      } else {
-        await supabaseClient.from('post_votes').update({ vote_type: type }).eq('id', existing.id);
-      }
+      if (existing.vote_type === type) await supabaseClient.from('post_votes').delete().eq('id', existing.id);
+      else await supabaseClient.from('post_votes').update({ vote_type: type }).eq('id', existing.id);
     } else {
       await supabaseClient.from('post_votes').insert({ post_id: postId, user_id: user.id, vote_type: type });
     }
@@ -718,13 +671,6 @@
     alert('已删除'); navigate('#community');
   }
 
-  async function deleteReply(replyId) {
-    if (!confirm('删除回复？')) return;
-    const { data: reply } = await supabaseClient.from('post_replies').select('post_id').eq('id', replyId).single();
-    await supabaseClient.from('post_replies').delete().eq('id', replyId);
-    navigate(`#post/${reply.post_id}`);
-  }
-
   // ========== 管理员后台 ==========
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
@@ -740,33 +686,40 @@
     if (posts?.length) posts.forEach(p => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
     else c.innerHTML = '<p>暂无帖子</p>';
   }
+
   async function adminComments() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data } = await supabaseClient.from('comments').select('*, profiles(username), novels(title)').order('created_at', { ascending: false });
     if (data?.length) data.forEach(d => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(d.profiles?.username)} 评《${esc(d.novels.title)}》：${esc(d.content)} <button class="danger" onclick="deleteComment(${d.id})">删除</button></div>`);
     else c.innerHTML = '<p>暂无评论</p>';
   }
+
   async function deleteComment(id) { if (confirm('删除？')) { await supabaseClient.from('comments').delete().eq('id', id); adminComments(); } }
+
   async function adminNovels() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
     if (data?.length) data.forEach(d => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(d.title)}</b> 作者：${esc(d.profiles?.username)} <button class="danger" style="float:right;" onclick="deleteNovelAdmin('${d.id}')">删除</button></div>`);
     else c.innerHTML = '<p>暂无小说</p>';
   }
+
   async function deleteNovelAdmin(id) { if (confirm('强制删除？')) { await supabaseClient.from('novels').delete().eq('id', id); adminNovels(); } }
+
   async function adminAdmins() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: profiles } = await supabaseClient.from('profiles').select('*');
     if (profiles) profiles.forEach(p => {
-      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(p.username)} (${p.role}) ${p.email !== '18631167199@163.com' && p.id !== user.id ? `<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销':'设为'}管理员</button>` : '<small>（超级管理员）</small>'}</div>`;
+      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(p.username)} (${p.role}) ${p.email!=='18631167199@163.com'&&p.id!==user.id?`<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销':'设为'}管理员</button>`:'<small>（超级管理员）</small>'}</div>`;
     });
   }
+
   async function toggleAdmin(userId) {
     const { data: p } = await supabaseClient.from('profiles').select('role,email').eq('id', userId).single();
-    if (p.email === '18631167199@163.com') return alert('超级管理员不可更改');
-    await supabaseClient.from('profiles').update({ role: p.role === 'admin' ? 'user' : 'admin' }).eq('id', userId);
+    if (p.email==='18631167199@163.com') return alert('超级管理员不可更改');
+    await supabaseClient.from('profiles').update({ role: p.role==='admin'?'user':'admin' }).eq('id', userId);
     adminAdmins();
   }
+
   function editAnnouncement() {
     openGenericForm('编辑公告（支持 Markdown）', `<textarea id="ann" rows="6" placeholder="公告内容..."></textarea><small>支持 Markdown 语法</small>`, async () => {
       const content = document.getElementById('ann').value.trim();
@@ -779,31 +732,23 @@
   // ========== 通用工具 ==========
   function openGenericForm(title, html, cb) {
     const container = document.getElementById('modal-container');
-    container.innerHTML = `<div class="modal"><div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3>
-      <div id="generic-form-body">${html}</div>
-      <button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button>
-      <div id="generic-err" style="color:red;"></div>
-    </div></div>`;
+    container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
     window.__genericCallback = cb;
   }
+
   function submitGenericForm() {
     const cb = window.__genericCallback;
     if (!cb) return;
     const err = document.getElementById('generic-err'); err.textContent = '';
     cb().then(() => closeModal()).catch(e => err.textContent = e.message);
   }
+
   function showConfirm(msg, onConfirm) {
     const container = document.getElementById('modal-container');
-    container.innerHTML = `<div class="modal"><div class="modal-content" style="text-align:center;">
-      <p>${msg}</p>
-      <div class="btn-group" style="justify-content:center;margin-top:15px;">
-        <button class="outline" onclick="closeModal()">取消</button>
-        <button class="danger" id="confirm-ok">确认</button>
-      </div>
-    </div></div>`;
+    container.innerHTML = `<div class="modal"><div class="modal-content" style="text-align:center;"><p>${msg}</p><div class="btn-group" style="justify-content:center;margin-top:15px;"><button class="outline" onclick="closeModal()">取消</button><button class="danger" id="confirm-ok">确认</button></div></div></div>`;
     document.getElementById('confirm-ok').onclick = () => { closeModal(); onConfirm(); };
   }
+
   function esc(text) {
     const div = document.createElement('div');
     div.textContent = text;
