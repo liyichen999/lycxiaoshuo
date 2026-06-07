@@ -50,6 +50,16 @@
     .nav-chapter { display:flex; justify-content:space-between; margin-top:15px; }
     .follow-btn { background:#4a6fa5; font-size:12px; padding:4px 12px; }
     .follow-btn.following { background:#aaa; }
+    /* 帖子样式 */
+    .post-item { border-bottom:1px solid #f0ece4; padding:12px 0; }
+    .post-item:last-child { border-bottom:none; }
+    .post-title { font-weight:bold; }
+    .post-meta { font-size:12px; color:#888; }
+    .vote-btns { display:flex; gap:8px; align-items:center; }
+    .vote-btns button { background:transparent; border:1px solid #ddd; color:#555; padding:2px 8px; font-size:12px; }
+    .vote-btns button.active { background:#8b7355; color:#fff; border-color:#8b7355; }
+    .reply-item { margin-left:20px; margin-top:10px; padding:8px 0; border-bottom:1px solid #f0ece4; }
+    .reply-item:last-child { border-bottom:none; }
     @media (max-width:400px) { .novel-grid { grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -58,6 +68,7 @@
 <div class="container" id="app"></div>
 <nav class="bottom-nav" id="bottom-nav">
   <button onclick="navigate('#home')" class="active"><span>🏠</span>首页</button>
+  <button onclick="navigate('#community')"><span>💬</span>社区</button>
   <button onclick="navigate('#new-novel')"><span>✏️</span>发布</button>
   <button onclick="navigate('#profile')"><span>👤</span>我的</button>
   <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><span>⚙️</span>后台</button>
@@ -106,11 +117,10 @@
       if (parts.length === 3 && parts[2] === 'chapters') await chapterList(app, parts[1]);
       else await novelDetail(app, parts[1]);
     }
-    else if (hash.startsWith('#chapter/')) {
-      const chapterId = hash.split('/')[1];
-      await chapterContent(app, chapterId);
-    }
+    else if (hash.startsWith('#chapter/')) await chapterContent(app, hash.split('/')[1]);
     else if (hash.startsWith('#user/')) await userPage(app, hash.split('/')[1]);
+    else if (hash === '#community') await communityList(app);
+    else if (hash.startsWith('#post/')) await postDetail(app, hash.split('/')[1]);
     else if (hash === '#new-novel') await newNovel(app);
     else if (hash === '#profile') await myProfile(app);
     else if (hash === '#admin' && profile?.role === 'admin') await adminPanel(app);
@@ -240,7 +250,7 @@
 
   async function signOut() { await supabaseClient.auth.signOut(); user = null; profile = null; render(); }
 
-  // ========== 首页 ==========
+  // ========== 首页（原样） ==========
   async function home(container) {
     const { data: ann } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (ann?.length) {
@@ -251,7 +261,6 @@
     const searchDiv = document.createElement('div'); searchDiv.className = 'card';
     searchDiv.innerHTML = `<input id="search" placeholder="搜索小说、作者、用户..."><button onclick="search()" style="margin-top:6px;">搜索</button><div id="results" style="margin-top:10px;"></div>`;
     container.appendChild(searchDiv);
-
     const { data: allNovels } = await supabaseClient.from('novels').select('*, profiles(username), ratings(score)').order('updated_at', { ascending: false }).limit(50);
     const ranked = allNovels?.map(n => {
       const scores = n.ratings?.map(r=>r.score) || [];
@@ -269,20 +278,16 @@
       });
       container.appendChild(rankCard);
     }
-
     const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false }).limit(30);
     const grid = document.createElement('div'); grid.className = 'novel-grid';
+    const placeholder = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
     if (novels?.length) {
       novels.forEach(n => {
         const card = document.createElement('div'); card.className = 'novel-card';
         card.onclick = () => navigate(`#novel/${n.id}`);
-        card.innerHTML = `
-          <img class="novel-cover" src="${n.cover_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3Ctext fill=%22%23aaa%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2214%22%3E暂无封面%3C/text%3E%3C/svg%3E'}" alt="封面">
-          <div class="novel-info">
-            <div class="novel-title">${esc(n.title)}</div>
-            <div class="novel-desc">${esc(n.description || '暂无简介')}</div>
-            <div class="novel-author">${esc(n.profiles?.username)}</div>
-          </div>`;
+        const coverUrl = n.cover_url || placeholder;
+        card.innerHTML = `<img class="novel-cover" src="${coverUrl}" loading="lazy" onerror="this.onerror=null;this.src='${placeholder}'" alt="封面">
+          <div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description || '暂无简介')}</div><div class="novel-author">${esc(n.profiles?.username)}</div></div>`;
         grid.appendChild(card);
       });
     } else grid.innerHTML = '<p style="color:#888;">还没有小说，快来发布吧！</p>';
@@ -306,11 +311,10 @@
     if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
   }
 
-  // ========== 小说详情 ==========
+  // ========== 小说详情（保留） ==========
   async function novelDetail(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
-
     const { data: ratings } = await supabaseClient.from('ratings').select('score').eq('novel_id', novelId);
     const avg = ratings?.length ? (ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1) : '-';
     const userRating = user ? ratings?.find(r=>r.user_id === user.id) : null;
@@ -319,7 +323,6 @@
       const { data: f } = await supabaseClient.from('follows').select('*').eq('follower_id', user.id).eq('following_id', novel.author_id).maybeSingle();
       isFollowing = !!f;
     }
-
     const infoCard = document.createElement('div'); infoCard.className = 'card';
     infoCard.innerHTML = `
       <a onclick="navigate('#home')" style="font-size:12px;">← 首页</a>
@@ -353,7 +356,6 @@
         </div>
       </div>`;
     container.appendChild(infoCard);
-
     const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novelId).is('chapter_id', null).order('created_at', { ascending: false });
     const commCard = document.createElement('div'); commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 小说评论区</h3>';
@@ -368,13 +370,8 @@
 
   async function rateNovel(novelId) {
     const score = parseInt(document.getElementById('my-rating').value);
-    if (score === 0) {
-      await supabaseClient.from('ratings').delete().eq('novel_id', novelId).eq('user_id', user.id);
-      alert('已取消评分');
-    } else {
-      const { error } = await supabaseClient.from('ratings').upsert({ novel_id: novelId, user_id: user.id, score }, { onConflict: 'novel_id,user_id' });
-      if (error) alert(error.message); else alert('评分成功');
-    }
+    if (score === 0) { await supabaseClient.from('ratings').delete().eq('novel_id', novelId).eq('user_id', user.id); alert('已取消评分'); }
+    else { const { error } = await supabaseClient.from('ratings').upsert({ novel_id: novelId, user_id: user.id, score }, { onConflict: 'novel_id,user_id' }); if (error) alert(error.message); else alert('评分成功'); }
     navigate(`#novel/${novelId}`);
   }
 
@@ -418,13 +415,8 @@
     card.innerHTML = `<a onclick="navigate('#novel/${novelId}')" style="font-size:12px;">← 详情</a><h2>${esc(novel.title)} · 章节</h2>`;
     if (chapters?.length) {
       chapters.forEach(ch => {
-        card.innerHTML += `<div class="chapter-item">
-          <a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>
-          ${user?.id === novel.author_id ? `<div>
-            <button class="outline" style="padding:2px 8px; font-size:11px;" onclick="editChapter(${ch.id},${novelId})">编辑</button>
-            <button class="danger" style="padding:2px 8px; font-size:11px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button>
-          </div>` : ''}
-        </div>`;
+        card.innerHTML += `<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>
+          ${user?.id === novel.author_id ? `<div><button class="outline" style="padding:2px 8px; font-size:11px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 8px; font-size:11px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>` : ''}</div>`;
       });
     } else card.innerHTML += '<p>暂无章节</p>';
     if (user?.id === novel.author_id) card.innerHTML += `<button onclick="addChapter(${novelId})" style="margin-top:10px;">+ 新章节</button>`;
@@ -460,133 +452,51 @@
     });
   }
 
-  // ========== 章节内容（完全安全版，已修复空指针） ==========
+  // ========== 章节内容（修复空指针） ==========
   async function chapterContent(container, chapterId) {
-    console.log('chapterContent 开始加载:', chapterId);
-    // 第一步：获取章节
-    let chapter;
-    try {
-      const { data, error } = await supabaseClient
-        .from('chapters')
-        .select('*')
-        .eq('id', chapterId)
-        .maybeSingle();
-      if (error) throw error;
-      chapter = data;
-    } catch (e) {
-      console.error('章节查询失败:', e);
-      container.innerHTML += '<p>章节加载失败</p>';
-      return;
-    }
-    if (!chapter) {
-      container.innerHTML += '<p>章节不存在</p>';
-      return;
-    }
-    if (!chapter.novel_id) {
-      container.innerHTML += '<p>章节数据异常</p>';
-      return;
-    }
+    const { data: chapter, error: chapterError } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).maybeSingle();
+    if (chapterError || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
+    if (!chapter.novel_id) { container.innerHTML += '<p>章节数据异常</p>'; return; }
 
-    // 第二步：获取小说
-    let novel;
-    try {
-      const { data, error } = await supabaseClient
-        .from('novels')
-        .select('id, title, author_id')
-        .eq('id', chapter.novel_id)
-        .maybeSingle();
-      if (error) throw error;
-      novel = data;
-    } catch (e) {
-      console.error('小说查询失败:', e);
-      container.innerHTML += '<p>小说加载失败</p>';
-      return;
-    }
-    if (!novel) {
-      container.innerHTML += '<p>所属小说已不存在</p>';
-      return;
-    }
+    const { data: novel } = await supabaseClient.from('novels').select('id, title, author_id').eq('id', chapter.novel_id).maybeSingle();
+    if (!novel) { container.innerHTML += '<p>所属小说不存在</p>'; return; }
 
-    // 第三步：获取所有章节用于导航
-    let allChapters = [];
-    try {
-      const { data, error } = await supabaseClient
-        .from('chapters')
-        .select('id, chapter_number')
-        .eq('novel_id', novel.id)
-        .order('chapter_number');
-      if (!error) allChapters = data || [];
-    } catch (e) { console.warn('章节列表获取失败:', e); }
+    const { data: allChapters } = await supabaseClient.from('chapters').select('id, chapter_number').eq('novel_id', novel.id).order('chapter_number');
+    const list = allChapters || [];
+    const idx = list.findIndex(ch => ch.id === chapterId);
+    const prev = idx > 0 ? list[idx - 1] : null;
+    const next = idx < list.length - 1 ? list[idx + 1] : null;
 
-    const idx = allChapters.findIndex(ch => ch.id === chapterId);
-    const prev = (idx > 0 && allChapters[idx - 1]) ? allChapters[idx - 1] : null;
-    const next = (idx < allChapters.length - 1 && allChapters[idx + 1]) ? allChapters[idx + 1] : null;
+    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novel.id).eq('chapter_id', chapterId).order('created_at', { ascending: true });
 
-    // 第四步：获取本章评论
-    let comments = [];
-    try {
-      const { data, error } = await supabaseClient
-        .from('comments')
-        .select('*, profiles(username)')
-        .eq('novel_id', novel.id)
-        .eq('chapter_id', chapterId)
-        .order('created_at', { ascending: true });
-      if (!error) comments = data || [];
-    } catch (e) { console.warn('评论获取失败:', e); }
-
-    // 渲染正文
-    const contentCard = document.createElement('div');
-    contentCard.className = 'card';
+    const contentCard = document.createElement('div'); contentCard.className = 'card';
     contentCard.innerHTML = `
       <a onclick="navigate('#novel/${novel.id}/chapters')" style="font-size:12px;">← 返回章节列表</a>
       <h2>${esc(chapter.title)}</h2>
       <pre>${esc(chapter.content)}</pre>
       <div class="nav-chapter">
-        <button onclick="navigate('#chapter/${prev ? prev.id : ''}')" ${prev ? '' : 'disabled'}>← 上一章</button>
-        <button onclick="navigate('#chapter/${next ? next.id : ''}')" ${next ? '' : 'disabled'}>下一章 →</button>
+        <button onclick="navigate('#chapter/${prev?.id || ''}')" ${prev ? '' : 'disabled'}>← 上一章</button>
+        <button onclick="navigate('#chapter/${next?.id || ''}')" ${next ? '' : 'disabled'}>下一章 →</button>
       </div>
-      ${user?.id === novel.author_id ? `<div class="btn-group" style="margin-top:10px;">
-        <button class="outline" onclick="editChapter(${chapter.id}, ${novel.id})">编辑章节</button>
-        <button class="danger" onclick="deleteChapter(${chapter.id}, ${novel.id})">删除章节</button>
-      </div>` : ''}
+      ${user?.id === novel.author_id ? `<div class="btn-group" style="margin-top:10px;"><button class="outline" onclick="editChapter(${chapter.id},${novel.id})">编辑</button><button class="danger" onclick="deleteChapter(${chapter.id},${novel.id})">删除</button></div>` : ''}
     `;
     container.appendChild(contentCard);
 
-    // 渲染评论区
-    const commCard = document.createElement('div');
-    commCard.className = 'card';
+    const commCard = document.createElement('div'); commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 本章评论区</h3>';
-    if (comments.length) {
-      comments.forEach(c => {
-        commCard.innerHTML += `
-          <div style="margin-bottom:8px;">
-            <strong>${esc(c.profiles?.username || '匿名')}</strong>：${esc(c.content)}
-            <small style="color:#aaa;">${new Date(c.created_at).toLocaleString()}</small>
-          </div>`;
-      });
-    } else {
-      commCard.innerHTML += '<p style="color:#888;">暂无评论，快来抢沙发吧！</p>';
-    }
+    if (comments?.length) {
+      comments.forEach(c => commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${esc(c.profiles?.username)}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`);
+    } else commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
     if (user) {
-      commCard.innerHTML += `
-        <textarea id="chapter-comment" placeholder="写下你对本章的评论..." rows="3" style="margin-top:8px;"></textarea>
-        <button onclick="addChapterComment('${novel.id}', '${chapterId}')" style="margin-top:6px;">发表评论</button>
-      `;
-    } else {
-      commCard.innerHTML += '<p style="margin-top:8px;">请先登录后评论</p>';
-    }
+      commCard.innerHTML += `<textarea id="chapter-comment" placeholder="写下你的评论..." rows="3" style="margin-top:8px;"></textarea><button onclick="addChapterComment('${novel.id}','${chapterId}')" style="margin-top:6px;">发表评论</button>`;
+    } else commCard.innerHTML += '<p>登录后可评论</p>';
     container.appendChild(commCard);
   }
 
   async function addChapterComment(novelId, chapterId) {
     const content = document.getElementById('chapter-comment').value.trim();
     if (!content) return alert('评论不能为空');
-    await supabaseClient.from('comments').insert({
-      novel_id: novelId,
-      user_id: user.id,
-      content,
-      chapter_id: chapterId
-    });
+    await supabaseClient.from('comments').insert({ novel_id: novelId, user_id: user.id, content, chapter_id: chapterId });
     navigate(`#chapter/${chapterId}`);
   }
 
@@ -603,15 +513,10 @@
       <a onclick="history.back()" style="font-size:12px;">← 返回</a>
       <div style="display:flex; gap:15px; margin-top:10px; align-items:center;">
         <div class="avatar-circle" style="width:60px;height:60px;font-size:24px;">${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : p.username[0]}</div>
-        <div>
-          <h2>${esc(p.username)}</h2>
-          <p>${esc(p.bio || '这个人很懒，什么都没写')}</p>
-          <p class="meta">关注者 ${followers || 0} · 关注中 ${following || 0}</p>
-          ${user && user.id !== p.id ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${p.id}')">${isFollowing?'已关注':'+ 关注'}</button>` : ''}
-        </div>
+        <div><h2>${esc(p.username)}</h2><p>${esc(p.bio || '这个人很懒，什么都没写')}</p><p class="meta">关注者 ${followers || 0} · 关注中 ${following || 0}</p>
+        ${user && user.id !== p.id ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${p.id}')">${isFollowing?'已关注':'+ 关注'}</button>` : ''}</div>
       </div>
-      <h3 style="margin-top:15px;">📖 作品</h3>
-      ${novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>'}
+      <h3 style="margin-top:15px;">📖 作品</h3>${novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>'}
     `;
     container.appendChild(card);
   }
@@ -631,11 +536,8 @@
     card.innerHTML = `
       <div style="display:flex; gap:15px; align-items:center;">
         <div class="avatar-circle" style="width:60px;height:60px;font-size:24px; cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : profile.username[0]}</div>
-        <div>
-          <h2>${esc(profile.username)}</h2>
-          <p>${esc(profile.bio || '编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p>
-          <button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>
-        </div>
+        <div><h2>${esc(profile.username)}</h2><p>${esc(profile.bio || '编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p>
+        <button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button></div>
       </div>
       <h3 style="margin-top:15px;">📖 我的小说</h3><div id="my-novels"></div>
       <h3 style="margin-top:15px;">💬 我的评论</h3><div id="my-comments"></div>
@@ -653,10 +555,7 @@
   // ========== 发布小说 ==========
   async function newNovel(container) {
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<h2>📝 发布新小说</h2>
-      <input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;">
-      <textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea>
-      <button onclick="publishNovel()" style="width:100%;margin-top:12px;">立即发布</button><div id="err" style="color:red;"></div>`;
+    card.innerHTML = `<h2>📝 发布新小说</h2><input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;"><textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea><button onclick="publishNovel()" style="width:100%;margin-top:12px;">立即发布</button><div id="err" style="color:red;"></div>`;
     container.appendChild(card);
   }
 
@@ -670,22 +569,205 @@
     alert('发布成功！'); navigate('#home');
   }
 
+  // ========== 社区帖子列表 ==========
+  async function communityList(container) {
+    const { data: posts, error } = await supabaseClient.from('posts').select('*, profiles(username)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = '<h2>💬 社区</h2>';
+    if (user) card.innerHTML += `<button onclick="openNewPostModal()" style="margin-bottom:10px;">+ 发帖</button>`;
+    if (posts?.length) {
+      posts.forEach(p => {
+        const div = document.createElement('div'); div.className = 'post-item';
+        div.innerHTML = `
+          ${p.is_pinned ? '<span style="background:#8b7355;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">置顶</span> ' : ''}
+          <a onclick="navigate('#post/${p.id}')" class="post-title">${esc(p.title)}</a>
+          <div class="post-meta">${esc(p.profiles?.username)} · ${new Date(p.created_at).toLocaleString()} · 👍 ${p.like_count || 0} · 👎 ${p.dislike_count || 0}</div>`;
+        card.appendChild(div);
+      });
+    } else card.innerHTML += '<p>暂无帖子</p>';
+    container.appendChild(card);
+  }
+
+  function openNewPostModal() {
+    openGenericForm('发布帖子', `<input id="post-title" placeholder="标题"><textarea id="post-content" rows="4" placeholder="内容..." style="margin-top:6px;"></textarea>`, async () => {
+      const title = document.getElementById('post-title').value.trim();
+      const content = document.getElementById('post-content').value.trim();
+      if (!title || !content) throw new Error('请填写完整');
+      const { error } = await supabaseClient.from('posts').insert({ author_id: user.id, title, content });
+      if (error) throw error;
+      alert('发布成功'); navigate('#community');
+    });
+  }
+
+  // ========== 帖子详情（含点赞、回复、嵌套） ==========
+  async function postDetail(container, postId) {
+    const { data: post } = await supabaseClient.from('posts').select('*, profiles(username)').eq('id', postId).single();
+    if (!post) return container.innerHTML += '<p>帖子不存在</p>';
+
+    // 当前用户的投票状态
+    let userVote = null;
+    if (user) {
+      const { data: vote } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
+      userVote = vote?.vote_type || null;
+    }
+
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = `
+      <a onclick="navigate('#community')" style="font-size:12px;">← 社区</a>
+      <h2>${esc(post.title)}</h2>
+      <div class="post-meta">${esc(post.profiles?.username)} · ${new Date(post.created_at).toLocaleString()}</div>
+      <div style="margin:10px 0;">${esc(post.content)}</div>
+      <div class="vote-btns">
+        <button onclick="votePost(${post.id}, 'like')" class="${userVote === 'like' ? 'active' : ''}">👍 ${post.like_count || 0}</button>
+        <button onclick="votePost(${post.id}, 'dislike')" class="${userVote === 'dislike' ? 'active' : ''}">👎 ${post.dislike_count || 0}</button>
+        ${profile?.role === 'admin' ? `<button onclick="togglePin(${post.id})">${post.is_pinned ? '取消置顶' : '置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>` : ''}
+      </div>
+    `;
+    container.appendChild(card);
+
+    // 回复列表（含嵌套）
+    const { data: replies } = await supabaseClient.from('post_replies').select('*, profiles(username)').eq('post_id', postId).order('created_at', { ascending: true });
+    const replyCard = document.createElement('div'); replyCard.className = 'card';
+    replyCard.innerHTML = '<h3>回复</h3>';
+    if (replies?.length) {
+      const rootReplies = replies.filter(r => !r.parent_id);
+      rootReplies.forEach(r => {
+        replyCard.appendChild(renderReply(r, replies));
+      });
+    } else replyCard.innerHTML += '<p>暂无回复</p>';
+    if (user) {
+      replyCard.innerHTML += `<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="addReply(${post.id}, null)" style="margin-top:6px;">回复</button>`;
+    }
+    container.appendChild(replyCard);
+  }
+
+  function renderReply(reply, allReplies, depth = 0) {
+    const div = document.createElement('div');
+    div.className = 'reply-item';
+    div.style.marginLeft = depth > 0 ? '20px' : '0';
+    div.innerHTML = `
+      <strong>${esc(reply.profiles?.username)}</strong> <small>${new Date(reply.created_at).toLocaleString()}</small>
+      <div>${esc(reply.content)}</div>
+      ${user ? `<a onclick="openReplyForm(${reply.id})" style="font-size:12px;">回复</a>` : ''}
+      ${(profile?.role === 'admin') ? `<a onclick="deleteReply(${reply.id})" class="danger" style="font-size:12px; margin-left:8px;">删除</a>` : ''}
+      <div id="reply-form-${reply.id}" style="display:none; margin-top:6px;"></div>
+    `;
+    const children = allReplies.filter(r => r.parent_id === reply.id);
+    if (children.length) {
+      children.forEach(ch => div.appendChild(renderReply(ch, allReplies, depth + 1)));
+    }
+    return div;
+  }
+
+  window.openReplyForm = function(replyId) {
+    const formDiv = document.getElementById(`reply-form-${replyId}`);
+    formDiv.style.display = 'block';
+    formDiv.innerHTML = `<textarea id="child-reply-${replyId}" rows="2" placeholder="回复..."></textarea><button onclick="addReplyChild(${replyId})" style="margin-top:4px;">提交</button>`;
+  };
+
+  window.addReplyChild = async function(parentId) {
+    const content = document.getElementById(`child-reply-${parentId}`).value.trim();
+    if (!content) return alert('内容不能为空');
+    const { data: parent } = await supabaseClient.from('post_replies').select('post_id').eq('id', parentId).single();
+    if (!parent) return;
+    await supabaseClient.from('post_replies').insert({ post_id: parent.post_id, author_id: user.id, content, parent_id: parentId });
+    navigate(`#post/${parent.post_id}`);
+  };
+
+  async function addReply(postId, parentId = null) {
+    const content = document.getElementById('reply-content').value.trim();
+    if (!content) return alert('内容不能为空');
+    await supabaseClient.from('post_replies').insert({ post_id: postId, author_id: user.id, content, parent_id: parentId });
+    navigate(`#post/${postId}`);
+  }
+
+  async function votePost(postId, type) {
+    if (!user) return alert('请先登录');
+    // 检查是否已投票
+    const { data: existing } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
+    if (existing) {
+      if (existing.vote_type === type) {
+        // 取消投票
+        await supabaseClient.from('post_votes').delete().eq('id', existing.id);
+        await supabaseClient.rpc('update_post_count', { postid: postId, type: existing.vote_type, change: -1 });
+      } else {
+        // 切换投票类型
+        await supabaseClient.from('post_votes').update({ vote_type: type }).eq('id', existing.id);
+        await supabaseClient.rpc('update_post_count', { postid: postId, type: existing.vote_type, change: -1 });
+        await supabaseClient.rpc('update_post_count', { postid: postId, type: type, change: 1 });
+      }
+    } else {
+      await supabaseClient.from('post_votes').insert({ post_id: postId, user_id: user.id, vote_type: type });
+      await supabaseClient.rpc('update_post_count', { postid: postId, type: type, change: 1 });
+    }
+    navigate(`#post/${postId}`);
+  }
+
+  // 需要在Supabase中创建RPC函数（见下）
+  // 如果不想用RPC，可以在应用层更新like_count/dislike_count，但更简单的是直接查询投票数，此处改为应用层更新：
+  async function updateVoteCounts(postId) {
+    const { data: likes } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('vote_type', 'like');
+    const { data: dislikes } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('vote_type', 'dislike');
+    await supabaseClient.from('posts').update({ like_count: likes.length, dislike_count: dislikes.length }).eq('id', postId);
+  }
+  // 修改votePost为应用层更新：
+  async function votePost(postId, type) {
+    if (!user) return alert('请先登录');
+    const { data: existing } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
+    if (existing) {
+      if (existing.vote_type === type) {
+        await supabaseClient.from('post_votes').delete().eq('id', existing.id);
+      } else {
+        await supabaseClient.from('post_votes').update({ vote_type: type }).eq('id', existing.id);
+      }
+    } else {
+      await supabaseClient.from('post_votes').insert({ post_id: postId, user_id: user.id, vote_type: type });
+    }
+    await updateVoteCounts(postId);
+    navigate(`#post/${postId}`);
+  }
+
+  async function togglePin(postId) {
+    const { data: post } = await supabaseClient.from('posts').select('is_pinned').eq('id', postId).single();
+    await supabaseClient.from('posts').update({ is_pinned: !post.is_pinned }).eq('id', postId);
+    navigate(`#post/${postId}`);
+  }
+
+  async function deletePost(postId) {
+    if (!confirm('删除帖子？')) return;
+    await supabaseClient.from('posts').delete().eq('id', postId);
+    alert('已删除'); navigate('#community');
+  }
+
+  async function deleteReply(replyId) {
+    if (!confirm('删除回复？')) return;
+    const { data: reply } = await supabaseClient.from('post_replies').select('post_id').eq('id', replyId).single();
+    await supabaseClient.from('post_replies').delete().eq('id', replyId);
+    navigate(`#post/${reply.post_id}`);
+  }
+
   // ========== 管理员后台 ==========
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
+    card.innerHTML = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
     container.appendChild(card);
     const content = document.createElement('div'); content.id = 'admin-content'; container.appendChild(content);
     adminComments();
   }
 
+  async function adminPosts() {
+    const c = document.getElementById('admin-content'); c.innerHTML = '';
+    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').order('created_at', { ascending: false });
+    if (posts?.length) posts.forEach(p => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
+    else c.innerHTML = '<p>暂无帖子</p>';
+  }
+  // adminComments, adminNovels, adminAdmins 保持原样但略加调整
   async function adminComments() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data } = await supabaseClient.from('comments').select('*, profiles(username), novels(title)').order('created_at', { ascending: false });
     if (data?.length) data.forEach(d => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(d.profiles?.username)} 评《${esc(d.novels.title)}》：${esc(d.content)} <button class="danger" onclick="deleteComment(${d.id})">删除</button></div>`);
     else c.innerHTML = '<p>暂无评论</p>';
   }
-
   async function deleteComment(id) { if (confirm('删除？')) { await supabaseClient.from('comments').delete().eq('id', id); adminComments(); } }
   async function adminNovels() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
