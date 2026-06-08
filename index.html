@@ -79,6 +79,9 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // 全局图片占位符，防止未定义变量错误
+  const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
+
   let user = null, profile = null;
   let rendering = false;
   const BANNED_WORDS = ['广告','赌博','色情','敏感词'];
@@ -260,13 +263,12 @@
     }
     const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false }).limit(30);
     const grid = document.createElement('div'); grid.className = 'novel-grid';
-    const placeholder = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
     if (novels?.length) {
       novels.forEach(n => {
         const card = document.createElement('div'); card.className = 'novel-card';
         card.onclick = () => navigate(`#novel/${n.id}`);
-        const coverUrl = n.cover_url || placeholder;
-        card.innerHTML = `<img class="novel-cover" src="${coverUrl}" loading="lazy" onerror="this.onerror=null;this.src='${placeholder}'" alt="封面">
+        const coverUrl = n.cover_url || PLACEHOLDER_IMAGE;
+        card.innerHTML = `<img class="novel-cover" src="${coverUrl}" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'" alt="封面">
           <div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${esc(n.profiles?.username)}</div></div>`;
         grid.appendChild(card);
       });
@@ -291,7 +293,7 @@
     if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
   }
 
-  // ========== 小说详情 ==========
+  // ========== 小说详情（已修复 placeholder） ==========
   async function novelDetail(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
@@ -307,7 +309,7 @@
     infoCard.innerHTML = `
       <a onclick="navigate('#home')" style="font-size:12px;">← 首页</a>
       <div style="display:flex; gap:15px; margin-top:10px; flex-wrap:wrap;">
-        <img src="${novel.cover_url || 'data:image/svg+xml,...'}" style="width:100px;height:140px;object-fit:cover;border-radius:8px; background:#f0ece4;" onerror="this.src='${placeholder}'">
+        <img src="${novel.cover_url || PLACEHOLDER_IMAGE}" style="width:100px;height:140px;object-fit:cover;border-radius:8px; background:#f0ece4;" onerror="this.src='${PLACEHOLDER_IMAGE}'">
         <div style="flex:1; min-width:200px;">
           <h2>${esc(novel.title)}</h2>
           <p>作者：<a onclick="navigate('#user/${esc(novel.profiles.username)}')">${esc(novel.profiles.username)}</a>
@@ -554,7 +556,7 @@
     });
   }
 
-  // ========== 帖子详情（回复功能已完全修复） ==========
+  // ========== 帖子详情（回复功能已修复） ==========
   async function postDetail(container, postId) {
     const { data: post } = await supabaseClient.from('posts').select('*, profiles(username)').eq('id', postId).single();
     if (!post) return container.innerHTML += '<p>帖子不存在</p>';
@@ -592,7 +594,6 @@
     container.appendChild(replyCard);
   }
 
-  // 以下全局函数确保回复功能可用
   window.addTopReply = async function(postId) {
     const content = document.getElementById('reply-content').value.trim();
     if (!content) return alert('内容不能为空');
