@@ -59,6 +59,11 @@
     .vote-btns button.active{background:#8b7355;color:#fff;border-color:#8b7355}
     .reply-item{margin-left:20px;margin-top:10px;padding:8px 0;border-bottom:1px solid #f0ece4}
     .reply-item:last-child{border-bottom:none}
+    .checkin-btn{background:#4CAF50;font-size:14px}
+    .checkin-btn:disabled{background:#aaa}
+    .username-label{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:4px;vertical-align:middle;font-weight:bold}
+    .label-admin{background:#FFD700;color:#000}
+    .label-violator{background:#b55;color:#fff;text-decoration:line-through}
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -78,14 +83,60 @@
   const SUPABASE_URL = 'https://srbibtnvtpygegmtehzb.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  // 全局图片占位符，防止未定义变量错误
   const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
 
-  let user = null, profile = null;
-  let rendering = false;
-  const BANNED_WORDS = ['广告','赌博','色情','敏感词'];
+  let user = null, profile = null, rendering = false;
+  const BANNED_WORDS = ['广告','赌博','色情','敏感词','违法','政治'];
+
   function containsBanned(text) { return BANNED_WORDS.some(w => text.includes(w)); }
+  function isContentValid(title, content) {
+    if (!title || title.length < 2) return false;
+    if (!content || content.length < 3) return false;
+    if (/^(.)\1+$/.test(content)) return false;
+    if (/^[\s\p{P}]+$/u.test(content)) return false;
+    return true;
+  }
+  function isMuted(p) { return p?.muted_until && new Date(p.muted_until) > new Date(); }
+
+  async function addViolation(userId, reason) {
+    await supabaseClient.from('user_violations').insert({ user_id: userId, reason });
+    const { data: p } = await supabaseClient.from('profiles').select('violation_count').eq('id', userId).single();
+    let count = (p?.violation_count || 0) + 1;
+    let muted_until = null;
+    if (count >= 3) muted_until = new Date(Date.now() + 86400000).toISOString();
+    await supabaseClient.from('profiles').update({ violation_count: count, muted_until }).eq('id', userId);
+  }
+
+  async function getUserNameColor(profileData) {
+    if (!profileData) return '#3b3226';
+    if (isMuted(profileData)) return '#8B6914';
+    if (profileData.role === 'admin') return '#FFD700';
+    const { data: novels } = await supabaseClient.from('novels').select('id').eq('author_id', profileData.id);
+    const novelCount = novels?.length || 0;
+    const { count: checkinCount } = await supabaseClient.from('daily_checkins').select('*', { count: 'exact', head: true }).eq('user_id', profileData.id);
+    const days = checkinCount || 0;
+    const { data: ratings } = await supabaseClient.from('ratings').select('score').eq('user_id', profileData.id);
+    const totalScore = ratings?.reduce((s,r)=>s+r.score,0) || 0;
+    const points = novelCount * 10 + days * 2 + totalScore;
+    if (points >= 100) return '#FF8C00';
+    if (points >= 50) return '#4682B4';
+    if (points >= 20) return '#32CD32';
+    return '#3b3226';
+  }
+
+  async function getUserLabel(profileData) {
+    if (!profileData) return '';
+    if (isMuted(profileData)) return '<span class="username-label label-violator">违规者</span>';
+    if (profileData.label) return `<span class="username-label label-admin">${esc(profileData.label)}</span>`;
+    return '';
+  }
+
+  async function formatUsername(profileData, showLabel = true) {
+    if (!profileData) return '未知';
+    const color = await getUserNameColor(profileData);
+    let labelHtml = showLabel ? await getUserLabel(profileData) : '';
+    return `<span style="color:${color};font-weight:bold;">${esc(profileData.username)}</span> ${labelHtml}`;
+  }
 
   function navigate(hash) { window.location.hash = hash; }
   window.onhashchange = () => render();
@@ -102,12 +153,8 @@
     nav.innerHTML = `<span class="logo" onclick="navigate('#home')">📖 lyc书库</span>`;
     if (user && profile) {
       const avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='${profile.username[0]}'">` : profile.username[0];
-      nav.innerHTML += `<div class="user-badge">
-        <a onclick="navigate('#user/${esc(profile.username)}')" style="display:flex;align-items:center;gap:4px;">
-          <div class="avatar-circle">${avatarHtml}</div> ${esc(profile.username)}
-        </a>
-        <button onclick="signOut()" style="font-size:11px;padding:3px 8px;">退出</button>
-      </div>`;
+      const formatted = await formatUsername(profile, true);
+      nav.innerHTML += `<div class="user-badge"><a onclick="navigate('#user/${esc(profile.username)}')" style="display:flex;align-items:center;gap:4px;"><div class="avatar-circle">${avatarHtml}</div> ${formatted}</a><button onclick="signOut()" style="font-size:11px;padding:3px 8px;">退出</button></div>`;
     } else {
       nav.innerHTML += `<div><button onclick="openModal('login')">登录</button><button onclick="openModal('register')" style="margin-left:4px;">注册</button></div>`;
     }
@@ -120,8 +167,7 @@
       const parts = hash.split('/');
       if (parts.length === 3 && parts[2] === 'chapters') await chapterList(app, parts[1]);
       else await novelDetail(app, parts[1]);
-    }
-    else if (hash.startsWith('#chapter/')) await chapterContent(app, hash.split('/')[1]);
+    } else if (hash.startsWith('#chapter/')) await chapterContent(app, hash.split('/')[1]);
     else if (hash.startsWith('#user/')) await userPage(app, hash.split('/')[1]);
     else if (hash === '#community') await communityList(app);
     else if (hash.startsWith('#post/')) await postDetail(app, hash.split('/')[1]);
@@ -129,7 +175,6 @@
     else if (hash === '#profile') await myProfile(app);
     else if (hash === '#admin' && profile?.role === 'admin') await adminPanel(app);
     else home(app);
-
     rendering = false;
   }
 
@@ -139,22 +184,16 @@
     profile = data || null;
   }
 
-  // ========== 通用模态框 ==========
+  // 模态框
   function openModal(type, data) {
     const container = document.getElementById('modal-container');
-    if (type === 'login') {
-      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
-    } else if (type === 'register') {
-      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>注册</h3><input id="ruser" placeholder="用户名"><input id="remail" placeholder="邮箱" style="margin-top:8px;"><input id="rpass" type="password" placeholder="密码(6位+)" style="margin-top:8px;"><button onclick="doRegister()" style="width:100%;margin-top:12px;">注册</button><div id="err" style="color:red;"></div></div></div>`;
-    } else if (type === 'change-password') {
-      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>修改密码</h3><input id="newpw" type="password" placeholder="新密码(至少6位)"><button onclick="changePassword()" style="width:100%;margin-top:12px;">确认修改</button><div id="err" style="color:red;"></div></div></div>`;
-    } else if (type === 'upload-avatar') {
-      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传头像</h3><input type="file" id="avatar-file" accept="image/*"><button onclick="uploadAvatar()" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
-    } else if (type === 'upload-cover') {
-      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传封面</h3><input type="file" id="cover-file" accept="image/*"><button onclick="uploadCover('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
-    } else if (type === 'edit-bio') {
-      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑个人简介</h3><textarea id="bio-text" rows="4" placeholder="介绍一下自己...">${esc(profile?.bio||'')}</textarea><button onclick="saveBio()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
-    }
+    if (type === 'login') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
+    else if (type === 'register') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>注册</h3><input id="ruser" placeholder="用户名"><input id="remail" placeholder="邮箱" style="margin-top:8px;"><input id="rpass" type="password" placeholder="密码(6位+)" style="margin-top:8px;"><button onclick="doRegister()" style="width:100%;margin-top:12px;">注册</button><div id="err" style="color:red;"></div></div></div>`;
+    else if (type === 'change-password') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>修改密码</h3><input id="newpw" type="password" placeholder="新密码(至少6位)"><button onclick="changePassword()" style="width:100%;margin-top:12px;">确认修改</button><div id="err" style="color:red;"></div></div></div>`;
+    else if (type === 'upload-avatar') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传头像</h3><input type="file" id="avatar-file" accept="image/*"><button onclick="uploadAvatar()" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
+    else if (type === 'upload-cover') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传封面</h3><input type="file" id="cover-file" accept="image/*"><button onclick="uploadCover('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
+    else if (type === 'edit-bio') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑个人简介</h3><textarea id="bio-text" rows="4" placeholder="介绍一下自己...">${esc(profile?.bio||'')}</textarea><button onclick="saveBio()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
+    else if (type === 'edit-label') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑标签</h3><input id="new-label" value="${esc(profile?.label||'')}" placeholder="输入标签"><button onclick="updateLabel()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
   }
   function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
 
@@ -170,9 +209,7 @@
   }
 
   async function doRegister() {
-    const u = document.getElementById('ruser').value.trim();
-    const em = document.getElementById('remail').value.trim();
-    const pw = document.getElementById('rpass').value;
+    const u = document.getElementById('ruser').value.trim(), em = document.getElementById('remail').value.trim(), pw = document.getElementById('rpass').value;
     const e = document.getElementById('err'); e.textContent = '';
     if (!u || !em || !pw) return e.textContent = '请填写完整';
     if (pw.length < 6) return e.textContent = '密码至少6位';
@@ -187,7 +224,9 @@
       user = loginData.user;
     } else { await supabaseClient.auth.setSession(signUpData.session); user = signUpData.user; }
     const role = em === '18631167199@163.com' ? 'admin' : 'user';
-    await supabaseClient.from('profiles').upsert({ id: user.id, username: u, email: em, role });
+    const label = role === 'admin' ? '管理员' : '';
+    const label_changes = role === 'admin' ? (em === '18631167199@163.com' ? 999 : 1) : 0;
+    await supabaseClient.from('profiles').upsert({ id: user.id, username: u, email: em, role, label, label_changes_remaining: label_changes });
     closeModal(); await loadProfile(); render();
   }
 
@@ -231,47 +270,87 @@
     closeModal(); await loadProfile(); render();
   }
 
+  async function updateLabel() {
+    const newLabel = document.getElementById('new-label').value.trim();
+    if (profile.role === 'admin' && profile.email !== '18631167199@163.com' && (profile.label_changes_remaining ?? 0) <= 0) {
+      return document.getElementById('err').textContent = '你没有更改标签的次数了';
+    }
+    const { error } = await supabaseClient.from('profiles').update({
+      label: newLabel,
+      label_changes_remaining: profile.email === '18631167199@163.com' ? 999 : (profile.label_changes_remaining ?? 1) - 1
+    }).eq('id', user.id);
+    if (error) return document.getElementById('err').textContent = error.message;
+    closeModal(); await loadProfile(); render();
+  }
+
   async function signOut() { await supabaseClient.auth.signOut(); user = null; profile = null; render(); }
 
-  // ========== 首页 ==========
+  // 签到（局部刷新）
+  async function performCheckin(button) {
+    if (!user) return;
+    const today = new Date().toISOString().slice(0,10);
+    const { data: existing } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
+    if (existing) return;
+    const { data: recent } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).order('checkin_date', { ascending: false }).limit(1);
+    let consecutive = 1;
+    if (recent && recent.length) {
+      const lastDate = new Date(recent[0].checkin_date);
+      const diff = Math.floor((new Date(today) - lastDate) / (1000 * 60 * 60 * 24));
+      consecutive = (diff === 1) ? (recent[0].consecutive_days || 0) + 1 : 1;
+    }
+    let points = Math.floor(Math.random() * 5) + 5;
+    if (consecutive >= 7) points *= 2;
+    const { error } = await supabaseClient.from('daily_checkins').insert({ user_id: user.id, checkin_date: today, points, consecutive_days: consecutive });
+    if (error) return alert('签到失败');
+    button.disabled = true;
+    button.textContent = `已签到 (${points}积分，连续${consecutive}天)`;
+  }
+
+  // 首页
   async function home(container) {
+    // 公告
     const { data: ann } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (ann?.length) {
       const div = document.createElement('div'); div.className = 'card';
       div.innerHTML = `<strong>📢 公告</strong><br>${marked.parse(ann[0].content)}`;
       container.appendChild(div);
     }
+
+    // 签到
+    if (user) {
+      const today = new Date().toISOString().slice(0,10);
+      const { data: checkin } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
+      const checkinDiv = document.createElement('div'); checkinDiv.className = 'card';
+      checkinDiv.innerHTML = `<h3>📅 每日签到</h3>`;
+      if (checkin) {
+        checkinDiv.innerHTML += `<p>今日已签到，获得 ${checkin.points} 积分，连续 ${checkin.consecutive_days} 天</p>`;
+      } else {
+        const btn = document.createElement('button');
+        btn.className = 'checkin-btn';
+        btn.textContent = '签到领积分';
+        btn.onclick = function() { performCheckin(btn); };
+        checkinDiv.appendChild(btn);
+      }
+      container.appendChild(checkinDiv);
+    }
+
+    // 搜索
     const searchDiv = document.createElement('div'); searchDiv.className = 'card';
     searchDiv.innerHTML = `<input id="search" placeholder="搜索小说、作者、用户..."><button onclick="search()" style="margin-top:6px;">搜索</button><div id="results" style="margin-top:10px;"></div>`;
     container.appendChild(searchDiv);
-    const { data: allNovels } = await supabaseClient.from('novels').select('*, profiles(username), ratings(score)').order('updated_at', { ascending: false }).limit(50);
-    const ranked = allNovels?.map(n => {
-      const scores = n.ratings?.map(r=>r.score) || [];
-      const avg = scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : 0;
-      return { ...n, avg };
-    }).filter(n => n.avg > 0).sort((a,b) => b.avg - a.avg).slice(0,10);
-    if (ranked?.length) {
-      const rankCard = document.createElement('div'); rankCard.className = 'card';
-      rankCard.innerHTML = '<h3>🏆 巅峰榜</h3><ul class="rank-list"></ul>';
-      const list = rankCard.querySelector('.rank-list');
-      ranked.forEach((n, i) => {
-        const li = document.createElement('li');
-        li.innerHTML = `<span class="rank-num">${i+1}</span><div style="flex:1;"><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a> <span style="font-size:12px;">⭐${n.avg.toFixed(1)}</span></div>`;
-        list.appendChild(li);
-      });
-      container.appendChild(rankCard);
-    }
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false }).limit(30);
+
+    // 小说网格（异步格式化作者名）
+    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').order('updated_at', { ascending: false }).limit(30);
     const grid = document.createElement('div'); grid.className = 'novel-grid';
     if (novels?.length) {
-      novels.forEach(n => {
+      for (const n of novels) {
+        const authorFormatted = n.profiles ? await formatUsername(n.profiles, true) : '未知';
         const card = document.createElement('div'); card.className = 'novel-card';
         card.onclick = () => navigate(`#novel/${n.id}`);
-        const coverUrl = n.cover_url || PLACEHOLDER_IMAGE;
-        card.innerHTML = `<img class="novel-cover" src="${coverUrl}" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'" alt="封面">
-          <div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${esc(n.profiles?.username)}</div></div>`;
+        card.innerHTML = `<img class="novel-cover" src="${n.cover_url || PLACEHOLDER_IMAGE}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+          <div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${authorFormatted}</div></div>`;
         grid.appendChild(card);
-      });
+      }
     } else grid.innerHTML = '<p style="color:#888;">还没有小说，快来发布吧！</p>';
     container.appendChild(grid);
   }
@@ -280,23 +359,30 @@
     const kw = document.getElementById('search').value.trim();
     const resultsDiv = document.getElementById('results'); resultsDiv.innerHTML = '';
     if (!kw) return;
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').ilike('title', `%${kw}%`).limit(10);
+    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').ilike('title', `%${kw}%`).limit(10);
     const { data: users } = await supabaseClient.from('profiles').select('*').ilike('username', `%${kw}%`).limit(10);
     if (users?.length) {
       resultsDiv.innerHTML += '<b>👥 用户</b>';
-      users.forEach(u => resultsDiv.innerHTML += `<div><a onclick="navigate('#user/${esc(u.username)}')">${esc(u.username)}</a></div>`);
+      for (const u of users) {
+        const formatted = await formatUsername(u, true);
+        resultsDiv.innerHTML += `<div><a onclick="navigate('#user/${esc(u.username)}')">${formatted}</a></div>`;
+      }
     }
     if (novels?.length) {
       resultsDiv.innerHTML += '<b>📚 小说</b>';
-      novels.forEach(n => resultsDiv.innerHTML += `<div class="flex-row"><div><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></div><span>${esc(n.profiles?.username)}</span></div>`);
+      for (const n of novels) {
+        const authorFormatted = n.profiles ? await formatUsername(n.profiles, true) : '未知';
+        resultsDiv.innerHTML += `<div class="flex-row"><div><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></div><span>${authorFormatted}</span></div>`;
+      }
     }
     if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
   }
 
-  // ========== 小说详情（已修复 placeholder） ==========
+  // 小说详情
   async function novelDetail(container, novelId) {
-    const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username)').eq('id', novelId).single();
+    const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
+    const authorFormatted = novel.profiles ? await formatUsername(novel.profiles, true) : '未知';
     const { data: ratings } = await supabaseClient.from('ratings').select('score').eq('novel_id', novelId);
     const avg = ratings?.length ? (ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1) : '-';
     const userRating = user ? ratings?.find(r=>r.user_id === user.id) : null;
@@ -308,32 +394,37 @@
     const infoCard = document.createElement('div'); infoCard.className = 'card';
     infoCard.innerHTML = `
       <a onclick="navigate('#home')" style="font-size:12px;">← 首页</a>
-      <div style="display:flex; gap:15px; margin-top:10px; flex-wrap:wrap;">
-        <img src="${novel.cover_url || PLACEHOLDER_IMAGE}" style="width:100px;height:140px;object-fit:cover;border-radius:8px; background:#f0ece4;" onerror="this.src='${PLACEHOLDER_IMAGE}'">
-        <div style="flex:1; min-width:200px;">
+      <div style="display:flex;gap:15px;margin-top:10px;flex-wrap:wrap;">
+        <img src="${novel.cover_url || PLACEHOLDER_IMAGE}" style="width:100px;height:140px;object-fit:cover;border-radius:8px;background:#f0ece4;" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+        <div style="flex:1;min-width:200px;">
           <h2>${esc(novel.title)}</h2>
-          <p>作者：<a onclick="navigate('#user/${esc(novel.profiles.username)}')">${esc(novel.profiles.username)}</a>
-          ${user && user.id !== novel.author_id ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollow('${novel.author_id}')" style="margin-left:6px;">${isFollowing?'已关注':'+ 关注'}</button>` : ''}</p>
+          <p>作者：<a onclick="navigate('#user/${esc(novel.profiles?.username)}')">${authorFormatted}</a> ${user && user.id!==novel.author_id ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollow('${novel.author_id}')" style="margin-left:6px;">${isFollowing?'已关注':'+ 关注'}</button>` : ''}</p>
           <p>⭐ ${avg} (${ratings?.length||0}人) | 状态：${novel.status} | 分类：${novel.genre||''}</p>
           <p>${esc(novel.description||'')}</p>
           <div class="btn-group">
             <button onclick="navigate('#novel/${novelId}/chapters')">📖 章节列表</button>
-            ${user?.id === novel.author_id ? `<button class="outline" onclick="openModal('upload-cover','${novelId}')">🖼️ 上传封面</button><button class="outline" onclick="editNovel(${novel.id})">✏️ 编辑</button><button class="danger" onclick="deleteNovel(${novel.id})">🗑️ 删除</button>` : ''}
-            ${profile?.role === 'admin' && user?.id !== novel.author_id ? `<button class="danger" onclick="deleteNovel(${novel.id})">管理员删除</button>` : ''}
+            ${user?.id===novel.author_id?`<button class="outline" onclick="openModal('upload-cover','${novelId}')">🖼️ 上传封面</button><button class="outline" onclick="editNovel(${novel.id})">✏️ 编辑</button><button class="danger" onclick="deleteNovel(${novel.id})">🗑️ 删除</button>`:''}
+            ${profile?.role==='admin'&&user?.id!==novel.author_id?`<button class="danger" onclick="deleteNovel(${novel.id})">管理员删除</button>`:''}
           </div>
-          ${user ? `<div style="margin-top:10px;"><label>我的评分：</label><select id="my-rating" style="width:auto;"><option value="0">未评分</option><option value="1" ${userRating?.score===1?'selected':''}>1星</option><option value="2" ${userRating?.score===2?'selected':''}>2星</option><option value="3" ${userRating?.score===3?'selected':''}>3星</option><option value="4" ${userRating?.score===4?'selected':''}>4星</option><option value="5" ${userRating?.score===5?'selected':''}>5星</option></select><button onclick="rateNovel(${novel.id})">提交评分</button></div>` : '<p>登录后可评分</p>'}
+          ${user?`<div style="margin-top:10px;"><label>我的评分：</label><select id="my-rating" style="width:auto;"><option value="0">未评分</option>${[1,2,3,4,5].map(s=>`<option value="${s}" ${userRating?.score===s?'selected':''}>${s}星</option>`).join('')}</select><button onclick="rateNovel(${novel.id})">提交评分</button></div>`:'<p>登录后可评分</p>'}
         </div>
       </div>`;
     container.appendChild(infoCard);
-    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novelId).is('chapter_id', null).order('created_at', { ascending: false });
+
+    // 小说总评论区
+    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username,role,muted_until,label)').eq('novel_id', novelId).is('chapter_id', null).order('created_at', { ascending: false });
     const commCard = document.createElement('div'); commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 小说评论区</h3>';
     if (comments?.length) {
-      comments.forEach(c => commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${esc(c.profiles?.username)}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`);
+      for (const c of comments) {
+        const commentUserFormatted = c.profiles ? await formatUsername(c.profiles, true) : '匿名';
+        commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${commentUserFormatted}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`;
+      }
     } else commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
-    if (user) {
+    if (user && !isMuted(profile)) {
       commCard.innerHTML += `<textarea id="novel-comment" placeholder="写下你的看法..." rows="3"></textarea><button onclick="addNovelComment(${novel.id})" style="margin-top:6px;">发表评论</button>`;
-    } else commCard.innerHTML += '<p>登录后可评论</p>';
+    } else if (isMuted(profile)) commCard.innerHTML += '<p style="color:red;">你已被禁言</p>';
+    else commCard.innerHTML += '<p>登录后可评论</p>';
     container.appendChild(commCard);
   }
 
@@ -345,8 +436,13 @@
   }
 
   async function addNovelComment(novelId) {
+    if (isMuted(profile)) return alert('你已被禁言');
     const content = document.getElementById('novel-comment').value.trim();
     if (!content) return alert('评论不能为空');
+    if (!isContentValid('占位', content) || containsBanned(content)) {
+      await addViolation(user.id, '违规评论');
+      return alert('内容违规，已记录违规');
+    }
     await supabaseClient.from('comments').insert({ novel_id: novelId, user_id: user.id, content, chapter_id: null });
     navigate(`#novel/${novelId}`);
   }
@@ -359,11 +455,7 @@
     navigate(`#novel/${location.hash.split('/')[1]}`);
   }
 
-  async function deleteNovel(id) {
-    if (!confirm('确定删除该小说及所有章节？')) return;
-    await supabaseClient.from('novels').delete().eq('id', id);
-    alert('已删除'); navigate('#home');
-  }
+  async function deleteNovel(id) { if (!confirm('确定删除该小说及所有章节？')) return; await supabaseClient.from('novels').delete().eq('id', id); alert('已删除'); navigate('#home'); }
 
   function editNovel(novelId) {
     supabaseClient.from('novels').select('*').eq('id', novelId).single().then(({data:n}) => {
@@ -375,7 +467,7 @@
     });
   }
 
-  // ========== 章节列表 ==========
+  // 章节列表
   async function chapterList(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
@@ -383,7 +475,9 @@
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = `<a onclick="navigate('#novel/${novelId}')" style="font-size:12px;">← 详情</a><h2>${esc(novel.title)} · 章节</h2>`;
     if (chapters?.length) {
-      chapters.forEach(ch => card.innerHTML += `<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>${user?.id===novel.author_id?`<div><button class="outline" style="padding:2px 8px;font-size:11px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 8px;font-size:11px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>`:''}</div>`);
+      for (const ch of chapters) {
+        card.innerHTML += `<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>${user?.id===novel.author_id?`<div><button class="outline" style="padding:2px 8px;font-size:11px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 8px;font-size:11px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>`:''}</div>`;
+      }
     } else card.innerHTML += '<p>暂无章节</p>';
     if (user?.id === novel.author_id) card.innerHTML += `<button onclick="addChapter(${novelId})" style="margin-top:10px;">+ 新章节</button>`;
     container.appendChild(card);
@@ -411,14 +505,9 @@
     });
   }
 
-  function deleteChapter(chapterId, novelId) {
-    showConfirm('删除该章节？', async () => {
-      await supabaseClient.from('chapters').delete().eq('id', chapterId);
-      navigate(`#novel/${novelId}/chapters`);
-    });
-  }
+  function deleteChapter(chapterId, novelId) { showConfirm('删除该章节？', async () => { await supabaseClient.from('chapters').delete().eq('id', chapterId); navigate(`#novel/${novelId}/chapters`); }); }
 
-  // ========== 章节内容 ==========
+  // 章节内容
   async function chapterContent(container, chapterId) {
     const { data: chapter, error: chapterError } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).maybeSingle();
     if (chapterError || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
@@ -430,38 +519,38 @@
     const idx = list.findIndex(ch => ch.id === chapterId);
     const prev = idx > 0 ? list[idx-1] : null;
     const next = idx < list.length-1 ? list[idx+1] : null;
-    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username)').eq('novel_id', novel.id).eq('chapter_id', chapterId).order('created_at', { ascending: true });
+    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username,role,muted_until,label)').eq('novel_id', novel.id).eq('chapter_id', chapterId).order('created_at', { ascending: true });
     const contentCard = document.createElement('div'); contentCard.className = 'card';
-    contentCard.innerHTML = `
-      <a onclick="navigate('#novel/${novel.id}/chapters')" style="font-size:12px;">← 返回章节列表</a>
-      <h2>${esc(chapter.title)}</h2>
-      <pre>${esc(chapter.content)}</pre>
-      <div class="nav-chapter">
-        <button onclick="navigate('#chapter/${prev?.id||''}')" ${prev?'':'disabled'}>← 上一章</button>
-        <button onclick="navigate('#chapter/${next?.id||''}')" ${next?'':'disabled'}>下一章 →</button>
-      </div>
-      ${user?.id === novel.author_id ? `<div class="btn-group" style="margin-top:10px;"><button class="outline" onclick="editChapter(${chapter.id},${novel.id})">编辑</button><button class="danger" onclick="deleteChapter(${chapter.id},${novel.id})">删除</button></div>` : ''}
-    `;
+    contentCard.innerHTML = `<a onclick="navigate('#novel/${novel.id}/chapters')" style="font-size:12px;">← 返回章节列表</a><h2>${esc(chapter.title)}</h2><pre>${esc(chapter.content)}</pre><div class="nav-chapter"><button onclick="navigate('#chapter/${prev?.id||''}')" ${prev?'':'disabled'}>← 上一章</button><button onclick="navigate('#chapter/${next?.id||''}')" ${next?'':'disabled'}>下一章 →</button></div>${user?.id===novel.author_id?`<div class="btn-group" style="margin-top:10px;"><button class="outline" onclick="editChapter(${chapter.id},${novel.id})">编辑</button><button class="danger" onclick="deleteChapter(${chapter.id},${novel.id})">删除</button></div>`:''}`;
     container.appendChild(contentCard);
     const commCard = document.createElement('div'); commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 本章评论区</h3>';
     if (comments?.length) {
-      comments.forEach(c => commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${esc(c.profiles?.username)}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`);
+      for (const c of comments) {
+        const commentUserFormatted = c.profiles ? await formatUsername(c.profiles, true) : '匿名';
+        commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${commentUserFormatted}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`;
+      }
     } else commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
-    if (user) {
+    if (user && !isMuted(profile)) {
       commCard.innerHTML += `<textarea id="chapter-comment" placeholder="写下你的评论..." rows="3" style="margin-top:8px;"></textarea><button onclick="addChapterComment('${novel.id}','${chapterId}')" style="margin-top:6px;">发表评论</button>`;
-    } else commCard.innerHTML += '<p>登录后可评论</p>';
+    } else if (isMuted(profile)) commCard.innerHTML += '<p style="color:red;">你已被禁言</p>';
+    else commCard.innerHTML += '<p>登录后可评论</p>';
     container.appendChild(commCard);
   }
 
   async function addChapterComment(novelId, chapterId) {
+    if (isMuted(profile)) return alert('你已被禁言');
     const content = document.getElementById('chapter-comment').value.trim();
     if (!content) return alert('评论不能为空');
+    if (!isContentValid('占位', content) || containsBanned(content)) {
+      await addViolation(user.id, '违规评论');
+      return alert('内容违规，已记录违规');
+    }
     await supabaseClient.from('comments').insert({ novel_id: novelId, user_id: user.id, content, chapter_id: chapterId });
     navigate(`#chapter/${chapterId}`);
   }
 
-  // ========== 用户主页 ==========
+  // 用户主页
   async function userPage(container, username) {
     const { data: p } = await supabaseClient.from('profiles').select('*').eq('username', username).single();
     if (!p) return container.innerHTML += '<p>用户不存在</p>';
@@ -469,15 +558,9 @@
     const { count: followers } = await supabaseClient.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', p.id);
     const { count: following } = await supabaseClient.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', p.id);
     const isFollowing = user ? !!(await supabaseClient.from('follows').select('*').eq('follower_id', user.id).eq('following_id', p.id).maybeSingle()) : false;
+    const formatted = await formatUsername(p, true);
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `
-      <a onclick="history.back()" style="font-size:12px;">← 返回</a>
-      <div style="display:flex; gap:15px; margin-top:10px; align-items:center;">
-        <div class="avatar-circle" style="width:60px;height:60px;font-size:24px;">${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : p.username[0]}</div>
-        <div><h2>${esc(p.username)}</h2><p>${esc(p.bio||'这个人很懒，什么都没写')}</p><p class="meta">关注者 ${followers||0} · 关注中 ${following||0}</p>${user && user.id !== p.id ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${p.id}')">${isFollowing?'已关注':'+ 关注'}</button>` : ''}</div>
-      </div>
-      <h3 style="margin-top:15px;">📖 作品</h3>${novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>'}
-    `;
+    card.innerHTML = `<a onclick="history.back()" style="font-size:12px;">← 返回</a><div style="display:flex;gap:15px;margin-top:10px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;">${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : p.username[0]}</div><div><h2>${formatted}</h2><p>${esc(p.bio||'这个人很懒，什么都没写')}</p><p class="meta">关注者 ${followers||0} · 关注中 ${following||0}</p>${user&&user.id!==p.id?`<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${p.id}')">${isFollowing?'已关注':'+ 关注'}</button>`:''}</div></div><h3 style="margin-top:15px;">📖 作品</h3>${novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>'}`;
     container.appendChild(card);
   }
 
@@ -489,19 +572,14 @@
     navigate(`#user/${location.hash.split('/')[1]}`);
   }
 
-  // ========== 个人中心 ==========
+  // 个人中心（增加积分显示）
   async function myProfile(container) {
     if (!user) return navigate('#home');
+    const { data: checkins } = await supabaseClient.from('daily_checkins').select('points');
+    const totalPoints = checkins?.reduce((s,c)=>s+c.points,0) || 0;
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `
-      <div style="display:flex; gap:15px; align-items:center;">
-        <div class="avatar-circle" style="width:60px;height:60px;font-size:24px; cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : profile.username[0]}</div>
-        <div><h2>${esc(profile.username)}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button></div>
-      </div>
-      <h3 style="margin-top:15px;">📖 我的小说</h3><div id="my-novels"></div>
-      <h3 style="margin-top:15px;">💬 我的评论</h3><div id="my-comments"></div>
-      <h3 style="margin-top:15px;">⭐ 我的评分</h3><div id="my-ratings"></div>
-    `;
+    const formatted = await formatUsername(profile, true);
+    card.innerHTML = `<div style="display:flex;gap:15px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : profile.username[0]}</div><div><h2>${formatted}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p><p>🌟 我的积分：${totalPoints}</p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>${profile.role==='admin'?`<button onclick="openModal('edit-label')" class="outline" style="margin-top:6px;">编辑标签</button>`:''}</div></div><h3 style="margin-top:15px;">📖 我的小说</h3><div id="my-novels"></div><h3 style="margin-top:15px;">💬 我的评论</h3><div id="my-comments"></div><h3 style="margin-top:15px;">⭐ 我的评分</h3><div id="my-ratings"></div>`;
     container.appendChild(card);
     const { data: novels } = await supabaseClient.from('novels').select('*').eq('author_id', user.id).order('updated_at', { ascending: false });
     document.getElementById('my-novels').innerHTML = novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>';
@@ -511,110 +589,107 @@
     document.getElementById('my-ratings').innerHTML = ratings?.length ? ratings.map(r => `<p>《${esc(r.novels.title)}》：${r.score}星</p>`).join('') : '<p>暂无</p>';
   }
 
-  // ========== 发布小说 ==========
+  // 发布小说页面
   async function newNovel(container) {
+    if (isMuted(profile)) return alert('你已被禁言，无法发布小说');
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = `<h2>📝 发布新小说</h2><input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;"><textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea><button onclick="publishNovel()" style="width:100%;margin-top:12px;">立即发布</button><div id="err" style="color:red;"></div>`;
     container.appendChild(card);
   }
 
   async function publishNovel() {
-    const title = document.getElementById('ntitle').value.trim();
-    const genre = document.getElementById('ngenre').value.trim();
-    const desc = document.getElementById('ndesc').value.trim();
-    if (!title) return document.getElementById('err').textContent = '请输入标题';
+    if (isMuted(profile)) return alert('你已被禁言');
+    const title = document.getElementById('ntitle').value.trim(), genre = document.getElementById('ngenre').value.trim(), desc = document.getElementById('ndesc').value.trim();
+    if (!title || !desc) return document.getElementById('err').textContent = '请填写标题和简介';
+    if (!isContentValid(title, desc) || containsBanned(title) || containsBanned(desc)) {
+      await addViolation(user.id, '发布违规小说');
+      return document.getElementById('err').textContent = '内容违规或无意义，已记录违规';
+    }
     const { error } = await supabaseClient.from('novels').insert({ title, genre, description: desc, author_id: user.id, status: '连载中' });
     if (error) return document.getElementById('err').textContent = error.message;
     alert('发布成功！'); navigate('#home');
   }
 
-  // ========== 社区帖子列表 ==========
+  // 社区帖子列表
   async function communityList(container) {
-    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
+    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = '<h2>💬 社区</h2>';
-    if (user) card.innerHTML += `<button onclick="openNewPostModal()" style="margin-bottom:10px;">+ 发帖</button>`;
+    if (user && !isMuted(profile)) card.innerHTML += `<button onclick="openNewPostModal()" style="margin-bottom:10px;">+ 发帖</button>`;
+    else if (isMuted(profile)) card.innerHTML += '<p style="color:red;">你已被禁言</p>';
     if (posts?.length) {
-      posts.forEach(p => {
+      for (const p of posts) {
+        const authorFormatted = p.profiles ? await formatUsername(p.profiles, true) : '未知';
         const div = document.createElement('div'); div.className = 'post-item';
-        div.innerHTML = `${p.is_pinned?'<span style="background:#8b7355;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">置顶</span> ':''}<a onclick="navigate('#post/${p.id}')" class="post-title">${esc(p.title)}</a><div class="post-meta">${esc(p.profiles?.username)} · ${new Date(p.created_at).toLocaleString()} · 👍 ${p.like_count||0} · 👎 ${p.dislike_count||0}</div>`;
+        div.innerHTML = `${p.is_pinned?'<span style="background:#8b7355;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">置顶</span> ':''}<a onclick="navigate('#post/${p.id}')" class="post-title">${esc(p.title)}</a><div class="post-meta">${authorFormatted} · ${new Date(p.created_at).toLocaleString()} · 👍 ${p.like_count||0} · 👎 ${p.dislike_count||0}</div>`;
         card.appendChild(div);
-      });
+      }
     } else card.innerHTML += '<p>暂无帖子</p>';
     container.appendChild(card);
   }
 
-  function openNewPostModal() {
+  async function openNewPostModal() {
+    if (isMuted(profile)) return alert('你已被禁言');
     openGenericForm('发布帖子', `<input id="post-title" placeholder="标题（至少2个字）"><textarea id="post-content" rows="4" placeholder="内容（至少3个字）" style="margin-top:6px;"></textarea>`, async () => {
       const title = document.getElementById('post-title').value.trim();
       const content = document.getElementById('post-content').value.trim();
-      if (title.length < 2 || content.length < 3) throw new Error('标题至少2字，内容至少3字');
-      if (containsBanned(title) || containsBanned(content)) throw new Error('内容包含违规词，请修改');
+      if (!isContentValid(title, content) || containsBanned(title) || containsBanned(content)) {
+        await addViolation(user.id, '发布违规帖子');
+        throw new Error('内容违规或无意义，已记录违规');
+      }
       const { error } = await supabaseClient.from('posts').insert({ author_id: user.id, title, content });
       if (error) throw error;
       alert('发布成功'); navigate('#community');
     });
   }
 
-  // ========== 帖子详情（回复功能已修复） ==========
+  // 帖子详情（含回复）
   async function postDetail(container, postId) {
-    const { data: post } = await supabaseClient.from('posts').select('*, profiles(username)').eq('id', postId).single();
+    const { data: post } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').eq('id', postId).single();
     if (!post) return container.innerHTML += '<p>帖子不存在</p>';
-
+    const authorFormatted = post.profiles ? await formatUsername(post.profiles, true) : '未知';
     let userVote = null;
     if (user) {
       const { data: vote } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
       userVote = vote?.vote_type || null;
     }
-
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `
-      <a onclick="navigate('#community')" style="font-size:12px;">← 社区</a>
-      <h2>${esc(post.title)}</h2>
-      <div class="post-meta">${esc(post.profiles?.username)} · ${new Date(post.created_at).toLocaleString()}</div>
-      <div style="margin:10px 0;">${esc(post.content).replace(/\n/g, '<br>')}</div>
-      <div class="vote-btns">
-        <button onclick="votePost(${post.id}, 'like')" class="${userVote==='like'?'active':''}">👍 ${post.like_count||0}</button>
-        <button onclick="votePost(${post.id}, 'dislike')" class="${userVote==='dislike'?'active':''}">👎 ${post.dislike_count||0}</button>
-        ${profile?.role==='admin' ? `<button onclick="togglePin(${post.id})">${post.is_pinned?'取消置顶':'置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>` : ''}
-      </div>
-    `;
+    card.innerHTML = `<a onclick="navigate('#community')" style="font-size:12px;">← 社区</a><h2>${esc(post.title)}</h2><div class="post-meta">${authorFormatted} · ${new Date(post.created_at).toLocaleString()}</div><div style="margin:10px 0;">${esc(post.content).replace(/\n/g,'<br>')}</div><div class="vote-btns"><button onclick="votePost(${post.id},'like')" class="${userVote==='like'?'active':''}">👍 ${post.like_count||0}</button><button onclick="votePost(${post.id},'dislike')" class="${userVote==='dislike'?'active':''}">👎 ${post.dislike_count||0}</button>${profile?.role==='admin'?`<button onclick="togglePin(${post.id})">${post.is_pinned?'取消置顶':'置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>`:''}</div>`;
     container.appendChild(card);
-
-    const { data: replies } = await supabaseClient.from('post_replies').select('*, profiles(username)').eq('post_id', postId).order('created_at', { ascending: true });
+    const { data: replies } = await supabaseClient.from('post_replies').select('*, profiles(username,role,muted_until,label)').eq('post_id', postId).order('created_at', { ascending: true });
     const replyCard = document.createElement('div'); replyCard.className = 'card';
     replyCard.innerHTML = '<h3>回复</h3>';
     if (replies?.length) {
       const rootReplies = replies.filter(r => !r.parent_id);
-      rootReplies.forEach(r => replyCard.appendChild(renderReply(r, replies)));
+      for (const r of rootReplies) replyCard.appendChild(await renderReply(r, replies));
     } else replyCard.innerHTML += '<p>暂无回复</p>';
-    if (user) {
-      replyCard.innerHTML += `<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="window.addTopReply(${post.id})" style="margin-top:6px;">回复</button>`;
-    }
+    if (user && !isMuted(profile)) replyCard.innerHTML += `<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="window.addTopReply(${post.id})" style="margin-top:6px;">回复</button>`;
+    else if (isMuted(profile)) replyCard.innerHTML += '<p style="color:red;">你已被禁言</p>';
+    else replyCard.innerHTML += '<p>登录后可回复</p>';
     container.appendChild(replyCard);
   }
 
+  // 顶层回复
   window.addTopReply = async function(postId) {
+    if (isMuted(profile)) return alert('你已被禁言');
     const content = document.getElementById('reply-content').value.trim();
     if (!content) return alert('内容不能为空');
-    if (containsBanned(content)) return alert('包含违规词');
+    if (containsBanned(content)) { await addViolation(user.id, '违规回复'); return alert('包含违规词，已记录违规'); }
     await supabaseClient.from('post_replies').insert({ post_id: postId, author_id: user.id, content, parent_id: null });
     navigate(`#post/${postId}`);
   };
 
-  function renderReply(reply, allReplies, depth = 0) {
+  // 递归渲染回复（异步格式化用户名）
+  async function renderReply(reply, allReplies, depth = 0) {
+    const authorFormatted = reply.profiles ? await formatUsername(reply.profiles, true) : '未知';
     const div = document.createElement('div');
     div.className = 'reply-item';
     div.style.marginLeft = depth > 0 ? '20px' : '0';
-    div.innerHTML = `
-      <strong>${esc(reply.profiles?.username)}</strong> <small>${new Date(reply.created_at).toLocaleString()}</small>
-      <div>${esc(reply.content).replace(/\n/g, '<br>')}</div>
-      ${user ? `<a onclick="window.openReplyForm(${reply.id})" style="font-size:12px;">回复</a>` : ''}
-      ${profile?.role==='admin' ? `<a onclick="window.deleteReply(${reply.id})" class="danger" style="font-size:12px; margin-left:8px;">删除</a>` : ''}
-      <div id="reply-form-${reply.id}" style="display:none; margin-top:6px;"></div>
-    `;
+    div.innerHTML = `<strong>${authorFormatted}</strong> <small>${new Date(reply.created_at).toLocaleString()}</small><div>${esc(reply.content).replace(/\n/g,'<br>')}</div>${user&&!isMuted(profile)?`<a onclick="window.openReplyForm(${reply.id})" style="font-size:12px;">回复</a>`:''}${profile?.role==='admin'?`<a onclick="window.deleteReply(${reply.id})" class="danger" style="font-size:12px;margin-left:8px;">删除</a>`:''}<div id="reply-form-${reply.id}" style="display:none;margin-top:6px;"></div>`;
     const children = allReplies.filter(r => r.parent_id === reply.id);
-    if (children.length) children.forEach(ch => div.appendChild(renderReply(ch, allReplies, depth + 1)));
+    for (const ch of children) {
+      div.appendChild(await renderReply(ch, allReplies, depth + 1));
+    }
     return div;
   }
 
@@ -625,9 +700,10 @@
   };
 
   window.addChildReply = async function(parentId) {
+    if (isMuted(profile)) return alert('你已被禁言');
     const content = document.getElementById(`child-reply-${parentId}`).value.trim();
     if (!content) return alert('内容不能为空');
-    if (containsBanned(content)) return alert('包含违规词');
+    if (containsBanned(content)) { await addViolation(user.id, '违规回复'); return alert('包含违规词，已记录违规'); }
     const { data: parent } = await supabaseClient.from('post_replies').select('post_id').eq('id', parentId).single();
     if (!parent) return;
     await supabaseClient.from('post_replies').insert({ post_id: parent.post_id, author_id: user.id, content, parent_id: parentId });
@@ -647,9 +723,7 @@
     if (existing) {
       if (existing.vote_type === type) await supabaseClient.from('post_votes').delete().eq('id', existing.id);
       else await supabaseClient.from('post_votes').update({ vote_type: type }).eq('id', existing.id);
-    } else {
-      await supabaseClient.from('post_votes').insert({ post_id: postId, user_id: user.id, vote_type: type });
-    }
+    } else await supabaseClient.from('post_votes').insert({ post_id: postId, user_id: user.id, vote_type: type });
     await updateVoteCounts(postId);
     navigate(`#post/${postId}`);
   }
@@ -666,27 +740,47 @@
     navigate(`#post/${postId}`);
   }
 
-  async function deletePost(postId) {
-    if (!confirm('删除帖子？')) return;
-    await supabaseClient.from('posts').delete().eq('id', postId);
-    alert('已删除'); navigate('#community');
-  }
+  async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
-  // ========== 管理员后台 ==========
+  // 管理员后台
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
+    card.innerHTML = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
     container.appendChild(card);
     const content = document.createElement('div'); content.id = 'admin-content'; container.appendChild(content);
     adminComments();
   }
 
-  async function adminPosts() {
+  async function adminUsers() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').order('created_at', { ascending: false });
-    if (posts?.length) posts.forEach(p => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
-    else c.innerHTML = '<p>暂无帖子</p>';
+    const { data: users } = await supabaseClient.from('profiles').select('*').order('username');
+    if (!users) { c.innerHTML = '<p>暂无用户</p>'; return; }
+    for (const u of users) {
+      const formatted = await formatUsername(u, true);
+      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${formatted} (${u.role}) <button onclick="editUserLabel('${u.id}')">编辑标签</button> <button onclick="toggleMute('${u.id}')">${isMuted(u)?'解除禁言':'禁言1天'}</button> <button class="danger" onclick="resetViolations('${u.id}')">清零违规</button></div>`;
+    }
   }
+
+  function editUserLabel(userId) {
+    supabaseClient.from('profiles').select('label').eq('id', userId).single().then(({data}) => {
+      const currentLabel = data?.label || '';
+      openGenericForm('编辑用户标签', `<input id="editlabel" value="${esc(currentLabel)}" placeholder="标签内容">`, async () => {
+        const newLabel = document.getElementById('editlabel').value.trim();
+        await supabaseClient.from('profiles').update({ label: newLabel }).eq('id', userId);
+        alert('标签已更新'); adminUsers();
+      });
+    });
+  }
+
+  async function toggleMute(userId) {
+    const { data: p } = await supabaseClient.from('profiles').select('muted_until').eq('id', userId).single();
+    const muted = p?.muted_until && new Date(p.muted_until) > new Date();
+    if (muted) await supabaseClient.from('profiles').update({ muted_until: null }).eq('id', userId);
+    else await supabaseClient.from('profiles').update({ muted_until: new Date(Date.now() + 86400000).toISOString() }).eq('id', userId);
+    alert(muted ? '已解除禁言' : '已禁言1天'); adminUsers();
+  }
+
+  async function resetViolations(userId) { await supabaseClient.from('profiles').update({ violation_count: 0, muted_until: null }).eq('id', userId); alert('违规记录已清零'); adminUsers(); }
 
   async function adminComments() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
@@ -694,18 +788,20 @@
     if (data?.length) data.forEach(d => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(d.profiles?.username)} 评《${esc(d.novels.title)}》：${esc(d.content)} <button class="danger" onclick="deleteComment(${d.id})">删除</button></div>`);
     else c.innerHTML = '<p>暂无评论</p>';
   }
-
   async function deleteComment(id) { if (confirm('删除？')) { await supabaseClient.from('comments').delete().eq('id', id); adminComments(); } }
-
   async function adminNovels() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
     if (data?.length) data.forEach(d => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(d.title)}</b> 作者：${esc(d.profiles?.username)} <button class="danger" style="float:right;" onclick="deleteNovelAdmin('${d.id}')">删除</button></div>`);
     else c.innerHTML = '<p>暂无小说</p>';
   }
-
   async function deleteNovelAdmin(id) { if (confirm('强制删除？')) { await supabaseClient.from('novels').delete().eq('id', id); adminNovels(); } }
-
+  async function adminPosts() {
+    const c = document.getElementById('admin-content'); c.innerHTML = '';
+    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').order('created_at', { ascending: false });
+    if (posts?.length) posts.forEach(p => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
+    else c.innerHTML = '<p>暂无帖子</p>';
+  }
   async function adminAdmins() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: profiles } = await supabaseClient.from('profiles').select('*');
@@ -713,14 +809,12 @@
       c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(p.username)} (${p.role}) ${p.email!=='18631167199@163.com'&&p.id!==user.id?`<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销':'设为'}管理员</button>`:'<small>（超级管理员）</small>'}</div>`;
     });
   }
-
   async function toggleAdmin(userId) {
     const { data: p } = await supabaseClient.from('profiles').select('role,email').eq('id', userId).single();
     if (p.email==='18631167199@163.com') return alert('超级管理员不可更改');
     await supabaseClient.from('profiles').update({ role: p.role==='admin'?'user':'admin' }).eq('id', userId);
     adminAdmins();
   }
-
   function editAnnouncement() {
     openGenericForm('编辑公告（支持 Markdown）', `<textarea id="ann" rows="6" placeholder="公告内容..."></textarea><small>支持 Markdown 语法</small>`, async () => {
       const content = document.getElementById('ann').value.trim();
@@ -730,34 +824,29 @@
     });
   }
 
-  // ========== 通用工具 ==========
+  // 通用工具
   function openGenericForm(title, html, cb) {
     const container = document.getElementById('modal-container');
     container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
     window.__genericCallback = cb;
   }
-
   function submitGenericForm() {
     const cb = window.__genericCallback;
     if (!cb) return;
     const err = document.getElementById('generic-err'); err.textContent = '';
     cb().then(() => closeModal()).catch(e => err.textContent = e.message);
   }
-
   function showConfirm(msg, onConfirm) {
     const container = document.getElementById('modal-container');
     container.innerHTML = `<div class="modal"><div class="modal-content" style="text-align:center;"><p>${msg}</p><div class="btn-group" style="justify-content:center;margin-top:15px;"><button class="outline" onclick="closeModal()">取消</button><button class="danger" id="confirm-ok">确认</button></div></div></div>`;
     document.getElementById('confirm-ok').onclick = () => { closeModal(); onConfirm(); };
   }
-
   function esc(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
-
   if (typeof marked !== 'undefined') marked.setOptions({ breaks: true, gfm: true });
-
   render();
 </script>
 </body>
