@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>lyc书库 · 小说社区</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f5f2eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -37,6 +41,10 @@
     a{color:#8b7355;cursor:pointer;text-decoration:none}
     .meta{font-size:12px;color:#888}
     .btn-group{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+    .install-banner{position:fixed;bottom:70px;left:10px;right:10px;background:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 3px 10px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:101;transition:transform 0.2s,opacity 0.2s}
+    .install-banner.hidden{opacity:0;transform:translateY(10px);pointer-events:none}
+    .install-banner span{font-size:14px;color:#3b3226}
+    .install-banner button{background:#8b7355;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px}
     .bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:#fff;border-top:1px solid #e0d7c6;display:flex;justify-content:space-around;padding:8px 0;z-index:99}
     .bottom-nav button{background:none;border:none;color:#8b7355;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px}
     .bottom-nav button.active{color:#3b3226;font-weight:bold}
@@ -70,6 +78,7 @@
 </head>
 <body>
 <div class="container" id="app"></div>
+<div id="install-banner" class="install-banner hidden"><span>将此页面添加到主屏幕，像应用一样使用。</span><button onclick="promptInstall()">安装应用</button></div>
 <nav class="bottom-nav" id="bottom-nav">
   <button onclick="navigate('#home')" class="active"><span>🏠</span>首页</button>
   <button onclick="navigate('#community')"><span>💬</span>社区</button>
@@ -846,6 +855,42 @@
     div.textContent = text;
     return div.innerHTML;
   }
+
+  let deferredPrompt = null;
+  const installBanner = document.getElementById('install-banner');
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    if (installBanner) installBanner.classList.remove('hidden');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    if (installBanner) installBanner.classList.add('hidden');
+    alert('应用已安装，可从桌面或开始菜单打开');
+  });
+
+  function promptInstall() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('用户接受安装');
+      } else {
+        console.log('用户取消安装');
+      }
+      deferredPrompt = null;
+      if (installBanner) installBanner.classList.add('hidden');
+    });
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('Service Worker registered'))
+      .catch((err) => console.warn('Service Worker registration failed:', err));
+  }
+
   if (typeof marked !== 'undefined') marked.setOptions({ breaks: true, gfm: true });
   render();
 </script>
