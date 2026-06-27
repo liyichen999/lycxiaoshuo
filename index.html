@@ -294,7 +294,6 @@
 
   async function signOut() { await supabaseClient.auth.signOut(); user = null; profile = null; render(); }
 
-  // 签到（局部刷新）
   async function performCheckin(button) {
     if (!user) return;
     const today = new Date().toISOString().slice(0,10);
@@ -315,17 +314,13 @@
     button.textContent = `已签到 (${points}积分，连续${consecutive}天)`;
   }
 
-  // 首页
   async function home(container) {
-    // 公告
     const { data: ann } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (ann?.length) {
       const div = document.createElement('div'); div.className = 'card';
       div.innerHTML = `<strong>📢 公告</strong><br>${marked.parse(ann[0].content)}`;
       container.appendChild(div);
     }
-
-    // 签到
     if (user) {
       const today = new Date().toISOString().slice(0,10);
       const { data: checkin } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
@@ -342,13 +337,9 @@
       }
       container.appendChild(checkinDiv);
     }
-
-    // 搜索
     const searchDiv = document.createElement('div'); searchDiv.className = 'card';
     searchDiv.innerHTML = `<input id="search" placeholder="搜索小说、作者、用户..."><button onclick="search()" style="margin-top:6px;">搜索</button><div id="results" style="margin-top:10px;"></div>`;
     container.appendChild(searchDiv);
-
-    // 小说网格（异步格式化作者名）
     const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').order('updated_at', { ascending: false }).limit(30);
     const grid = document.createElement('div'); grid.className = 'novel-grid';
     if (novels?.length) {
@@ -356,8 +347,7 @@
         const authorFormatted = n.profiles ? await formatUsername(n.profiles, true) : '未知';
         const card = document.createElement('div'); card.className = 'novel-card';
         card.onclick = () => navigate(`#novel/${n.id}`);
-        card.innerHTML = `<img class="novel-cover" src="${n.cover_url || PLACEHOLDER_IMAGE}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'">
-          <div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${authorFormatted}</div></div>`;
+        card.innerHTML = `<img class="novel-cover" src="${n.cover_url || PLACEHOLDER_IMAGE}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${authorFormatted}</div></div>`;
         grid.appendChild(card);
       }
     } else grid.innerHTML = '<p style="color:#888;">还没有小说，快来发布吧！</p>';
@@ -387,7 +377,6 @@
     if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
   }
 
-  // 小说详情
   async function novelDetail(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
@@ -419,8 +408,6 @@
         </div>
       </div>`;
     container.appendChild(infoCard);
-
-    // 小说总评论区
     const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username,role,muted_until,label)').eq('novel_id', novelId).is('chapter_id', null).order('created_at', { ascending: false });
     const commCard = document.createElement('div'); commCard.className = 'card';
     commCard.innerHTML = '<h3>💬 小说评论区</h3>';
@@ -476,7 +463,6 @@
     });
   }
 
-  // 章节列表
   async function chapterList(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
@@ -516,7 +502,6 @@
 
   function deleteChapter(chapterId, novelId) { showConfirm('删除该章节？', async () => { await supabaseClient.from('chapters').delete().eq('id', chapterId); navigate(`#novel/${novelId}/chapters`); }); }
 
-  // 章节内容
   async function chapterContent(container, chapterId) {
     const { data: chapter, error: chapterError } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).maybeSingle();
     if (chapterError || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
@@ -559,7 +544,6 @@
     navigate(`#chapter/${chapterId}`);
   }
 
-  // 用户主页
   async function userPage(container, username) {
     const { data: p } = await supabaseClient.from('profiles').select('*').eq('username', username).single();
     if (!p) return container.innerHTML += '<p>用户不存在</p>';
@@ -581,7 +565,6 @@
     navigate(`#user/${location.hash.split('/')[1]}`);
   }
 
-  // 个人中心（增加积分显示）
   async function myProfile(container) {
     if (!user) return navigate('#home');
     const { data: checkins } = await supabaseClient.from('daily_checkins').select('points');
@@ -598,7 +581,6 @@
     document.getElementById('my-ratings').innerHTML = ratings?.length ? ratings.map(r => `<p>《${esc(r.novels.title)}》：${r.score}星</p>`).join('') : '<p>暂无</p>';
   }
 
-  // 发布小说页面
   async function newNovel(container) {
     if (isMuted(profile)) return alert('你已被禁言，无法发布小说');
     const card = document.createElement('div'); card.className = 'card';
@@ -619,7 +601,6 @@
     alert('发布成功！'); navigate('#home');
   }
 
-  // 社区帖子列表
   async function communityList(container) {
     const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
@@ -652,7 +633,6 @@
     });
   }
 
-  // 帖子详情（含回复）
   async function postDetail(container, postId) {
     const { data: post } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').eq('id', postId).single();
     if (!post) return container.innerHTML += '<p>帖子不存在</p>';
@@ -678,7 +658,6 @@
     container.appendChild(replyCard);
   }
 
-  // 顶层回复
   window.addTopReply = async function(postId) {
     if (isMuted(profile)) return alert('你已被禁言');
     const content = document.getElementById('reply-content').value.trim();
@@ -688,7 +667,6 @@
     navigate(`#post/${postId}`);
   };
 
-  // 递归渲染回复（异步格式化用户名）
   async function renderReply(reply, allReplies, depth = 0) {
     const authorFormatted = reply.profiles ? await formatUsername(reply.profiles, true) : '未知';
     const div = document.createElement('div');
@@ -751,7 +729,6 @@
 
   async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
-  // 管理员后台
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
@@ -798,6 +775,7 @@
     else c.innerHTML = '<p>暂无评论</p>';
   }
   async function deleteComment(id) { if (confirm('删除？')) { await supabaseClient.from('comments').delete().eq('id', id); adminComments(); } }
+
   async function adminNovels() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
@@ -805,12 +783,14 @@
     else c.innerHTML = '<p>暂无小说</p>';
   }
   async function deleteNovelAdmin(id) { if (confirm('强制删除？')) { await supabaseClient.from('novels').delete().eq('id', id); adminNovels(); } }
+
   async function adminPosts() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').order('created_at', { ascending: false });
     if (posts?.length) posts.forEach(p => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
     else c.innerHTML = '<p>暂无帖子</p>';
   }
+
   async function adminAdmins() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: profiles } = await supabaseClient.from('profiles').select('*');
@@ -824,6 +804,7 @@
     await supabaseClient.from('profiles').update({ role: p.role==='admin'?'user':'admin' }).eq('id', userId);
     adminAdmins();
   }
+
   function editAnnouncement() {
     openGenericForm('编辑公告（支持 Markdown）', `<textarea id="ann" rows="6" placeholder="公告内容..."></textarea><small>支持 Markdown 语法</small>`, async () => {
       const content = document.getElementById('ann').value.trim();
