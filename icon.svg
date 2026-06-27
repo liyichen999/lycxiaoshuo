@@ -1,5 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#8b7355"/>
-  <path d="M144 128h224v256H144z" fill="#f5f2eb"/>
-  <path d="M176 160h160v32H176zm0 80h160v32H176zm0 80h104v32H176z" fill="#8b7355"/>
+  <!-- 背景圆角矩形 -->
+  <rect x="64" y="64" width="384" height="384" rx="80" fill="#6b5b4a"/>
+  <!-- 书页（左） -->
+  <path d="M160 170 L250 210 V370 L160 330 Z" fill="#f5f2eb" opacity="0.9"/>
+  <!-- 书页（右） -->
+  <path d="M352 170 L262 210 V370 L352 330 Z" fill="#f5f2eb"/>
+  <!-- 书脊 -->
+  <rect x="248" y="190" width="16" height="160" rx="4" fill="#e6b422"/>
+  <!-- 字母L的竖线 -->
+  <line x1="230" y1="240" x2="230" y2="310" stroke="#3b3226" stroke-width="12" stroke-linecap="round"/>
+  <!-- 字母L的横线 -->
+  <line x1="230" y1="310" x2="280" y2="310" stroke="#3b3226" stroke-width="12" stroke-linecap="round"/>
 </svg>
