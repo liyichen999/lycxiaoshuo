@@ -1,6 +1,6 @@
 {
   "name": "lyc书库",
-  "short_name": "书库",
+  "short_name": "lyc书库",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#f5f2eb",
