@@ -1,6 +1,6 @@
 {
   "name": "lyc书库",
-  "short_name": "lyc书库",
+  "short_name": "书库",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#f5f2eb",
@@ -8,7 +8,13 @@
   "icons": [
     {
       "src": "icon.svg",
-      "sizes": "any",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
     }
