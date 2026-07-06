@@ -463,10 +463,12 @@
     });
   }
 
+  // 修复后的章节列表
   async function chapterList(container, novelId) {
-    const { data: novel } = await supabaseClient.from('novels').select('*').eq('id', novelId).single();
-    if (!novel) return container.innerHTML += '<p>不存在</p>';
-    const { data: chapters } = await supabaseClient.from('chapters').select('*').eq('novel_id', novelId).order('chapter_number');
+    const { data: novel, error: novelError } = await supabaseClient.from('novels').select('*').eq('id', novelId).maybeSingle();
+    if (novelError || !novel) { container.innerHTML += '<p>小说不存在</p>'; return; }
+    const { data: chapters, error: chaptersError } = await supabaseClient.from('chapters').select('*').eq('novel_id', novelId).order('chapter_number');
+    if (chaptersError) { container.innerHTML += '<p>加载章节失败</p>'; return; }
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = `<a onclick="navigate('#novel/${novelId}')" style="font-size:12px;">← 详情</a><h2>${esc(novel.title)} · 章节</h2>`;
     if (chapters?.length) {
