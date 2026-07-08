@@ -72,7 +72,6 @@
     .username-label{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:4px;vertical-align:middle;font-weight:bold}
     .label-admin{background:#FFD700;color:#000}
     .label-violator{background:#b55;color:#fff;text-decoration:line-through}
-    .post-image{max-width:100%;border-radius:8px;margin-top:8px;}
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -454,15 +453,14 @@
   async function deleteNovel(id) { if (!confirm('确定删除该小说及所有章节？')) return; await supabaseClient.from('novels').delete().eq('id', id); alert('已删除'); navigate('#home'); }
 
   function editNovel(novelId) {
-    supabaseClient.from('novels').select('*').eq('id', novelId).single().then(({data:n}) => {
-      openGenericForm('编辑小说', `<input id="et" value="${esc(n.title)}" placeholder="标题"><input id="eg" value="${esc(n.genre||'')}" placeholder="分类" style="margin-top:6px;"><textarea id="ed" rows="4" style="margin-top:6px;">${esc(n.description||'')}</textarea>`, async () => {
-        const t = document.getElementById('et').value.trim(); if (!t) throw new Error('标题不能为空');
-        await supabaseClient.from('novels').update({ title: t, genre: document.getElementById('eg').value.trim(), description: document.getElementById('ed').value.trim(), updated_at: new Date() }).eq('id', novelId);
-        navigate(`#novel/${novelId}`);
-      });
+    openGenericForm('编辑小说', `<input id="et" value="${esc(novel?.title||'')}" placeholder="标题"><input id="eg" value="${esc(novel?.genre||'')}" placeholder="分类" style="margin-top:6px;"><textarea id="ed" rows="4" style="margin-top:6px;">${esc(novel?.description||'')}</textarea>`, async () => {
+      const t = document.getElementById('et').value.trim(); if (!t) throw new Error('标题不能为空');
+      await supabaseClient.from('novels').update({ title: t, genre: document.getElementById('eg').value.trim(), description: document.getElementById('ed').value.trim(), updated_at: new Date() }).eq('id', novelId);
+      navigate(`#novel/${novelId}`);
     });
   }
 
+  // 章节列表
   async function chapterList(container, novelId) {
     const { data: novel, error: novelError } = await supabaseClient.from('novels').select('*').eq('id', novelId).maybeSingle();
     if (novelError || !novel) { container.innerHTML += '<p>小说不存在</p>'; return; }
@@ -628,8 +626,6 @@
       <textarea id="post-content" rows="4" placeholder="内容（至少3个字）" style="margin-top:6px;"></textarea>
       <input type="file" id="post-image" accept="image/*" style="margin-top:6px;">
       <small style="color:#888;">可选：上传图片</small>
-      <button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">发布</button>
-      <div id="generic-err" style="color:red;"></div>
     `, async () => {
       const title = document.getElementById('post-title').value.trim();
       const content = document.getElementById('post-content').value.trim();
@@ -846,14 +842,11 @@
     });
   }
 
-  // 通用工具
+  // ================== 通用弹窗（已修复按钮） ==================
   function openGenericForm(title, html, cb) {
     const container = document.getElementById('modal-container');
-    container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div></div></div>`;
+    container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
     window.__genericCallback = cb;
-    // 重新绑定提交按钮，因为openGenericForm可能被重写
-    const btn = document.getElementById('generic-submit');
-    if (btn) btn.onclick = submitGenericForm;
   }
   function submitGenericForm() {
     const cb = window.__genericCallback;
@@ -892,11 +885,8 @@
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('用户接受安装');
-      } else {
-        console.log('用户取消安装');
-      }
+      if (choiceResult.outcome === 'accepted') console.log('用户接受安装');
+      else console.log('用户取消安装');
       deferredPrompt = null;
       if (installBanner) installBanner.classList.add('hidden');
     });
