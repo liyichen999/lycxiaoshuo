@@ -72,6 +72,7 @@
     .username-label{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:4px;vertical-align:middle;font-weight:bold}
     .label-admin{background:#FFD700;color:#000}
     .label-violator{background:#b55;color:#fff;text-decoration:line-through}
+    .post-image{max-width:100%;border-radius:8px;margin-top:8px;}
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -193,7 +194,6 @@
     profile = data || null;
   }
 
-  // 模态框
   function openModal(type, data) {
     const container = document.getElementById('modal-container');
     if (type === 'login') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
@@ -463,7 +463,6 @@
     });
   }
 
-  // 修复后的章节列表
   async function chapterList(container, novelId) {
     const { data: novel, error: novelError } = await supabaseClient.from('novels').select('*').eq('id', novelId).maybeSingle();
     if (novelError || !novel) { container.innerHTML += '<p>小说不存在</p>'; return; }
@@ -504,6 +503,7 @@
 
   function deleteChapter(chapterId, novelId) { showConfirm('删除该章节？', async () => { await supabaseClient.from('chapters').delete().eq('id', chapterId); navigate(`#novel/${novelId}/chapters`); }); }
 
+  // 章节内容（已修复上一章/下一章）
   async function chapterContent(container, chapterId) {
     const { data: chapter, error: chapterError } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).maybeSingle();
     if (chapterError || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
@@ -512,7 +512,7 @@
     if (!novel) { container.innerHTML += '<p>所属小说不存在</p>'; return; }
     const { data: allChapters } = await supabaseClient.from('chapters').select('id, chapter_number').eq('novel_id', novel.id).order('chapter_number');
     const list = allChapters || [];
-    const idx = list.findIndex(ch => ch.id === chapterId);
+    const idx = list.findIndex(ch => ch.id == chapterId);
     const prev = idx > 0 ? list[idx-1] : null;
     const next = idx < list.length-1 ? list[idx+1] : null;
     const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username,role,muted_until,label)').eq('novel_id', novel.id).eq('chapter_id', chapterId).order('created_at', { ascending: true });
@@ -603,6 +603,7 @@
     alert('发布成功！'); navigate('#home');
   }
 
+  // ================== 社区（支持图片） ==================
   async function communityList(container) {
     const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
@@ -622,14 +623,31 @@
 
   async function openNewPostModal() {
     if (isMuted(profile)) return alert('你已被禁言');
-    openGenericForm('发布帖子', `<input id="post-title" placeholder="标题（至少2个字）"><textarea id="post-content" rows="4" placeholder="内容（至少3个字）" style="margin-top:6px;"></textarea>`, async () => {
+    openGenericForm('发布帖子', `
+      <input id="post-title" placeholder="标题（至少2个字）">
+      <textarea id="post-content" rows="4" placeholder="内容（至少3个字）" style="margin-top:6px;"></textarea>
+      <input type="file" id="post-image" accept="image/*" style="margin-top:6px;">
+      <small style="color:#888;">可选：上传图片</small>
+      <button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">发布</button>
+      <div id="generic-err" style="color:red;"></div>
+    `, async () => {
       const title = document.getElementById('post-title').value.trim();
       const content = document.getElementById('post-content').value.trim();
+      const fileInput = document.getElementById('post-image');
+      const file = fileInput.files[0];
       if (!isContentValid(title, content) || containsBanned(title) || containsBanned(content)) {
         await addViolation(user.id, '发布违规帖子');
         throw new Error('内容违规或无意义，已记录违规');
       }
-      const { error } = await supabaseClient.from('posts').insert({ author_id: user.id, title, content });
+      let finalContent = content;
+      if (file) {
+        const path = `post_${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabaseClient.storage.from('posts').upload(path, file);
+        if (uploadError) throw new Error('图片上传失败：' + uploadError.message);
+        const { data: { publicUrl } } = supabaseClient.storage.from('posts').getPublicUrl(path);
+        finalContent += `\n![image](${publicUrl})`;
+      }
+      const { error } = await supabaseClient.from('posts').insert({ author_id: user.id, title, content: finalContent });
       if (error) throw error;
       alert('发布成功'); navigate('#community');
     });
@@ -645,8 +663,19 @@
       userVote = vote?.vote_type || null;
     }
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<a onclick="navigate('#community')" style="font-size:12px;">← 社区</a><h2>${esc(post.title)}</h2><div class="post-meta">${authorFormatted} · ${new Date(post.created_at).toLocaleString()}</div><div style="margin:10px 0;">${esc(post.content).replace(/\n/g,'<br>')}</div><div class="vote-btns"><button onclick="votePost(${post.id},'like')" class="${userVote==='like'?'active':''}">👍 ${post.like_count||0}</button><button onclick="votePost(${post.id},'dislike')" class="${userVote==='dislike'?'active':''}">👎 ${post.dislike_count||0}</button>${profile?.role==='admin'?`<button onclick="togglePin(${post.id})">${post.is_pinned?'取消置顶':'置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>`:''}</div>`;
+    card.innerHTML = `
+      <a onclick="navigate('#community')" style="font-size:12px;">← 社区</a>
+      <h2>${esc(post.title)}</h2>
+      <div class="post-meta">${authorFormatted} · ${new Date(post.created_at).toLocaleString()}</div>
+      <div style="margin:10px 0;">${marked.parse(post.content)}</div>
+      <div class="vote-btns">
+        <button onclick="votePost(${post.id},'like')" class="${userVote==='like'?'active':''}">👍 ${post.like_count||0}</button>
+        <button onclick="votePost(${post.id},'dislike')" class="${userVote==='dislike'?'active':''}">👎 ${post.dislike_count||0}</button>
+        ${profile?.role==='admin'?`<button onclick="togglePin(${post.id})">${post.is_pinned?'取消置顶':'置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>`:''}
+      </div>
+    `;
     container.appendChild(card);
+
     const { data: replies } = await supabaseClient.from('post_replies').select('*, profiles(username,role,muted_until,label)').eq('post_id', postId).order('created_at', { ascending: true });
     const replyCard = document.createElement('div'); replyCard.className = 'card';
     replyCard.innerHTML = '<h3>回复</h3>';
@@ -731,6 +760,7 @@
 
   async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
+  // ================== 管理员后台 ==================
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
@@ -819,14 +849,18 @@
   // 通用工具
   function openGenericForm(title, html, cb) {
     const container = document.getElementById('modal-container');
-    container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
+    container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div></div></div>`;
     window.__genericCallback = cb;
+    // 重新绑定提交按钮，因为openGenericForm可能被重写
+    const btn = document.getElementById('generic-submit');
+    if (btn) btn.onclick = submitGenericForm;
   }
   function submitGenericForm() {
     const cb = window.__genericCallback;
     if (!cb) return;
-    const err = document.getElementById('generic-err'); err.textContent = '';
-    cb().then(() => closeModal()).catch(e => err.textContent = e.message);
+    const err = document.getElementById('generic-err');
+    if (err) err.textContent = '';
+    cb().then(() => closeModal()).catch(e => { if (err) err.textContent = e.message; });
   }
   function showConfirm(msg, onConfirm) {
     const container = document.getElementById('modal-container');
