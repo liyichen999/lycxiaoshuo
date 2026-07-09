@@ -72,6 +72,26 @@
     .username-label{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:4px;vertical-align:middle;font-weight:bold}
     .label-admin{background:#FFD700;color:#000}
     .label-violator{background:#b55;color:#fff;text-decoration:line-through}
+    /* 私信样式 */
+    .message-item{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #f0ece4;cursor:pointer}
+    .message-item:last-child{border-bottom:none}
+    .message-avatar{width:50px;height:50px;border-radius:50%;background:#8b7355;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:12px;overflow:hidden;flex-shrink:0}
+    .message-avatar img{width:100%;height:100%;object-fit:cover}
+    .message-content{flex:1;min-width:0}
+    .message-content .name{font-weight:bold;font-size:16px;display:flex;align-items:center}
+    .message-content .preview{font-size:14px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .message-time{font-size:12px;color:#aaa;margin-left:10px;white-space:nowrap}
+    .unread-dot{width:10px;height:10px;background:#f00;border-radius:50%;display:inline-block;margin-left:5px}
+    .chat-header{display:flex;align-items:center;padding:10px 15px;background:#fff;border-bottom:1px solid #f0ece4;position:sticky;top:0;z-index:10}
+    .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 250px)}
+    .chat-input-area{display:flex;padding:10px;background:#fff;border-top:1px solid #f0ece4;position:sticky;bottom:0}
+    .chat-input-area textarea{flex:1;border:1px solid #ddd;border-radius:5px;padding:8px;resize:none}
+    .chat-bubble{margin-bottom:12px;display:flex}
+    .chat-bubble.mine{justify-content:flex-end}
+    .chat-bubble .bubble{max-width:70%;padding:10px 12px;border-radius:12px;font-size:15px;line-height:1.5;word-break:break-word}
+    .chat-bubble.mine .bubble{background:#95ec69;color:#000}
+    .chat-bubble.other .bubble{background:#fff;color:#000;border:1px solid #e0e0e0}
+    .chat-bubble .time{font-size:11px;color:#aaa;margin-top:4px}
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -83,6 +103,7 @@
   <button onclick="navigate('#home')" class="active"><span>🏠</span>首页</button>
   <button onclick="navigate('#community')"><span>💬</span>社区</button>
   <button onclick="navigate('#new-novel')"><span>✏️</span>发布</button>
+  <button onclick="navigate('#messages')"><span>✉️</span>私信</button>
   <button onclick="navigate('#profile')"><span>👤</span>我的</button>
   <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><span>⚙️</span>后台</button>
 </nav>
@@ -180,6 +201,8 @@
     else if (hash.startsWith('#user/')) await userPage(app, hash.split('/')[1]);
     else if (hash === '#community') await communityList(app);
     else if (hash.startsWith('#post/')) await postDetail(app, hash.split('/')[1]);
+    else if (hash === '#messages') await messagesPage(app);
+    else if (hash.startsWith('#chat/')) await chatPage(app, hash.split('/')[1]);
     else if (hash === '#new-novel') await newNovel(app);
     else if (hash === '#profile') await myProfile(app);
     else if (hash === '#admin' && profile?.role === 'admin') await adminPanel(app);
@@ -193,6 +216,7 @@
     profile = data || null;
   }
 
+  // ========== 通用模态框 ==========
   function openModal(type, data) {
     const container = document.getElementById('modal-container');
     if (type === 'login') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
@@ -453,14 +477,15 @@
   async function deleteNovel(id) { if (!confirm('确定删除该小说及所有章节？')) return; await supabaseClient.from('novels').delete().eq('id', id); alert('已删除'); navigate('#home'); }
 
   function editNovel(novelId) {
-    openGenericForm('编辑小说', `<input id="et" value="${esc(novel?.title||'')}" placeholder="标题"><input id="eg" value="${esc(novel?.genre||'')}" placeholder="分类" style="margin-top:6px;"><textarea id="ed" rows="4" style="margin-top:6px;">${esc(novel?.description||'')}</textarea>`, async () => {
-      const t = document.getElementById('et').value.trim(); if (!t) throw new Error('标题不能为空');
-      await supabaseClient.from('novels').update({ title: t, genre: document.getElementById('eg').value.trim(), description: document.getElementById('ed').value.trim(), updated_at: new Date() }).eq('id', novelId);
-      navigate(`#novel/${novelId}`);
+    supabaseClient.from('novels').select('*').eq('id', novelId).single().then(({data:n}) => {
+      openGenericForm('编辑小说', `<input id="et" value="${esc(n.title)}" placeholder="标题"><input id="eg" value="${esc(n.genre||'')}" placeholder="分类" style="margin-top:6px;"><textarea id="ed" rows="4" style="margin-top:6px;">${esc(n.description||'')}</textarea>`, async () => {
+        const t = document.getElementById('et').value.trim(); if (!t) throw new Error('标题不能为空');
+        await supabaseClient.from('novels').update({ title: t, genre: document.getElementById('eg').value.trim(), description: document.getElementById('ed').value.trim(), updated_at: new Date() }).eq('id', novelId);
+        navigate(`#novel/${novelId}`);
+      });
     });
   }
 
-  // 章节列表
   async function chapterList(container, novelId) {
     const { data: novel, error: novelError } = await supabaseClient.from('novels').select('*').eq('id', novelId).maybeSingle();
     if (novelError || !novel) { container.innerHTML += '<p>小说不存在</p>'; return; }
@@ -501,7 +526,6 @@
 
   function deleteChapter(chapterId, novelId) { showConfirm('删除该章节？', async () => { await supabaseClient.from('chapters').delete().eq('id', chapterId); navigate(`#novel/${novelId}/chapters`); }); }
 
-  // 章节内容（已修复上一章/下一章）
   async function chapterContent(container, chapterId) {
     const { data: chapter, error: chapterError } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).maybeSingle();
     if (chapterError || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
@@ -601,7 +625,7 @@
     alert('发布成功！'); navigate('#home');
   }
 
-  // ================== 社区（支持图片） ==================
+  // ================== 社区 ==================
   async function communityList(container) {
     const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
@@ -756,13 +780,152 @@
 
   async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
+  // ================== 私信功能（直接搜索） ==================
+  async function messagesPage(container) {
+    if (!user) return container.innerHTML = '<p>请先登录</p>';
+
+    // 搜索框
+    const searchDiv = document.createElement('div'); searchDiv.className = 'card';
+    searchDiv.innerHTML = `<h2>✉️ 私信</h2><input id="msg-search" placeholder="搜索用户名发起私信..."><div id="msg-search-results" style="margin-top:10px;"></div>`;
+    container.appendChild(searchDiv);
+
+    // 会话列表
+    const { data: msgs } = await supabaseClient.from('messages').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at', { ascending: false });
+    const conversations = new Map();
+    msgs?.forEach(m => {
+      const otherId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
+      if (!conversations.has(otherId) || new Date(m.created_at) > new Date(conversations.get(otherId).created_at)) {
+        conversations.set(otherId, m);
+      }
+    });
+    const userIds = Array.from(conversations.keys());
+    let userProfiles = [];
+    if (userIds.length) {
+      const { data } = await supabaseClient.from('profiles').select('*').in('id', userIds);
+      userProfiles = data || [];
+    }
+    if (userProfiles.length) {
+      const list = document.createElement('div'); list.className = 'card';
+      for (const p of userProfiles) {
+        const lastMsg = conversations.get(p.id);
+        const unread = lastMsg && !lastMsg.is_read && lastMsg.receiver_id === user.id;
+        const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : p.username[0];
+        const div = document.createElement('div');
+        div.className = 'message-item';
+        div.onclick = () => navigate(`#chat/${p.id}`);
+        div.innerHTML = `
+          <div class="message-avatar">${avatarHtml}</div>
+          <div class="message-content">
+            <div class="name">${esc(p.username)} ${unread ? '<span class="unread-dot"></span>' : ''}</div>
+            <div class="preview">${esc(lastMsg?.content?.substring(0,30) || '')}</div>
+          </div>
+          <div class="message-time">${lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString() : ''}</div>
+        `;
+        list.appendChild(div);
+      }
+      container.appendChild(list);
+    } else {
+      container.innerHTML += '<p style="text-align:center;color:#888;">暂无消息</p>';
+    }
+
+    // 绑定搜索事件
+    const inp = document.getElementById('msg-search');
+    if (inp) {
+      inp.addEventListener('input', async () => {
+        const kw = inp.value.trim();
+        const resultsDiv = document.getElementById('msg-search-results');
+        if (!kw) { resultsDiv.innerHTML = ''; return; }
+        const { data: users } = await supabaseClient.from('profiles').select('*').ilike('username', `%${kw}%`).neq('id', user.id).limit(5);
+        resultsDiv.innerHTML = '';
+        if (users) {
+          users.forEach(u => {
+            resultsDiv.innerHTML += `<div style="padding:8px 0;border-bottom:1px solid #f0ece4;cursor:pointer;" onclick="window.startChat('${u.id}')">${esc(u.username)}</div>`;
+          });
+        }
+      });
+    }
+  }
+
+  window.startChat = function(userId) {
+    navigate(`#chat/${userId}`);
+  };
+
+  async function chatPage(container, partnerId) {
+    if (!user) return container.innerHTML = '<p>请先登录</p>';
+    const { data: partner } = await supabaseClient.from('profiles').select('*').eq('id', partnerId).single();
+    if (!partner) return container.innerHTML += '<p>用户不存在</p>';
+
+    const { data: unreadMsgs } = await supabaseClient.from('messages').select('id').eq('sender_id', partnerId).eq('receiver_id', user.id).eq('is_read', false);
+    if (unreadMsgs?.length) {
+      await supabaseClient.from('messages').update({ is_read: true }).in('id', unreadMsgs.map(m => m.id));
+    }
+
+    const { data: msgs } = await supabaseClient.from('messages').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at', { ascending: true });
+
+    const avatarHtml = partner.avatar_url ? `<img src="${partner.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : partner.username[0];
+    const header = document.createElement('div');
+    header.className = 'chat-header';
+    header.innerHTML = `<div class="message-avatar" style="width:40px;height:40px;font-size:16px;margin-right:10px;">${avatarHtml}</div><div style="font-weight:bold;font-size:18px;">${esc(partner.username)}</div><button onclick="navigate('#messages')" style="margin-left:auto;">返回</button>`;
+    container.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'chat-body';
+    if (msgs?.length) {
+      msgs.forEach(m => {
+        const isMe = m.sender_id === user.id;
+        const div = document.createElement('div');
+        div.className = `chat-bubble ${isMe ? 'mine' : 'other'}`;
+        div.innerHTML = `<div><div class="bubble">${esc(m.content)}</div><div class="time">${new Date(m.created_at).toLocaleTimeString()}</div></div>`;
+        body.appendChild(div);
+      });
+    } else {
+      body.innerHTML = '<p style="text-align:center;color:#888;">暂无消息</p>';
+    }
+    container.appendChild(body);
+
+    const inputArea = document.createElement('div');
+    inputArea.className = 'chat-input-area';
+    inputArea.innerHTML = `<textarea id="msg-input" rows="2" placeholder="输入消息..."></textarea><button onclick="window.sendMessage('${partnerId}')" style="margin-left:8px;padding:10px 16px;">发送</button>`;
+    container.appendChild(inputArea);
+
+    setTimeout(() => { body.scrollTop = body.scrollHeight; }, 100);
+  }
+
+  window.sendMessage = async function(partnerId) {
+    const content = document.getElementById('msg-input').value.trim();
+    if (!content) return;
+    await supabaseClient.from('messages').insert({ sender_id: user.id, receiver_id: partnerId, content });
+    navigate(`#chat/${partnerId}`);
+  };
+
   // ================== 管理员后台 ==================
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
+    let buttons = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
+    if (profile?.email === '18631167199@163.com') {
+      buttons += `<button onclick="adminMessages()" style="margin-left:6px;background:#b55;">私信监控</button>`;
+    }
+    card.innerHTML = buttons;
     container.appendChild(card);
     const content = document.createElement('div'); content.id = 'admin-content'; container.appendChild(content);
     adminComments();
+  }
+
+  async function adminMessages() {
+    if (profile?.email !== '18631167199@163.com') return;
+    const c = document.getElementById('admin-content'); c.innerHTML = '';
+    const { data: messages } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: false }).limit(100);
+    if (!messages) { c.innerHTML = '<p>暂无私信记录</p>'; return; }
+    // 补充用户名信息
+    const userIds = [...new Set([...messages.map(m=>m.sender_id), ...messages.map(m=>m.receiver_id)])];
+    const { data: profiles } = await supabaseClient.from('profiles').select('id,username').in('id', userIds);
+    const userMap = {};
+    if (profiles) profiles.forEach(p => userMap[p.id] = p.username);
+    messages.forEach(m => {
+      const senderName = userMap[m.sender_id] || '未知';
+      const receiverName = userMap[m.receiver_id] || '未知';
+      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(senderName)}</b> → <b>${esc(receiverName)}</b>：${esc(m.content)} <small>${new Date(m.created_at).toLocaleString()}</small></div>`;
+    });
   }
 
   async function adminUsers() {
@@ -842,7 +1005,7 @@
     });
   }
 
-  // ================== 通用弹窗（已修复按钮） ==================
+  // ================== 通用工具 ==================
   function openGenericForm(title, html, cb) {
     const container = document.getElementById('modal-container');
     container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
