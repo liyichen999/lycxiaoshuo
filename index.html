@@ -6,7 +6,7 @@
   <title>lyc书库 · 小说社区</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#f5f2eb">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
@@ -41,18 +41,10 @@
     a{color:#8b7355;cursor:pointer;text-decoration:none}
     .meta{font-size:12px;color:#888}
     .btn-group{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
-    .install-banner{position:fixed;bottom:70px;left:10px;right:10px;background:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 3px 10px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:101;transition:transform 0.2s,opacity 0.2s}
-    .install-banner.hidden{opacity:0;transform:translateY(10px);pointer-events:none}
-    .install-banner span{font-size:14px;color:#3b3226}
-    .install-banner button{background:#8b7355;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px}
     .bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:#fff;border-top:1px solid #e0d7c6;display:flex;justify-content:space-around;padding:8px 0;z-index:99}
     .bottom-nav button{background:none;border:none;color:#8b7355;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px}
     .bottom-nav button.active{color:#3b3226;font-weight:bold}
     pre{white-space:pre-wrap;font-family:inherit}
-    .rank-list{list-style:none}
-    .rank-list li{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0ece4}
-    .rank-list li:last-child{border-bottom:none}
-    .rank-num{font-size:18px;font-weight:bold;color:#8b7355;width:24px;text-align:center}
     .chapter-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ece4}
     .chapter-item:last-child{border-bottom:none}
     .nav-chapter{display:flex;justify-content:space-between;margin-top:15px}
@@ -72,25 +64,25 @@
     .username-label{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:4px;vertical-align:middle;font-weight:bold}
     .label-admin{background:#FFD700;color:#000}
     .label-violator{background:#b55;color:#fff;text-decoration:line-through}
-    /* 私信样式 */
-    .message-item{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #f0ece4;cursor:pointer}
-    .message-item:last-child{border-bottom:none}
-    .message-avatar{width:50px;height:50px;border-radius:50%;background:#8b7355;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:12px;overflow:hidden;flex-shrink:0}
-    .message-avatar img{width:100%;height:100%;object-fit:cover}
-    .message-content{flex:1;min-width:0}
-    .message-content .name{font-weight:bold;font-size:16px;display:flex;align-items:center}
-    .message-content .preview{font-size:14px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .message-time{font-size:12px;color:#aaa;margin-left:10px;white-space:nowrap}
-    .unread-dot{width:10px;height:10px;background:#f00;border-radius:50%;display:inline-block;margin-left:5px}
-    .chat-header{display:flex;align-items:center;padding:10px 15px;background:#fff;border-bottom:1px solid #f0ece4;position:sticky;top:0;z-index:10}
-    .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 250px)}
+    /* 洛谷风格私信 */
+    .msg-list-item{display:flex;align-items:center;padding:12px;border-bottom:1px solid #f0ece4;cursor:pointer;transition:background 0.2s}
+    .msg-list-item:hover{background:#faf8f5}
+    .msg-avatar{width:45px;height:45px;border-radius:50%;background:#8b7355;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:12px;overflow:hidden;flex-shrink:0}
+    .msg-avatar img{width:100%;height:100%;object-fit:cover}
+    .msg-content{flex:1;min-width:0}
+    .msg-content .username{font-weight:bold;font-size:16px}
+    .msg-content .last-msg{font-size:14px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .msg-time{font-size:12px;color:#aaa;white-space:nowrap}
+    .unread-dot{width:8px;height:8px;background:#f00;border-radius:50%;display:inline-block;margin-left:6px}
+    .chat-header{display:flex;align-items:center;padding:12px 15px;background:#fff;border-bottom:1px solid #f0ece4;position:sticky;top:0;z-index:10}
+    .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 220px)}
     .chat-input-area{display:flex;padding:10px;background:#fff;border-top:1px solid #f0ece4;position:sticky;bottom:0}
     .chat-input-area textarea{flex:1;border:1px solid #ddd;border-radius:5px;padding:8px;resize:none}
-    .chat-bubble{margin-bottom:12px;display:flex}
+    .chat-bubble{margin-bottom:15px;display:flex}
     .chat-bubble.mine{justify-content:flex-end}
-    .chat-bubble .bubble{max-width:70%;padding:10px 12px;border-radius:12px;font-size:15px;line-height:1.5;word-break:break-word}
-    .chat-bubble.mine .bubble{background:#95ec69;color:#000}
-    .chat-bubble.other .bubble{background:#fff;color:#000;border:1px solid #e0e0e0}
+    .chat-bubble .bubble{max-width:75%;padding:10px 15px;border-radius:18px;font-size:15px;line-height:1.5;word-break:break-word;position:relative}
+    .chat-bubble.mine .bubble{background:#8b7355;color:#fff;border-bottom-right-radius:4px}
+    .chat-bubble.other .bubble{background:#fff;color:#000;border:1px solid #e0e0e0;border-bottom-left-radius:4px}
     .chat-bubble .time{font-size:11px;color:#aaa;margin-top:4px}
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
   </style>
@@ -98,7 +90,6 @@
 </head>
 <body>
 <div class="container" id="app"></div>
-<div id="install-banner" class="install-banner hidden"><span>将此页面添加到主屏幕，像应用一样使用。</span><button onclick="promptInstall()">安装应用</button></div>
 <nav class="bottom-nav" id="bottom-nav">
   <button onclick="navigate('#home')" class="active"><span>🏠</span>首页</button>
   <button onclick="navigate('#community')"><span>💬</span>社区</button>
@@ -216,7 +207,6 @@
     profile = data || null;
   }
 
-  // ========== 通用模态框 ==========
   function openModal(type, data) {
     const container = document.getElementById('modal-container');
     if (type === 'login') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
@@ -625,7 +615,7 @@
     alert('发布成功！'); navigate('#home');
   }
 
-  // ================== 社区 ==================
+  // ================== 社区（支持图片） ==================
   async function communityList(container) {
     const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
@@ -780,55 +770,55 @@
 
   async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
-  // ================== 私信功能（直接搜索） ==================
+  // ================== 洛谷风格私信（完全可用） ==================
   async function messagesPage(container) {
     if (!user) return container.innerHTML = '<p>请先登录</p>';
-
     // 搜索框
-    const searchDiv = document.createElement('div'); searchDiv.className = 'card';
-    searchDiv.innerHTML = `<h2>✉️ 私信</h2><input id="msg-search" placeholder="搜索用户名发起私信..."><div id="msg-search-results" style="margin-top:10px;"></div>`;
-    container.appendChild(searchDiv);
+    const searchCard = document.createElement('div'); searchCard.className = 'card';
+    searchCard.innerHTML = `<h2>✉️ 私信</h2><input id="msg-search" placeholder="搜索用户名发起私信..."><div id="msg-search-results" style="margin-top:10px;"></div>`;
+    container.appendChild(searchCard);
 
     // 会话列表
     const { data: msgs } = await supabaseClient.from('messages').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at', { ascending: false });
     const conversations = new Map();
-    msgs?.forEach(m => {
-      const otherId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
-      if (!conversations.has(otherId) || new Date(m.created_at) > new Date(conversations.get(otherId).created_at)) {
-        conversations.set(otherId, m);
-      }
-    });
-    const userIds = Array.from(conversations.keys());
-    let userProfiles = [];
-    if (userIds.length) {
-      const { data } = await supabaseClient.from('profiles').select('*').in('id', userIds);
-      userProfiles = data || [];
+    if (msgs) {
+      msgs.forEach(m => {
+        const otherId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
+        if (!conversations.has(otherId) || new Date(m.created_at) > new Date(conversations.get(otherId).created_at)) {
+          conversations.set(otherId, m);
+        }
+      });
     }
-    if (userProfiles.length) {
-      const list = document.createElement('div'); list.className = 'card';
-      for (const p of userProfiles) {
-        const lastMsg = conversations.get(p.id);
-        const unread = lastMsg && !lastMsg.is_read && lastMsg.receiver_id === user.id;
-        const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : p.username[0];
-        const div = document.createElement('div');
-        div.className = 'message-item';
-        div.onclick = () => navigate(`#chat/${p.id}`);
-        div.innerHTML = `
-          <div class="message-avatar">${avatarHtml}</div>
-          <div class="message-content">
-            <div class="name">${esc(p.username)} ${unread ? '<span class="unread-dot"></span>' : ''}</div>
-            <div class="preview">${esc(lastMsg?.content?.substring(0,30) || '')}</div>
-          </div>
-          <div class="message-time">${lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString() : ''}</div>
-        `;
-        list.appendChild(div);
+    const userIds = Array.from(conversations.keys());
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabaseClient.from('profiles').select('*').in('id', userIds);
+      const listCard = document.createElement('div'); listCard.className = 'card';
+      listCard.innerHTML = '<h3>最近会话</h3>';
+      if (profiles) {
+        for (const p of profiles) {
+          const lastMsg = conversations.get(p.id);
+          const unread = lastMsg && !lastMsg.is_read && lastMsg.receiver_id === user.id;
+          const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : p.username[0];
+          const div = document.createElement('div');
+          div.className = 'msg-list-item';
+          div.onclick = () => navigate(`#chat/${p.id}`);
+          div.innerHTML = `
+            <div class="msg-avatar">${avatarHtml}</div>
+            <div class="msg-content">
+              <div class="username" style="display:flex;align-items:center;">${esc(p.username)} ${unread ? '<span class="unread-dot"></span>' : ''}</div>
+              <div class="last-msg">${esc(lastMsg?.content?.substring(0,40) || '')}</div>
+            </div>
+            <div class="msg-time">${lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString() : ''}</div>
+          `;
+          listCard.appendChild(div);
+        }
       }
-      container.appendChild(list);
+      container.appendChild(listCard);
     } else {
       container.innerHTML += '<p style="text-align:center;color:#888;">暂无消息</p>';
     }
 
-    // 绑定搜索事件
+    // 搜索事件
     const inp = document.getElementById('msg-search');
     if (inp) {
       inp.addEventListener('input', async () => {
@@ -839,16 +829,12 @@
         resultsDiv.innerHTML = '';
         if (users) {
           users.forEach(u => {
-            resultsDiv.innerHTML += `<div style="padding:8px 0;border-bottom:1px solid #f0ece4;cursor:pointer;" onclick="window.startChat('${u.id}')">${esc(u.username)}</div>`;
+            resultsDiv.innerHTML += `<div class="msg-list-item" onclick="navigate('#chat/${u.id}')"><div class="msg-avatar">${u.username[0]}</div><div class="msg-content"><div class="username">${esc(u.username)}</div></div></div>`;
           });
         }
       });
     }
   }
-
-  window.startChat = function(userId) {
-    navigate(`#chat/${userId}`);
-  };
 
   async function chatPage(container, partnerId) {
     if (!user) return container.innerHTML = '<p>请先登录</p>';
@@ -865,7 +851,7 @@
     const avatarHtml = partner.avatar_url ? `<img src="${partner.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : partner.username[0];
     const header = document.createElement('div');
     header.className = 'chat-header';
-    header.innerHTML = `<div class="message-avatar" style="width:40px;height:40px;font-size:16px;margin-right:10px;">${avatarHtml}</div><div style="font-weight:bold;font-size:18px;">${esc(partner.username)}</div><button onclick="navigate('#messages')" style="margin-left:auto;">返回</button>`;
+    header.innerHTML = `<div class="msg-avatar" style="width:40px;height:40px;font-size:16px;margin-right:10px;">${avatarHtml}</div><div style="font-weight:bold;font-size:18px;">${esc(partner.username)}</div><button onclick="navigate('#messages')" style="margin-left:auto;">返回</button>`;
     container.appendChild(header);
 
     const body = document.createElement('div');
@@ -885,18 +871,22 @@
 
     const inputArea = document.createElement('div');
     inputArea.className = 'chat-input-area';
-    inputArea.innerHTML = `<textarea id="msg-input" rows="2" placeholder="输入消息..."></textarea><button onclick="window.sendMessage('${partnerId}')" style="margin-left:8px;padding:10px 16px;">发送</button>`;
+    inputArea.innerHTML = `<textarea id="msg-input" rows="2" placeholder="输入消息..."></textarea><button id="send-btn" style="margin-left:8px;padding:10px 16px;">发送</button>`;
     container.appendChild(inputArea);
+
+    document.getElementById('send-btn').onclick = async () => {
+      const content = document.getElementById('msg-input').value.trim();
+      if (!content) return;
+      const { error } = await supabaseClient.from('messages').insert({ sender_id: user.id, receiver_id: partnerId, content });
+      if (error) {
+        alert('发送失败：' + error.message);
+      } else {
+        navigate(`#chat/${partnerId}`);
+      }
+    };
 
     setTimeout(() => { body.scrollTop = body.scrollHeight; }, 100);
   }
-
-  window.sendMessage = async function(partnerId) {
-    const content = document.getElementById('msg-input').value.trim();
-    if (!content) return;
-    await supabaseClient.from('messages').insert({ sender_id: user.id, receiver_id: partnerId, content });
-    navigate(`#chat/${partnerId}`);
-  };
 
   // ================== 管理员后台 ==================
   async function adminPanel(container) {
@@ -916,7 +906,6 @@
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: messages } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: false }).limit(100);
     if (!messages) { c.innerHTML = '<p>暂无私信记录</p>'; return; }
-    // 补充用户名信息
     const userIds = [...new Set([...messages.map(m=>m.sender_id), ...messages.map(m=>m.receiver_id)])];
     const { data: profiles } = await supabaseClient.from('profiles').select('id,username').in('id', userIds);
     const userMap = {};
@@ -1005,7 +994,7 @@
     });
   }
 
-  // ================== 通用工具 ==================
+  // 通用工具
   function openGenericForm(title, html, cb) {
     const container = document.getElementById('modal-container');
     container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
@@ -1031,36 +1020,26 @@
 
   let deferredPrompt = null;
   const installBanner = document.getElementById('install-banner');
-
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     deferredPrompt = event;
     if (installBanner) installBanner.classList.remove('hidden');
   });
-
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     if (installBanner) installBanner.classList.add('hidden');
-    alert('应用已安装，可从桌面或开始菜单打开');
   });
-
   function promptInstall() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') console.log('用户接受安装');
-      else console.log('用户取消安装');
       deferredPrompt = null;
       if (installBanner) installBanner.classList.add('hidden');
     });
   }
-
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(() => console.log('Service Worker registered'))
-      .catch((err) => console.warn('Service Worker registration failed:', err));
+    navigator.serviceWorker.register('service-worker.js');
   }
-
   if (typeof marked !== 'undefined') marked.setOptions({ breaks: true, gfm: true });
   render();
 </script>
