@@ -92,7 +92,7 @@
   <button onclick="navigate('#home')" class="active"><span>🏠</span>首页</button>
   <button onclick="navigate('#community')"><span>💬</span>社区</button>
   <button onclick="navigate('#new-novel')"><span>✏️</span>发布</button>
-  <button onclick="navigate('#messages')"><span>✉️</span>私信</button>
+  <button onclick="navigate('#pm')"><span>✉️</span>私信</button>
   <button onclick="navigate('#profile')"><span>👤</span>我的</button>
   <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><span>⚙️</span>后台</button>
 </nav>
@@ -190,7 +190,7 @@
     else if (hash.startsWith('#user/')) await userPage(app, hash.split('/')[1]);
     else if (hash === '#community') await communityList(app);
     else if (hash.startsWith('#post/')) await postDetail(app, hash.split('/')[1]);
-    else if (hash === '#messages') await messagesPage(app);
+    else if (hash === '#pm') await pmPage(app);
     else if (hash.startsWith('#chat/')) await chatPage(app, hash.split('/')[1]);
     else if (hash === '#new-novel') await newNovel(app);
     else if (hash === '#profile') await myProfile(app);
@@ -768,16 +768,17 @@
 
   async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
-  // ================== 私信功能（最精简可靠版） ==================
-  async function messagesPage(container) {
+  // ================== 私信功能（使用新表 pm） ==================
+  async function pmPage(container) {
     if (!user) return container.innerHTML = '<p>请先登录</p>';
+    
     // 搜索框
     const searchCard = document.createElement('div'); searchCard.className = 'card';
     searchCard.innerHTML = `<h2>✉️ 私信</h2><input id="msg-search" placeholder="搜索用户名发起私信..."><div id="msg-search-results" style="margin-top:10px;"></div>`;
     container.appendChild(searchCard);
 
     // 会话列表
-    const { data: msgs } = await supabaseClient.from('messages').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at', { ascending: false });
+    const { data: msgs } = await supabaseClient.from('pm').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at', { ascending: false });
     const conversations = new Map();
     if (msgs) {
       msgs.forEach(m => {
@@ -839,12 +840,13 @@
     const { data: partner } = await supabaseClient.from('profiles').select('*').eq('id', partnerId).single();
     if (!partner) return container.innerHTML += '<p>用户不存在</p>';
 
-    const { data: msgs } = await supabaseClient.from('messages').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at', { ascending: true });
+    // 获取消息（使用新表 pm）
+    const { data: msgs } = await supabaseClient.from('pm').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at', { ascending: true });
 
     const avatarHtml = partner.avatar_url ? `<img src="${partner.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : partner.username[0];
     const header = document.createElement('div');
     header.className = 'chat-header';
-    header.innerHTML = `<div class="msg-avatar" style="width:40px;height:40px;font-size:16px;margin-right:10px;">${avatarHtml}</div><div style="font-weight:bold;font-size:18px;">${esc(partner.username)}</div><button onclick="navigate('#messages')" style="margin-left:auto;">返回</button>`;
+    header.innerHTML = `<div class="msg-avatar" style="width:40px;height:40px;font-size:16px;margin-right:10px;">${avatarHtml}</div><div style="font-weight:bold;font-size:18px;">${esc(partner.username)}</div><button onclick="navigate('#pm')" style="margin-left:auto;">返回</button>`;
     container.appendChild(header);
 
     const body = document.createElement('div');
@@ -862,15 +864,21 @@
     }
     container.appendChild(body);
 
+    // 输入框和发送按钮
     const inputArea = document.createElement('div');
     inputArea.className = 'chat-input-area';
     inputArea.innerHTML = `<textarea id="msg-input" rows="2" placeholder="输入消息..."></textarea><button id="send-btn" style="margin-left:8px;padding:10px 16px;">发送</button>`;
     container.appendChild(inputArea);
 
+    // 绑定发送事件（使用新表 pm）
     document.getElementById('send-btn').onclick = async () => {
       const content = document.getElementById('msg-input').value.trim();
       if (!content) return;
-      const { error } = await supabaseClient.from('messages').insert({ sender_id: user.id, receiver_id: partnerId, content });
+      const { error } = await supabaseClient.from('pm').insert({
+        sender_id: user.id,
+        receiver_id: partnerId,
+        content: content
+      });
       if (error) {
         alert('发送失败：' + error.message);
       } else {
@@ -886,7 +894,7 @@
     const card = document.createElement('div'); card.className = 'card';
     let buttons = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
     if (profile?.email === '18631167199@163.com') {
-      buttons += `<button onclick="adminMessages()" style="margin-left:6px;background:#b55;">私信监控</button>`;
+      buttons += `<button onclick="adminPM()" style="margin-left:6px;background:#b55;">私信监控</button>`;
     }
     card.innerHTML = buttons;
     container.appendChild(card);
@@ -894,10 +902,10 @@
     adminComments();
   }
 
-  async function adminMessages() {
+  async function adminPM() {
     if (profile?.email !== '18631167199@163.com') return;
     const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: messages } = await supabaseClient.from('messages').select('*').order('created_at', { ascending: false }).limit(100);
+    const { data: messages } = await supabaseClient.from('pm').select('*').order('created_at', { ascending: false }).limit(100);
     if (!messages) { c.innerHTML = '<p>暂无私信记录</p>'; return; }
     const userIds = [...new Set([...messages.map(m=>m.sender_id), ...messages.map(m=>m.receiver_id)])];
     const { data: profiles } = await supabaseClient.from('profiles').select('id,username').in('id', userIds);
