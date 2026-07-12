@@ -617,7 +617,7 @@
     alert('发布成功！'); navigate('#home');
   }
 
-  // ================== 社区 ==================
+  // 社区（含图片上传）
   async function communityList(container) {
     const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
@@ -665,6 +665,7 @@
     });
   }
 
+  // 帖子详情及回复
   async function postDetail(container, postId) {
     const { data: post } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').eq('id', postId).single();
     if (!post) return container.innerHTML += '<p>帖子不存在</p>';
@@ -772,7 +773,7 @@
 
   async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
-  // ================== 私信功能（最终修复版） ==================
+  // 私信功能
   async function updateMessageBadge() {
     if (!user) return;
     const { count } = await supabaseClient.from('pm').select('*', { count: 'exact', head: true }).eq('receiver_id', user.id).eq('is_read', false);
@@ -898,7 +899,7 @@
     setTimeout(() => { body.scrollTop = body.scrollHeight; }, 100);
   }
 
-  // ================== 管理员后台 ==================
+  // 管理员后台
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
     let buttons = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
