@@ -13,7 +13,8 @@
     body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f2eb;color:#3b3226;padding-bottom:70px}
     .container{max-width:800px;margin:0 auto;padding:15px}
     .navbar{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:10px 15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
-    .logo{font-size:1.3rem;font-weight:bold;color:#6b5b4a;cursor:pointer}
+    .logo{font-size:1.3rem;font-weight:bold;color:#6b5b4a;cursor:pointer;display:flex;align-items:center;gap:8px;}
+    .logo img{height:32px;vertical-align:middle;border-radius:50%;}
     .user-badge{display:flex;align-items:center;gap:6px}
     .avatar-circle{width:30px;height:30px;border-radius:50%;background:#8b7355;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;overflow:hidden}
     .avatar-circle img{width:100%;height:100%;object-fit:cover}
@@ -75,7 +76,7 @@
     .msg-time{font-size:12px;color:#aaa;white-space:nowrap}
     .unread-dot{width:8px;height:8px;background:#f00;border-radius:50%;display:inline-block;margin-left:6px}
     .chat-header{display:flex;align-items:center;padding:12px 15px;background:#fff;border-bottom:1px solid #f0ece4;position:sticky;top:0;z-index:10}
-    .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 220px)}
+    .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 250px)}
     .chat-input-area{display:flex;padding:10px;background:#fff;border-top:1px solid #f0ece4;position:sticky;bottom:0}
     .chat-input-area textarea{flex:1;border:1px solid #ddd;border-radius:5px;padding:8px;resize:none}
     .chat-bubble{margin-bottom:15px;display:flex}
@@ -90,12 +91,22 @@
     .ad-dots { text-align: center; margin-top: 5px; }
     .ad-dot { display: inline-block; width: 8px; height: 8px; background: #ccc; border-radius: 50%; margin: 0 4px; cursor: pointer; }
     .ad-dot.active { background: #8b7355; }
-    @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+    /* AI 助手 */
+    .ai-float-btn { position: fixed; right: 20px; bottom: 120px; width: 50px; height: 50px; background: #8b7355; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 200; overflow: hidden; }
+    .ai-float-btn img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+    .ai-chat-panel { position: fixed; right: 10px; bottom: 170px; width: 300px; max-height: 400px; background: #fff; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden; z-index: 201; display:none; }
+    .ai-chat-panel.show { display:flex; }
+    .ai-chat-messages { flex:1; padding:10px; overflow-y:auto; }
+    .ai-chat-input { display:flex; padding:8px; border-top:1px solid #eee; }
+    .ai-chat-input input { flex:1; border:1px solid #ddd; border-radius:20px; padding:6px 12px; font-size:13px; }
+    .ai-chat-input button { background:#8b7355; color:#fff; border:none; border-radius:20px; padding:6px 12px; margin-left:6px; font-size:13px; }
+    @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))} .ai-chat-panel{width:260px;} }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="container" id="app"></div>
+<div id="install-banner" class="install-banner hidden"><span>将此页面添加到主屏幕，像应用一样使用。</span><button onclick="promptInstall()">安装应用</button></div>
 <nav class="bottom-nav" id="bottom-nav">
   <button onclick="navigate('#home')" class="active"><span>🏠</span>首页</button>
   <button onclick="navigate('#community')"><span>💬</span>社区</button>
@@ -106,11 +117,30 @@
 </nav>
 <div id="modal-container"></div>
 
+<!-- AI 助手 -->
+<div class="ai-float-btn" id="ai-float-btn" onclick="toggleAiChat()">
+  <img src="小l.jpg" alt="小l">
+</div>
+<div class="ai-chat-panel" id="ai-chat-panel">
+  <div class="chat-header" style="padding:10px 15px; border-bottom:1px solid #eee;">
+    <span style="font-weight:bold;">🤖 小l 助手</span>
+    <button onclick="toggleAiChat()" style="margin-left:auto; background:none; border:none; font-size:18px; cursor:pointer;">×</button>
+  </div>
+  <div class="ai-chat-messages" id="ai-messages">
+    <div class="chat-bubble other"><div class="bubble">你好！我是小l，关于书库的问题都可以问我~</div></div>
+  </div>
+  <div class="ai-chat-input">
+    <input type="text" id="ai-input" placeholder="问我关于书的问题..." onkeydown="if(event.key==='Enter')sendAiMessage()">
+    <button onclick="sendAiMessage()">发送</button>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = 'https://srbibtnvtpygegmtehzb.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
+  const ZHIPU_API_KEY = '82ef0cac37cf4ecabd4e26eb4520a17c.erhi0QMNAoQpRh5r';
 
   let user = null, profile = null, rendering = false;
   const BANNED_WORDS = ['广告','赌博','色情','敏感词','违法','政治'];
@@ -179,7 +209,9 @@
     updateMessageBadge();
 
     const nav = document.createElement('div'); nav.className = 'navbar';
-    nav.innerHTML = `<span class="logo" onclick="navigate('#home')">📖 lyc书库</span>`;
+    nav.innerHTML = `<div class="logo" onclick="navigate('#home')">
+      <img src="小l.jpg" alt="小l"> lyc书库
+    </div>`;
     if (user && profile) {
       const avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='${profile.username[0]}'">` : profile.username[0];
       const formatted = await formatUsername(profile, true);
@@ -348,9 +380,8 @@
     button.textContent = `已签到 (${points}积分，连续${consecutive}天)`;
   }
 
-  // ================== 首页（含广告轮播） ==================
+  // ================== 首页（广告轮播修复） ==================
   async function home(container) {
-    // 公告
     const { data: ann } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (ann?.length) {
       const div = document.createElement('div'); div.className = 'card';
@@ -358,7 +389,6 @@
       container.appendChild(div);
     }
 
-    // 广告轮播
     const { data: ads } = await supabaseClient.from('posts').select('id, ad_image_url').eq('is_ad', true);
     if (ads && ads.length > 0) {
       const adContainer = document.createElement('div');
@@ -399,7 +429,6 @@
       }, 5000);
     }
 
-    // 签到
     if (user) {
       const today = new Date().toISOString().slice(0,10);
       const { data: checkin } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
@@ -682,7 +711,7 @@
     alert('发布成功！'); navigate('#home');
   }
 
-  // ================== 社区（含图片上传） ==================
+  // ================== 社区 ==================
   async function communityList(container) {
     const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
@@ -837,7 +866,7 @@
 
   async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
-  // ================== 私信功能 ==================
+  // ================== 私信 ==================
   async function updateMessageBadge() {
     if (!user) return;
     const { count } = await supabaseClient.from('pm').select('*', { count: 'exact', head: true }).eq('receiver_id', user.id).eq('is_read', false);
@@ -963,7 +992,7 @@
     setTimeout(() => { body.scrollTop = body.scrollHeight; }, 100);
   }
 
-  // ================== 管理员后台（含广告管理） ==================
+  // ================== 管理员后台 ==================
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
     let buttons = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="adminAds()" style="margin-left:6px;">管理广告</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
@@ -1098,6 +1127,58 @@
     });
   }
 
+  // ================== AI 助手 ==================
+  function toggleAiChat() {
+    const panel = document.getElementById('ai-chat-panel');
+    panel.classList.toggle('show');
+  }
+
+  async function sendAiMessage() {
+    const input = document.getElementById('ai-input');
+    const question = input.value.trim();
+    if (!question) return;
+    appendAiMessage('user', question);
+    input.value = '';
+    const { data: novels } = await supabaseClient.from('novels').select('title, description, genre').limit(20);
+    let bookContext = '';
+    if (novels && novels.length > 0) {
+      bookContext = novels.map(n => `《${n.title}》(${n.genre || ''})：${n.description || ''}`).join('\n');
+    }
+    const systemPrompt = `你是lyc书库的智能助手“小l”，一个可爱的小吉祥物。你了解书库中的所有书籍，并乐于帮助用户解答关于书籍内容、书库功能等问题。请根据以下书库信息回答用户问题：\n${bookContext}\n如果用户问的问题与书无关，你可以友善地推荐相关书籍。`;
+    try {
+      const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ZHIPU_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'glm-4-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: question }
+          ],
+          temperature: 0.7,
+          max_tokens: 1024
+        })
+      });
+      const result = await response.json();
+      const reply = result.choices?.[0]?.message?.content || '抱歉，我暂时无法回答。';
+      appendAiMessage('assistant', reply);
+    } catch (err) {
+      appendAiMessage('assistant', '网络错误，请稍后再试。');
+    }
+  }
+
+  function appendAiMessage(role, content) {
+    const messagesDiv = document.getElementById('ai-messages');
+    const div = document.createElement('div');
+    div.className = role === 'user' ? 'chat-bubble mine' : 'chat-bubble other';
+    div.innerHTML = `<div class="bubble">${esc(content)}</div>`;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
   // 通用工具
   function openGenericForm(title, html, cb) {
     const container = document.getElementById('modal-container');
@@ -1120,6 +1201,30 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  // PWA 安装
+  let deferredPrompt = null;
+  const installBanner = document.getElementById('install-banner');
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    if (installBanner) installBanner.classList.remove('hidden');
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    if (installBanner) installBanner.classList.add('hidden');
+  });
+  function promptInstall() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      deferredPrompt = null;
+      if (installBanner) installBanner.classList.add('hidden');
+    });
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
   }
 
   if (typeof marked !== 'undefined') marked.setOptions({ breaks: true, gfm: true });
