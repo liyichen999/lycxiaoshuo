@@ -13,8 +13,7 @@
     body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f2eb;color:#3b3226;padding-bottom:70px}
     .container{max-width:800px;margin:0 auto;padding:15px}
     .navbar{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:10px 15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
-    .logo{font-size:1.3rem;font-weight:bold;color:#6b5b4a;cursor:pointer;display:flex;align-items:center;gap:8px;}
-    .logo img{height:32px;vertical-align:middle;border-radius:50%;}
+    .logo{font-size:1.3rem;font-weight:bold;color:#6b5b4a;cursor:pointer}
     .user-badge{display:flex;align-items:center;gap:6px}
     .avatar-circle{width:30px;height:30px;border-radius:50%;background:#8b7355;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;overflow:hidden}
     .avatar-circle img{width:100%;height:100%;object-fit:cover}
@@ -42,10 +41,10 @@
     .meta{font-size:12px;color:#888}
     .btn-group{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
     .bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:#fff;border-top:1px solid #e0d7c6;display:flex;justify-content:space-around;padding:8px 0;z-index:99}
-    .bottom-nav button{background:none;border:none;color:#8b7355;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px; position:relative;}
+    .bottom-nav button{background:none;border:none;color:#8b7355;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
     .bottom-nav button.active{color:#3b3226;font-weight:bold}
-    .badge{position:absolute;top:0;right:8px;background:red;color:white;border-radius:10px;padding:0 4px;font-size:10px;line-height:16px;min-width:16px;text-align:center;display:none;}
-    .badge.show{display:inline-block;}
+    .badge{position:absolute;top:0;right:8px;background:red;color:white;border-radius:10px;padding:0 4px;font-size:10px;line-height:16px;min-width:16px;text-align:center;display:none}
+    .badge.show{display:inline-block}
     pre{white-space:pre-wrap;font-family:inherit}
     .chapter-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ece4}
     .chapter-item:last-child{border-bottom:none}
@@ -76,37 +75,39 @@
     .msg-time{font-size:12px;color:#aaa;white-space:nowrap}
     .unread-dot{width:8px;height:8px;background:#f00;border-radius:50%;display:inline-block;margin-left:6px}
     .chat-header{display:flex;align-items:center;padding:12px 15px;background:#fff;border-bottom:1px solid #f0ece4;position:sticky;top:0;z-index:10}
-    .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 250px)}
+    .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 220px)}
     .chat-input-area{display:flex;padding:10px;background:#fff;border-top:1px solid #f0ece4;position:sticky;bottom:0}
     .chat-input-area textarea{flex:1;border:1px solid #ddd;border-radius:5px;padding:8px;resize:none}
     .chat-bubble{margin-bottom:15px;display:flex}
     .chat-bubble.mine{justify-content:flex-end}
-    .chat-bubble .bubble{max-width:75%;padding:10px 15px;border-radius:18px;font-size:15px;line-height:1.5;word-break:break-word;white-space:pre-wrap;overflow-wrap:break-word;}
+    .chat-bubble .bubble{max-width:75%;padding:10px 15px;border-radius:18px;font-size:15px;line-height:1.5;word-break:break-word;white-space:pre-wrap;overflow-wrap:break-word}
     .chat-bubble.mine .bubble{background:#8b7355;color:#fff;border-bottom-right-radius:4px}
     .chat-bubble.other .bubble{background:#fff;color:#000;border:1px solid #e0e0e0;border-bottom-left-radius:4px}
     .chat-bubble .time{font-size:11px;color:#aaa;margin-top:4px}
-    /* 广告轮播 */
-    .ad-carousel { position: relative; overflow: hidden; border-radius: 10px; margin-bottom: 12px; }
-    .ad-carousel img { width: 100%; height: 150px; object-fit: cover; display: block; cursor: pointer; }
-    .ad-dots { text-align: center; margin-top: 5px; }
-    .ad-dot { display: inline-block; width: 8px; height: 8px; background: #ccc; border-radius: 50%; margin: 0 4px; cursor: pointer; }
-    .ad-dot.active { background: #8b7355; }
-    /* AI 助手 */
-    .ai-float-btn { position: fixed; right: 20px; bottom: 120px; width: 50px; height: 50px; background: #8b7355; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 200; overflow: hidden; }
-    .ai-float-btn img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
-    .ai-chat-panel { position: fixed; right: 10px; bottom: 170px; width: 300px; max-height: 400px; background: #fff; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden; z-index: 201; display:none; }
-    .ai-chat-panel.show { display:flex; }
-    .ai-chat-messages { flex:1; padding:10px; overflow-y:auto; }
-    .ai-chat-input { display:flex; padding:8px; border-top:1px solid #eee; }
-    .ai-chat-input input { flex:1; border:1px solid #ddd; border-radius:20px; padding:6px 12px; font-size:13px; }
-    .ai-chat-input button { background:#8b7355; color:#fff; border:none; border-radius:20px; padding:6px 12px; margin-left:6px; font-size:13px; }
-    @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))} .ai-chat-panel{width:260px;} }
+    /* 广告 */
+    .ad-carousel{position:relative;overflow:hidden;border-radius:10px;margin-bottom:12px;background:#f0ece4}
+    .ad-carousel img{width:100%;height:150px;object-fit:cover;display:block;cursor:pointer}
+    .ad-dots{text-align:center;padding:5px 0}
+    .ad-dot{display:inline-block;width:8px;height:8px;background:#ccc;border-radius:50%;margin:0 4px;cursor:pointer}
+    .ad-dot.active{background:#8b7355}
+    /* 吉祥物 */
+    .mascot-icon{position:fixed;bottom:90px;right:15px;z-index:1000;width:50px;height:50px;border-radius:50%;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer}
+    .mascot-icon img{width:100%;height:100%;object-fit:cover}
+    /* AI聊天窗 */
+    .ai-chat{position:fixed;bottom:150px;right:15px;width:300px;max-height:400px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:none;flex-direction:column;z-index:1001}
+    .ai-chat.show{display:flex}
+    .ai-chat .ai-header{background:#8b7355;color:#fff;padding:10px 15px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center}
+    .ai-chat .ai-body{flex:1;overflow-y:auto;padding:10px;min-height:200px;max-height:250px;font-size:14px}
+    .ai-chat .ai-input{padding:10px;border-top:1px solid #ddd;display:flex}
+    .ai-chat .ai-input input{flex:1;padding:8px;border:1px solid #ddd;border-radius:5px}
+    .ai-chat .ai-input button{margin-left:5px;padding:8px 12px}
+    .notification-item{padding:10px;border-bottom:1px solid #f0ece4}
+    @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="container" id="app"></div>
-<div id="install-banner" class="install-banner hidden"><span>将此页面添加到主屏幕，像应用一样使用。</span><button onclick="promptInstall()">安装应用</button></div>
 <nav class="bottom-nav" id="bottom-nav">
   <button onclick="navigate('#home')" class="active"><span>🏠</span>首页</button>
   <button onclick="navigate('#community')"><span>💬</span>社区</button>
@@ -116,22 +117,22 @@
   <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><span>⚙️</span>后台</button>
 </nav>
 <div id="modal-container"></div>
-
-<!-- AI 助手 -->
-<div class="ai-float-btn" id="ai-float-btn" onclick="toggleAiChat()">
-  <img src="小l.jpg" alt="小l">
+<!-- 吉祥物小l -->
+<div class="mascot-icon" onclick="toggleAiChat()">
+  <img src="小l.jpg" alt="小l" onerror="this.style.display='none'">
 </div>
-<div class="ai-chat-panel" id="ai-chat-panel">
-  <div class="chat-header" style="padding:10px 15px; border-bottom:1px solid #eee;">
-    <span style="font-weight:bold;">🤖 小l 助手</span>
-    <button onclick="toggleAiChat()" style="margin-left:auto; background:none; border:none; font-size:18px; cursor:pointer;">×</button>
+<!-- AI聊天窗口 -->
+<div class="ai-chat" id="ai-chat">
+  <div class="ai-header">
+    <span>🤖 小l · AI助手</span>
+    <span onclick="toggleAiChat()" style="cursor:pointer">&times;</span>
   </div>
-  <div class="ai-chat-messages" id="ai-messages">
-    <div class="chat-bubble other"><div class="bubble">你好！我是小l，关于书库的问题都可以问我~</div></div>
+  <div class="ai-body" id="ai-body">
+    <p style="color:#888;">你好，我是小l，可以问我关于书库的问题哦~</p>
   </div>
-  <div class="ai-chat-input">
-    <input type="text" id="ai-input" placeholder="问我关于书的问题..." onkeydown="if(event.key==='Enter')sendAiMessage()">
-    <button onclick="sendAiMessage()">发送</button>
+  <div class="ai-input">
+    <input type="text" id="ai-input" placeholder="问我关于书的问题...">
+    <button onclick="askAi()">发送</button>
   </div>
 </div>
 
@@ -141,9 +142,11 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
   const ZHIPU_API_KEY = '82ef0cac37cf4ecabd4e26eb4520a17c.erhi0QMNAoQpRh5r';
+  const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
   let user = null, profile = null, rendering = false;
   const BANNED_WORDS = ['广告','赌博','色情','敏感词','违法','政治'];
+  const ALL_PERMISSIONS = ['删除帖子','删除小说','管理评论','管理用户','编辑公告','设置管理员','通过帖子','通过小说'];
 
   function containsBanned(text) { return BANNED_WORDS.some(w => text.includes(w)); }
   function isContentValid(title, content) {
@@ -154,6 +157,11 @@
     return true;
   }
   function isMuted(p) { return p?.muted_until && new Date(p.muted_until) > new Date(); }
+  function hasPermission(perm) {
+    if (!profile) return false;
+    if (profile.email === '18631167199@163.com') return true;
+    return (profile.permissions || []).includes(perm);
+  }
 
   async function addViolation(userId, reason) {
     await supabaseClient.from('user_violations').insert({ user_id: userId, reason });
@@ -168,7 +176,7 @@
     if (!profileData) return '#3b3226';
     if (isMuted(profileData)) return '#8B6914';
     if (profileData.role === 'admin') return '#FFD700';
-    const { data: novels } = await supabaseClient.from('novels').select('id').eq('author_id', profileData.id);
+    const { data: novels } = await supabaseClient.from('novels').select('id').eq('author_id', profileData.id).eq('approval_status', 'approved');
     const novelCount = novels?.length || 0;
     const { count: checkinCount } = await supabaseClient.from('daily_checkins').select('*', { count: 'exact', head: true }).eq('user_id', profileData.id);
     const days = checkinCount || 0;
@@ -209,9 +217,7 @@
     updateMessageBadge();
 
     const nav = document.createElement('div'); nav.className = 'navbar';
-    nav.innerHTML = `<div class="logo" onclick="navigate('#home')">
-      <img src="小l.jpg" alt="小l"> lyc书库
-    </div>`;
+    nav.innerHTML = `<span class="logo" onclick="navigate('#home')">📖 lyc书库</span>`;
     if (user && profile) {
       const avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='${profile.username[0]}'">` : profile.username[0];
       const formatted = await formatUsername(profile, true);
@@ -236,6 +242,7 @@
     else if (hash.startsWith('#chat/')) await chatPage(app, hash.split('/')[1]);
     else if (hash === '#new-novel') await newNovel(app);
     else if (hash === '#profile') await myProfile(app);
+    else if (hash === '#notifications') await notificationsPage(app);
     else if (hash === '#admin' && profile?.role === 'admin') await adminPanel(app);
     else home(app);
     rendering = false;
@@ -247,6 +254,7 @@
     profile = data || null;
   }
 
+  // ========== 通用模态框 ==========
   function openModal(type, data) {
     const container = document.getElementById('modal-container');
     if (type === 'login') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
@@ -257,8 +265,22 @@
     else if (type === 'upload-ad-image') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传广告图片</h3><input type="file" id="ad-image-file" accept="image/*"><button onclick="uploadAdImage('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
     else if (type === 'edit-bio') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑个人简介</h3><textarea id="bio-text" rows="4" placeholder="介绍一下自己...">${esc(profile?.bio||'')}</textarea><button onclick="saveBio()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
     else if (type === 'edit-label') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑标签</h3><input id="new-label" value="${esc(profile?.label||'')}" placeholder="输入标签"><button onclick="updateLabel()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
+    else if (type === 'permissions') {
+      const userPerms = data.permissions || [];
+      let permsHtml = ALL_PERMISSIONS.map(p => `<label><input type="checkbox" value="${p}" ${userPerms.includes(p)?'checked':''}> ${p}</label><br>`).join('');
+      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>设置权限 (${esc(data.username)})</h3>${permsHtml}<button onclick="savePermissions('${data.id}')" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
+      window._permUserId = data.id;
+    }
   }
   function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
+
+  async function savePermissions(userId) {
+    const checks = document.querySelectorAll('#modal-container input[type=checkbox]:checked');
+    const perms = Array.from(checks).map(c => c.value);
+    const { error } = await supabaseClient.from('profiles').update({ permissions: perms }).eq('id', userId);
+    if (error) return document.getElementById('err').textContent = error.message;
+    alert('权限已更新'); closeModal(); adminAdmins();
+  }
 
   async function doLogin() {
     const u = document.getElementById('luser').value.trim(), p = document.getElementById('lpass').value;
@@ -289,7 +311,7 @@
     const role = em === '18631167199@163.com' ? 'admin' : 'user';
     const label = role === 'admin' ? '管理员' : '';
     const label_changes = role === 'admin' ? (em === '18631167199@163.com' ? 999 : 1) : 0;
-    await supabaseClient.from('profiles').upsert({ id: user.id, username: u, email: em, role, label, label_changes_remaining: label_changes });
+    await supabaseClient.from('profiles').upsert({ id: user.id, username: u, email: em, role, label, label_changes_remaining: label_changes, permissions: [] });
     closeModal(); await loadProfile(); render();
   }
 
@@ -380,8 +402,9 @@
     button.textContent = `已签到 (${points}积分，连续${consecutive}天)`;
   }
 
-  // ================== 首页（广告轮播修复） ==================
+  // ================== 首页 ==================
   async function home(container) {
+    // 公告
     const { data: ann } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (ann?.length) {
       const div = document.createElement('div'); div.className = 'card';
@@ -389,24 +412,23 @@
       container.appendChild(div);
     }
 
+    // 广告轮播
     const { data: ads } = await supabaseClient.from('posts').select('id, ad_image_url').eq('is_ad', true);
     if (ads && ads.length > 0) {
-      const adContainer = document.createElement('div');
-      adContainer.className = 'ad-carousel';
+      const adContainer = document.createElement('div'); adContainer.className = 'ad-carousel';
       let currentAd = 0;
       const img = document.createElement('img');
-      img.src = ads[0].ad_image_url;
+      img.src = ads[0].ad_image_url || PLACEHOLDER_IMAGE;
       img.onclick = () => navigate(`#post/${ads[0].id}`);
       adContainer.appendChild(img);
 
-      const dotsContainer = document.createElement('div');
-      dotsContainer.className = 'ad-dots';
+      const dotsContainer = document.createElement('div'); dotsContainer.className = 'ad-dots';
       ads.forEach((ad, i) => {
         const dot = document.createElement('span');
         dot.className = 'ad-dot' + (i === 0 ? ' active' : '');
         dot.onclick = () => {
           currentAd = i;
-          img.src = ads[i].ad_image_url;
+          img.src = ads[i].ad_image_url || PLACEHOLDER_IMAGE;
           img.onclick = () => navigate(`#post/${ads[i].id}`);
           updateDots();
         };
@@ -422,13 +444,14 @@
       setInterval(() => {
         if (ads.length > 1) {
           currentAd = (currentAd + 1) % ads.length;
-          img.src = ads[currentAd].ad_image_url;
+          img.src = ads[currentAd].ad_image_url || PLACEHOLDER_IMAGE;
           img.onclick = () => navigate(`#post/${ads[currentAd].id}`);
           updateDots();
         }
       }, 5000);
     }
 
+    // 签到
     if (user) {
       const today = new Date().toISOString().slice(0,10);
       const { data: checkin } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
@@ -446,10 +469,13 @@
       container.appendChild(checkinDiv);
     }
 
+    // 搜索
     const searchDiv = document.createElement('div'); searchDiv.className = 'card';
     searchDiv.innerHTML = `<input id="search" placeholder="搜索小说、作者、用户..."><button onclick="search()" style="margin-top:6px;">搜索</button><div id="results" style="margin-top:10px;"></div>`;
     container.appendChild(searchDiv);
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').order('updated_at', { ascending: false }).limit(30);
+
+    // 小说网格（只显示审核通过的）
+    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').eq('approval_status', 'approved').order('updated_at', { ascending: false }).limit(30);
     const grid = document.createElement('div'); grid.className = 'novel-grid';
     if (novels?.length) {
       for (const n of novels) {
@@ -467,7 +493,7 @@
     const kw = document.getElementById('search').value.trim();
     const resultsDiv = document.getElementById('results'); resultsDiv.innerHTML = '';
     if (!kw) return;
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').ilike('title', `%${kw}%`).limit(10);
+    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').ilike('title', `%${kw}%`).eq('approval_status', 'approved').limit(10);
     const { data: users } = await supabaseClient.from('profiles').select('*').ilike('username', `%${kw}%`).limit(10);
     if (users?.length) {
       resultsDiv.innerHTML += '<b>👥 用户</b>';
@@ -486,6 +512,7 @@
     if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
   }
 
+  // ================== 小说详情 ==================
   async function novelDetail(container, novelId) {
     const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').eq('id', novelId).single();
     if (!novel) return container.innerHTML += '<p>不存在</p>';
@@ -572,6 +599,7 @@
     });
   }
 
+  // ================== 章节列表 ==================
   async function chapterList(container, novelId) {
     const { data: novel, error: novelError } = await supabaseClient.from('novels').select('*').eq('id', novelId).maybeSingle();
     if (novelError || !novel) { container.innerHTML += '<p>小说不存在</p>'; return; }
@@ -612,6 +640,7 @@
 
   function deleteChapter(chapterId, novelId) { showConfirm('删除该章节？', async () => { await supabaseClient.from('chapters').delete().eq('id', chapterId); navigate(`#novel/${novelId}/chapters`); }); }
 
+  // ================== 章节内容 ==================
   async function chapterContent(container, chapterId) {
     const { data: chapter, error: chapterError } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).maybeSingle();
     if (chapterError || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
@@ -654,10 +683,11 @@
     navigate(`#chapter/${chapterId}`);
   }
 
+  // ================== 用户主页 ==================
   async function userPage(container, username) {
     const { data: p } = await supabaseClient.from('profiles').select('*').eq('username', username).single();
     if (!p) return container.innerHTML += '<p>用户不存在</p>';
-    const { data: novels } = await supabaseClient.from('novels').select('*').eq('author_id', p.id).order('updated_at', { ascending: false });
+    const { data: novels } = await supabaseClient.from('novels').select('*').eq('author_id', p.id).eq('approval_status', 'approved').order('updated_at', { ascending: false });
     const { count: followers } = await supabaseClient.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', p.id);
     const { count: following } = await supabaseClient.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', p.id);
     const isFollowing = user ? !!(await supabaseClient.from('follows').select('*').eq('follower_id', user.id).eq('following_id', p.id).maybeSingle()) : false;
@@ -675,13 +705,14 @@
     navigate(`#user/${location.hash.split('/')[1]}`);
   }
 
+  // ================== 个人中心 ==================
   async function myProfile(container) {
     if (!user) return navigate('#home');
     const { data: checkins } = await supabaseClient.from('daily_checkins').select('points');
     const totalPoints = checkins?.reduce((s,c)=>s+c.points,0) || 0;
     const card = document.createElement('div'); card.className = 'card';
     const formatted = await formatUsername(profile, true);
-    card.innerHTML = `<div style="display:flex;gap:15px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : profile.username[0]}</div><div><h2>${formatted}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p><p>🌟 我的积分：${totalPoints}</p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>${profile.role==='admin'?`<button onclick="openModal('edit-label')" class="outline" style="margin-top:6px;">编辑标签</button>`:''}</div></div><h3 style="margin-top:15px;">📖 我的小说</h3><div id="my-novels"></div><h3 style="margin-top:15px;">💬 我的评论</h3><div id="my-comments"></div><h3 style="margin-top:15px;">⭐ 我的评分</h3><div id="my-ratings"></div>`;
+    card.innerHTML = `<div style="display:flex;gap:15px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : profile.username[0]}</div><div><h2>${formatted}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p><p>🌟 我的积分：${totalPoints}</p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>${profile.role==='admin'?`<button onclick="openModal('edit-label')" class="outline" style="margin-top:6px;">编辑标签</button>`:''}</div></div><h3 style="margin-top:15px;">📖 我的小说</h3><div id="my-novels"></div><h3 style="margin-top:15px;">💬 我的评论</h3><div id="my-comments"></div><h3 style="margin-top:15px;">⭐ 我的评分</h3><div id="my-ratings"></div><h3 style="margin-top:15px;"><a onclick="navigate('#notifications')">📬 我的消息</a></h3>`;
     container.appendChild(card);
     const { data: novels } = await supabaseClient.from('novels').select('*').eq('author_id', user.id).order('updated_at', { ascending: false });
     document.getElementById('my-novels').innerHTML = novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>';
@@ -691,10 +722,11 @@
     document.getElementById('my-ratings').innerHTML = ratings?.length ? ratings.map(r => `<p>《${esc(r.novels.title)}》：${r.score}星</p>`).join('') : '<p>暂无</p>';
   }
 
+  // ================== 发布小说（需审核） ==================
   async function newNovel(container) {
     if (isMuted(profile)) return alert('你已被禁言，无法发布小说');
     const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<h2>📝 发布新小说</h2><input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;"><textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea><button onclick="publishNovel()" style="width:100%;margin-top:12px;">立即发布</button><div id="err" style="color:red;"></div>`;
+    card.innerHTML = `<h2>📝 发布新小说</h2><input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;"><textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea><button onclick="publishNovel()" style="width:100%;margin-top:12px;">提交审核</button><div id="err" style="color:red;"></div>`;
     container.appendChild(card);
   }
 
@@ -706,14 +738,17 @@
       await addViolation(user.id, '发布违规小说');
       return document.getElementById('err').textContent = '内容违规或无意义，已记录违规';
     }
-    const { error } = await supabaseClient.from('novels').insert({ title, genre, description: desc, author_id: user.id, status: '连载中' });
+    const { error } = await supabaseClient.from('novels').insert({
+      title, genre, description: desc, author_id: user.id,
+      status: '连载中', approval_status: 'pending'
+    });
     if (error) return document.getElementById('err').textContent = error.message;
-    alert('发布成功！'); navigate('#home');
+    alert('提交成功，等待审核'); navigate('#home');
   }
 
   // ================== 社区 ==================
   async function communityList(container) {
-    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
+    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').eq('approval_status', 'approved').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
     const card = document.createElement('div'); card.className = 'card';
     card.innerHTML = '<h2>💬 社区</h2>';
     if (user && !isMuted(profile)) card.innerHTML += `<button onclick="openNewPostModal()" style="margin-bottom:10px;">+ 发帖</button>`;
@@ -753,12 +788,16 @@
         const { data: { publicUrl } } = supabaseClient.storage.from('posts').getPublicUrl(path);
         finalContent += `\n![image](${publicUrl})`;
       }
-      const { error } = await supabaseClient.from('posts').insert({ author_id: user.id, title, content: finalContent });
+      const { error } = await supabaseClient.from('posts').insert({
+        author_id: user.id, title, content: finalContent,
+        approval_status: 'pending'
+      });
       if (error) throw error;
-      alert('发布成功'); navigate('#community');
+      alert('提交成功，等待审核'); navigate('#community');
     });
   }
 
+  // 帖子详情、回复、投票等（与之前版本相同，完整版已包含，此处省略细节，但实际文件已保留）
   async function postDetail(container, postId) {
     const { data: post } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').eq('id', postId).single();
     if (!post) return container.innerHTML += '<p>帖子不存在</p>';
@@ -866,18 +905,14 @@
 
   async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
 
-  // ================== 私信 ==================
+  // ================== 私信功能 ==================
   async function updateMessageBadge() {
     if (!user) return;
     const { count } = await supabaseClient.from('pm').select('*', { count: 'exact', head: true }).eq('receiver_id', user.id).eq('is_read', false);
     const badge = document.getElementById('msg-badge');
     if (badge) {
-      if (count > 0) {
-        badge.textContent = count;
-        badge.classList.add('show');
-      } else {
-        badge.classList.remove('show');
-      }
+      if (count > 0) { badge.textContent = count; badge.classList.add('show'); }
+      else badge.classList.remove('show');
     }
   }
 
@@ -992,28 +1027,114 @@
     setTimeout(() => { body.scrollTop = body.scrollHeight; }, 100);
   }
 
+  // ================== 通知页面 ==================
+  async function notificationsPage(container) {
+    if (!user) return container.innerHTML = '<p>请先登录</p>';
+    const back = document.createElement('div'); back.className = 'back-link'; back.textContent = '← 返回'; back.onclick = () => navigate('#profile');
+    container.appendChild(back);
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = '<h2>📬 我的消息</h2><div id="notif-list">加载中...</div>';
+    container.appendChild(card);
+
+    // 获取帖子的投票
+    const { data: votes } = await supabaseClient.from('post_votes').select('post_id, vote_type, created_at').eq('user_id', user.id).order('created_at', { ascending: false });
+    // 帖子的回复
+    const { data: replies } = await supabaseClient.from('post_replies').select('id, post_id, content, created_at').eq('author_id', user.id);
+    // 回复的被回复
+    const { data: myReplies } = await supabaseClient.from('post_replies').select('id, post_id, content, parent_id, created_at').in('parent_id', replies.map(r => r.id));
+    // 小说的评论
+    const { data: myNovels } = await supabaseClient.from('novels').select('id, title').eq('author_id', user.id);
+    const novelIds = myNovels?.map(n => n.id) || [];
+    const { data: novelComms } = await supabaseClient.from('comments').select('*, novels(title)').in('novel_id', novelIds).order('created_at', { ascending: false });
+
+    let html = '';
+    if (votes?.length) {
+      html += '<h4>帖子投票</h4>';
+      votes.forEach(v => html += `<div class="notification-item">你的帖子被${v.vote_type==='like'?'赞':'踩'}了 <small>${new Date(v.created_at).toLocaleString()}</small></div>`);
+    }
+    if (replies?.length) {
+      html += '<h4>帖子回复</h4>';
+      for (const r of replies) {
+        const { data: post } = await supabaseClient.from('posts').select('title').eq('id', r.post_id).single();
+        html += `<div class="notification-item">你的帖子《${esc(post?.title||'')}》有新回复 <small>${new Date(r.created_at).toLocaleString()}</small></div>`;
+      }
+    }
+    if (myReplies?.length) {
+      html += '<h4>回复被引用</h4>';
+      myReplies.forEach(r => html += `<div class="notification-item">你的回复被回复了 <small>${new Date(r.created_at).toLocaleString()}</small></div>`);
+    }
+    if (novelComms?.length) {
+      html += '<h4>小说评论</h4>';
+      novelComms.forEach(c => html += `<div class="notification-item">你的小说《${esc(c.novels.title)}》有新评论 <small>${new Date(c.created_at).toLocaleString()}</small></div>`);
+    }
+    if (!html) html = '<p>暂无新消息</p>';
+    document.getElementById('notif-list').innerHTML = html;
+  }
+
   // ================== 管理员后台 ==================
   async function adminPanel(container) {
     const card = document.createElement('div'); card.className = 'card';
-    let buttons = `<button onclick="adminComments()">管理评论</button><button onclick="adminNovels()" style="margin-left:6px;">管理小说</button><button onclick="adminPosts()" style="margin-left:6px;">管理帖子</button><button onclick="adminUsers()" style="margin-left:6px;">管理用户</button><button onclick="adminAdmins()" style="margin-left:6px;">管理管理员</button><button onclick="adminAds()" style="margin-left:6px;">管理广告</button><button onclick="editAnnouncement()" style="margin-left:6px;">编辑公告</button>`;
-    if (profile?.email === '18631167199@163.com') {
-      buttons += `<button onclick="adminMessages()" style="margin-left:6px;background:#b55;">私信监控</button>`;
-    }
+    let buttons = `<button onclick="adminComments()">管理评论</button>`;
+    if (hasPermission('通过帖子')) buttons += `<button onclick="adminPostApprovals()">审核帖子</button>`;
+    if (hasPermission('通过小说')) buttons += `<button onclick="adminNovelApprovals()">审核小说</button>`;
+    if (hasPermission('管理用户')) buttons += `<button onclick="adminUsers()" style="margin-left:6px;">管理用户</button>`;
+    if (profile?.email === '18631167199@163.com') buttons += `<button onclick="adminAdmins()">管理管理员</button>`;
+    buttons += `<button onclick="adminAds()">管理广告</button><button onclick="editAnnouncement()">编辑公告</button>`;
+    if (profile?.email === '18631167199@163.com') buttons += `<button onclick="adminMessages()" style="background:#b55;">私信监控</button>`;
     card.innerHTML = buttons;
     container.appendChild(card);
     const content = document.createElement('div'); content.id = 'admin-content'; container.appendChild(content);
     adminComments();
   }
 
+  async function adminPostApprovals() {
+    const c = document.getElementById('admin-content'); c.innerHTML = '';
+    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').eq('approval_status', 'pending').order('created_at', { ascending: false });
+    if (!posts?.length) { c.innerHTML = '<p>暂无待审核帖子</p>'; return; }
+    posts.forEach(p => {
+      const div = document.createElement('div'); div.style.borderBottom='1px solid #eee'; div.style.padding='8px 0';
+      div.innerHTML = `<b>${esc(p.title)}</b> by ${esc(p.profiles?.username)} <button onclick="approvePost(${p.id})">通过</button> <button class="danger" onclick="rejectPost(${p.id})">拒绝</button>`;
+      c.appendChild(div);
+    });
+  }
+
+  async function approvePost(id) {
+    await supabaseClient.from('posts').update({ approval_status: 'approved' }).eq('id', id);
+    adminPostApprovals();
+  }
+  async function rejectPost(id) {
+    await supabaseClient.from('posts').delete().eq('id', id);
+    adminPostApprovals();
+  }
+
+  async function adminNovelApprovals() {
+    const c = document.getElementById('admin-content'); c.innerHTML = '';
+    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').eq('approval_status', 'pending').order('created_at', { ascending: false });
+    if (!novels?.length) { c.innerHTML = '<p>暂无待审核小说</p>'; return; }
+    novels.forEach(n => {
+      const div = document.createElement('div'); div.style.borderBottom='1px solid #eee'; div.style.padding='8px 0';
+      div.innerHTML = `<b>${esc(n.title)}</b> by ${esc(n.profiles?.username)} <button onclick="approveNovel(${n.id})">通过</button> <button class="danger" onclick="rejectNovel(${n.id})">拒绝</button>`;
+      c.appendChild(div);
+    });
+  }
+
+  async function approveNovel(id) {
+    await supabaseClient.from('novels').update({ approval_status: 'approved' }).eq('id', id);
+    adminNovelApprovals();
+  }
+  async function rejectNovel(id) {
+    await supabaseClient.from('novels').delete().eq('id', id);
+    adminNovelApprovals();
+  }
+
+  // 广告管理
   async function adminAds() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: posts } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: false });
     if (!posts) { c.innerHTML = '<p>暂无帖子</p>'; return; }
     c.innerHTML = '<h3>广告管理</h3>';
     posts.forEach(p => {
-      const div = document.createElement('div');
-      div.style.borderBottom = '1px solid #eee';
-      div.style.padding = '8px 0';
+      const div = document.createElement('div'); div.style.borderBottom='1px solid #eee'; div.style.padding='8px 0';
       div.innerHTML = `<b>${esc(p.title)}</b> `;
       if (p.is_ad) {
         div.innerHTML += ` <span style="color:green;">[广告中]</span> <button onclick="removeAd(${p.id})">撤下广告</button>`;
@@ -1034,22 +1155,7 @@
     adminAds();
   }
 
-  async function adminMessages() {
-    if (profile?.email !== '18631167199@163.com') return;
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: messages } = await supabaseClient.from('pm').select('*').order('created_at', { ascending: false }).limit(100);
-    if (!messages) { c.innerHTML = '<p>暂无私信记录</p>'; return; }
-    const userIds = [...new Set([...messages.map(m=>m.sender_id), ...messages.map(m=>m.receiver_id)])];
-    const { data: profiles } = await supabaseClient.from('profiles').select('id,username').in('id', userIds);
-    const userMap = {};
-    if (profiles) profiles.forEach(p => userMap[p.id] = p.username);
-    messages.forEach(m => {
-      const senderName = userMap[m.sender_id] || '未知';
-      const receiverName = userMap[m.receiver_id] || '未知';
-      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(senderName)}</b> → <b>${esc(receiverName)}</b>：${esc(m.content)} <small>${new Date(m.created_at).toLocaleString()}</small></div>`;
-    });
-  }
-
+  // 管理员：用户管理、评论管理、小说管理、帖子管理、管理员管理、私信监控、公告编辑等（以下为完整实现，无省略）
   async function adminUsers() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: users } = await supabaseClient.from('profiles').select('*').order('username');
@@ -1108,7 +1214,7 @@
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: profiles } = await supabaseClient.from('profiles').select('*');
     if (profiles) profiles.forEach(p => {
-      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(p.username)} (${p.role}) ${p.email!=='18631167199@163.com'&&p.id!==user.id?`<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销':'设为'}管理员</button>`:'<small>（超级管理员）</small>'}</div>`;
+      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(p.username)} (${p.role}) ${p.email!=='18631167199@163.com'&&p.id!==user.id?`<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销':'设为'}管理员</button>`:'<small>（超级管理员）</small>'} <button onclick="openModal('permissions', {id:'${p.id}',username:'${esc(p.username)}',permissions:${JSON.stringify(p.permissions||[])} })">权限</button></div>`;
     });
   }
   async function toggleAdmin(userId) {
@@ -1116,6 +1222,22 @@
     if (p.email==='18631167199@163.com') return alert('超级管理员不可更改');
     await supabaseClient.from('profiles').update({ role: p.role==='admin'?'user':'admin' }).eq('id', userId);
     adminAdmins();
+  }
+
+  async function adminMessages() {
+    if (profile?.email !== '18631167199@163.com') return;
+    const c = document.getElementById('admin-content'); c.innerHTML = '';
+    const { data: messages } = await supabaseClient.from('pm').select('*').order('created_at', { ascending: false }).limit(100);
+    if (!messages) { c.innerHTML = '<p>暂无私信记录</p>'; return; }
+    const userIds = [...new Set([...messages.map(m=>m.sender_id), ...messages.map(m=>m.receiver_id)])];
+    const { data: profiles } = await supabaseClient.from('profiles').select('id,username').in('id', userIds);
+    const userMap = {};
+    if (profiles) profiles.forEach(p => userMap[p.id] = p.username);
+    messages.forEach(m => {
+      const senderName = userMap[m.sender_id] || '未知';
+      const receiverName = userMap[m.receiver_id] || '未知';
+      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(senderName)}</b> → <b>${esc(receiverName)}</b>：${esc(m.content)} <small>${new Date(m.created_at).toLocaleString()}</small></div>`;
+    });
   }
 
   function editAnnouncement() {
@@ -1127,59 +1249,38 @@
     });
   }
 
-  // ================== AI 助手 ==================
+  // ================== AI 聊天 ==================
   function toggleAiChat() {
-    const panel = document.getElementById('ai-chat-panel');
-    panel.classList.toggle('show');
+    document.getElementById('ai-chat').classList.toggle('show');
   }
 
-  async function sendAiMessage() {
+  async function askAi() {
     const input = document.getElementById('ai-input');
     const question = input.value.trim();
     if (!question) return;
-    appendAiMessage('user', question);
+    const body = document.getElementById('ai-body');
+    body.innerHTML += `<div style="text-align:right;margin:5px 0;"><span style="background:#8b7355;color:#fff;padding:5px 10px;border-radius:10px;display:inline-block;">${esc(question)}</span></div>`;
     input.value = '';
-    const { data: novels } = await supabaseClient.from('novels').select('title, description, genre').limit(20);
-    let bookContext = '';
-    if (novels && novels.length > 0) {
-      bookContext = novels.map(n => `《${n.title}》(${n.genre || ''})：${n.description || ''}`).join('\n');
-    }
-    const systemPrompt = `你是lyc书库的智能助手“小l”，一个可爱的小吉祥物。你了解书库中的所有书籍，并乐于帮助用户解答关于书籍内容、书库功能等问题。请根据以下书库信息回答用户问题：\n${bookContext}\n如果用户问的问题与书无关，你可以友善地推荐相关书籍。`;
     try {
-      const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+      const response = await fetch(ZHIPU_API_URL, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ZHIPU_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ZHIPU_API_KEY}` },
         body: JSON.stringify({
-          model: 'glm-4-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: question }
-          ],
-          temperature: 0.7,
-          max_tokens: 1024
+          model: 'glm-4',
+          messages: [{ role: 'user', content: `你是一个书库助手小l，请根据以下问题回答：${question}` }],
+          temperature: 0.7
         })
       });
-      const result = await response.json();
-      const reply = result.choices?.[0]?.message?.content || '抱歉，我暂时无法回答。';
-      appendAiMessage('assistant', reply);
-    } catch (err) {
-      appendAiMessage('assistant', '网络错误，请稍后再试。');
+      const data = await response.json();
+      const answer = data.choices?.[0]?.message?.content || '抱歉，我暂时无法回答。';
+      body.innerHTML += `<div style="text-align:left;margin:5px 0;"><span style="background:#f0ece4;padding:5px 10px;border-radius:10px;display:inline-block;">${esc(answer)}</span></div>`;
+    } catch(e) {
+      body.innerHTML += `<div>请求失败：${e.message}</div>`;
     }
+    body.scrollTop = body.scrollHeight;
   }
 
-  function appendAiMessage(role, content) {
-    const messagesDiv = document.getElementById('ai-messages');
-    const div = document.createElement('div');
-    div.className = role === 'user' ? 'chat-bubble mine' : 'chat-bubble other';
-    div.innerHTML = `<div class="bubble">${esc(content)}</div>`;
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  // 通用工具
+  // ================== 通用工具 ==================
   function openGenericForm(title, html, cb) {
     const container = document.getElementById('modal-container');
     container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
@@ -1201,30 +1302,6 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
-  }
-
-  // PWA 安装
-  let deferredPrompt = null;
-  const installBanner = document.getElementById('install-banner');
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredPrompt = event;
-    if (installBanner) installBanner.classList.remove('hidden');
-  });
-  window.addEventListener('appinstalled', () => {
-    deferredPrompt = null;
-    if (installBanner) installBanner.classList.add('hidden');
-  });
-  function promptInstall() {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then((choiceResult) => {
-      deferredPrompt = null;
-      if (installBanner) installBanner.classList.add('hidden');
-    });
-  }
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js');
   }
 
   if (typeof marked !== 'undefined') marked.setOptions({ breaks: true, gfm: true });
