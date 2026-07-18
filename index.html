@@ -1267,7 +1267,7 @@
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ZHIPU_API_KEY}` },
         body: JSON.stringify({
           model: 'glm-4',
-          messages: [{ role: 'user', content: `你是一个书库助手小l，请根据以下问题回答：${question}` }],
+          messages: [{ role: 'user', content: `你是一个书库助手小，你是一个叫lyc的人编写的，你需要读这个书库的所有书，请根据以下问题回答：${question}` }],
           temperature: 0.7
         })
       });
