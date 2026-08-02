@@ -141,16 +141,16 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
-  const ZHIPU_API_KEY = '82ef0cac37cf4ecabd4e26eb4520a17c.erhi0QMNAoQpRh5r';
+  const ZHIPU_API_KEY = '75a65450c3314bdb90525cc13a356c8f.PiDT1xco3uFpfnmh';
   const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
   let user = null, profile = null, rendering = false;
-  const BANNED_WORDS = ['广告','赌博','色情','敏感词','违法','政治'];
+  const BANNED_WORDS = ['傻逼','赌博','色情','敏感词','违法','政治'];
   const ALL_PERMISSIONS = ['删除帖子','删除小说','管理评论','管理用户','编辑公告','设置管理员','通过帖子','通过小说'];
 
   function containsBanned(text) { return BANNED_WORDS.some(w => text.includes(w)); }
   function isContentValid(title, content) {
-    if (!title || title.length < 2) return false;
+    if (!title || title.length < 1) return false;
     if (!content || content.length < 3) return false;
     if (/^(.)\1+$/.test(content)) return false;
     if (/^[\s\p{P}]+$/u.test(content)) return false;
@@ -1272,7 +1272,7 @@
         })
       });
       const data = await response.json();
-      const answer = data.choices?.[0]?.message?.content || '抱歉，我暂时无法回答。';
+      const answer = data.choices?.[0]?.message?.content || '你问的这个东西很有意思，不过我不回。';
       body.innerHTML += `<div style="text-align:left;margin:5px 0;"><span style="background:#f0ece4;padding:5px 10px;border-radius:10px;display:inline-block;">${esc(answer)}</span></div>`;
     } catch(e) {
       body.innerHTML += `<div>请求失败：${e.message}</div>`;
