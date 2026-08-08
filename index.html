@@ -78,22 +78,13 @@
     .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 220px)}
     .chat-input-area{display:flex;padding:10px;background:#fff;border-top:1px solid #f0ece4;position:sticky;bottom:0}
     .chat-input-area textarea{flex:1;border:1px solid #ddd;border-radius:5px;padding:8px;resize:none}
-    .chat-bubble{margin-bottom:15px;display:flex}
-    .chat-bubble.mine{justify-content:flex-end}
-    .chat-bubble .bubble{max-width:75%;padding:10px 15px;border-radius:18px;font-size:15px;line-height:1.5;word-break:break-word;white-space:pre-wrap;overflow-wrap:break-word}
-    .chat-bubble.mine .bubble{background:#8b7355;color:#fff;border-bottom-right-radius:4px}
-    .chat-bubble.other .bubble{background:#fff;color:#000;border:1px solid #e0e0e0;border-bottom-left-radius:4px}
-    .chat-bubble .time{font-size:11px;color:#aaa;margin-top:4px}
-    /* 广告 */
     .ad-carousel{position:relative;overflow:hidden;border-radius:10px;margin-bottom:12px;background:#f0ece4}
     .ad-carousel img{width:100%;height:150px;object-fit:cover;display:block;cursor:pointer}
     .ad-dots{text-align:center;padding:5px 0}
     .ad-dot{display:inline-block;width:8px;height:8px;background:#ccc;border-radius:50%;margin:0 4px;cursor:pointer}
     .ad-dot.active{background:#8b7355}
-    /* 吉祥物 */
     .mascot-icon{position:fixed;bottom:90px;right:15px;z-index:1000;width:50px;height:50px;border-radius:50%;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer}
     .mascot-icon img{width:100%;height:100%;object-fit:cover}
-    /* AI聊天窗 */
     .ai-chat{position:fixed;bottom:150px;right:15px;width:300px;max-height:400px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:none;flex-direction:column;z-index:1001}
     .ai-chat.show{display:flex}
     .ai-chat .ai-header{background:#8b7355;color:#fff;padding:10px 15px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center}
@@ -117,11 +108,9 @@
   <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><span>⚙️</span>后台</button>
 </nav>
 <div id="modal-container"></div>
-<!-- 吉祥物小l -->
 <div class="mascot-icon" onclick="toggleAiChat()">
   <img src="小l.jpg" alt="小l" onerror="this.style.display='none'">
 </div>
-<!-- AI聊天窗口 -->
 <div class="ai-chat" id="ai-chat">
   <div class="ai-header">
     <span>🤖 小l · AI助手</span>
@@ -254,7 +243,6 @@
     profile = data || null;
   }
 
-  // ========== 通用模态框 ==========
   function openModal(type, data) {
     const container = document.getElementById('modal-container');
     if (type === 'login') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
@@ -404,7 +392,6 @@
 
   // ================== 首页 ==================
   async function home(container) {
-    // 公告
     const { data: ann } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
     if (ann?.length) {
       const div = document.createElement('div'); div.className = 'card';
@@ -412,7 +399,6 @@
       container.appendChild(div);
     }
 
-    // 广告轮播
     const { data: ads } = await supabaseClient.from('posts').select('id, ad_image_url').eq('is_ad', true);
     if (ads && ads.length > 0) {
       const adContainer = document.createElement('div'); adContainer.className = 'ad-carousel';
@@ -451,7 +437,6 @@
       }, 5000);
     }
 
-    // 签到
     if (user) {
       const today = new Date().toISOString().slice(0,10);
       const { data: checkin } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
@@ -469,12 +454,10 @@
       container.appendChild(checkinDiv);
     }
 
-    // 搜索
     const searchDiv = document.createElement('div'); searchDiv.className = 'card';
     searchDiv.innerHTML = `<input id="search" placeholder="搜索小说、作者、用户..."><button onclick="search()" style="margin-top:6px;">搜索</button><div id="results" style="margin-top:10px;"></div>`;
     container.appendChild(searchDiv);
 
-    // 小说网格（只显示审核通过的）
     const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').eq('approval_status', 'approved').order('updated_at', { ascending: false }).limit(30);
     const grid = document.createElement('div'); grid.className = 'novel-grid';
     if (novels?.length) {
@@ -797,7 +780,7 @@
     });
   }
 
-  // 帖子详情、回复、投票等（与之前版本相同，完整版已包含，此处省略细节，但实际文件已保留）
+  // ================== 帖子详情 ==================
   async function postDetail(container, postId) {
     const { data: post } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').eq('id', postId).single();
     if (!post) return container.innerHTML += '<p>帖子不存在</p>';
@@ -978,6 +961,7 @@
     }
   }
 
+  // ========== ⭐ 私信聊天页（彻底修复） ==========
   async function chatPage(container, partnerId) {
     if (!user) return container.innerHTML = '<p>请先登录</p>';
     const { data: partner } = await supabaseClient.from('profiles').select('*').eq('id', partnerId).single();
@@ -998,13 +982,53 @@
 
     const body = document.createElement('div');
     body.className = 'chat-body';
+
     if (msgs?.length) {
       msgs.forEach(m => {
         const isMe = m.sender_id === user.id;
-        const div = document.createElement('div');
-        div.className = `chat-bubble ${isMe ? 'mine' : 'other'}`;
-        div.innerHTML = `<div><div class="bubble">${esc(m.content)}</div><div class="time">${new Date(m.created_at).toLocaleTimeString()}</div></div>`;
-        body.appendChild(div);
+        const outerDiv = document.createElement('div');
+        outerDiv.className = `chat-bubble ${isMe ? 'mine' : 'other'}`;
+
+        // 用 inner 包裹内容和时间
+        const innerDiv = document.createElement('div');
+
+        const bubbleSpan = document.createElement('span');
+        bubbleSpan.className = 'bubble';
+        // ⭐ 核心修复：直接把样式写在元素上，绝对生效
+        bubbleSpan.style.display = 'inline-block';
+        bubbleSpan.style.maxWidth = '75%';
+        bubbleSpan.style.padding = '10px 15px';
+        bubbleSpan.style.borderRadius = '18px';
+        bubbleSpan.style.fontSize = '15px';
+        bubbleSpan.style.lineHeight = '1.5';
+        bubbleSpan.style.wordWrap = 'break-word';
+        bubbleSpan.style.overflowWrap = 'break-word';
+        bubbleSpan.style.whiteSpace = 'normal';
+        bubbleSpan.style.wordBreak = 'normal';
+        if (isMe) {
+          bubbleSpan.style.background = '#8b7355';
+          bubbleSpan.style.color = '#fff';
+          bubbleSpan.style.borderBottomRightRadius = '4px';
+        } else {
+          bubbleSpan.style.background = '#fff';
+          bubbleSpan.style.color = '#000';
+          bubbleSpan.style.border = '1px solid #e0e0e0';
+          bubbleSpan.style.borderBottomLeftRadius = '4px';
+        }
+        // 把换行转为 <br>
+        bubbleSpan.innerHTML = esc(m.content).replace(/\n/g, '<br>');
+
+        const timeSpan = document.createElement('div');
+        timeSpan.className = 'time';
+        timeSpan.style.fontSize = '11px';
+        timeSpan.style.color = '#aaa';
+        timeSpan.style.marginTop = '4px';
+        timeSpan.textContent = new Date(m.created_at).toLocaleTimeString();
+
+        innerDiv.appendChild(bubbleSpan);
+        innerDiv.appendChild(timeSpan);
+        outerDiv.appendChild(innerDiv);
+        body.appendChild(outerDiv);
       });
     } else {
       body.innerHTML = '<p style="text-align:center;color:#888;">暂无消息</p>';
@@ -1036,13 +1060,9 @@
     card.innerHTML = '<h2>📬 我的消息</h2><div id="notif-list">加载中...</div>';
     container.appendChild(card);
 
-    // 获取帖子的投票
     const { data: votes } = await supabaseClient.from('post_votes').select('post_id, vote_type, created_at').eq('user_id', user.id).order('created_at', { ascending: false });
-    // 帖子的回复
     const { data: replies } = await supabaseClient.from('post_replies').select('id, post_id, content, created_at').eq('author_id', user.id);
-    // 回复的被回复
     const { data: myReplies } = await supabaseClient.from('post_replies').select('id, post_id, content, parent_id, created_at').in('parent_id', replies.map(r => r.id));
-    // 小说的评论
     const { data: myNovels } = await supabaseClient.from('novels').select('id, title').eq('author_id', user.id);
     const novelIds = myNovels?.map(n => n.id) || [];
     const { data: novelComms } = await supabaseClient.from('comments').select('*, novels(title)').in('novel_id', novelIds).order('created_at', { ascending: false });
@@ -1127,7 +1147,6 @@
     adminNovelApprovals();
   }
 
-  // 广告管理
   async function adminAds() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: posts } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: false });
@@ -1155,7 +1174,6 @@
     adminAds();
   }
 
-  // 管理员：用户管理、评论管理、小说管理、帖子管理、管理员管理、私信监控、公告编辑等（以下为完整实现，无省略）
   async function adminUsers() {
     const c = document.getElementById('admin-content'); c.innerHTML = '';
     const { data: users } = await supabaseClient.from('profiles').select('*').order('username');
