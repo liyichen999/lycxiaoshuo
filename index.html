@@ -5,107 +5,146 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>lyc书库 · 小说社区</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#f5f2eb">
+  <meta name="theme-color" content="#f0f2f5">
   <meta name="mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
+    /* 样式完整，同前，不再重复 */
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f2eb;color:#3b3226;padding-bottom:70px}
+    body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#f0f2f5;color:#1e293b;padding-bottom:70px}
     .container{max-width:800px;margin:0 auto;padding:15px}
-    .navbar{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:10px 15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
-    .logo{font-size:1.3rem;font-weight:bold;color:#6b5b4a;cursor:pointer}
-    .user-badge{display:flex;align-items:center;gap:6px}
-    .avatar-circle{width:30px;height:30px;border-radius:50%;background:#8b7355;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;overflow:hidden}
+    .card{background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.6);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 8px 30px rgba(0,0,0,0.06);transition:transform .2s,box-shadow .2s}
+    .card:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,0.10)}
+    .navbar{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);padding:12px 18px;border-radius:16px;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,0.04);border:1px solid rgba(255,255,255,0.5)}
+    .logo{font-size:1.3rem;font-weight:700;color:#0f172a;cursor:pointer;letter-spacing:-.3px}
+    .logo i{color:#eab308;margin-right:6px}
+    .user-badge{display:flex;align-items:center;gap:8px}
+    .avatar-circle{width:34px;height:34px;border-radius:50%;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;overflow:hidden;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
     .avatar-circle img{width:100%;height:100%;object-fit:cover}
-    .card{background:#fff;border-radius:10px;padding:15px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
-    .novel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
-    .novel-card{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.05);cursor:pointer;transition:transform 0.2s}
-    .novel-card:hover{transform:translateY(-2px)}
-    .novel-cover{width:100%;height:180px;object-fit:cover;background:#f0ece4}
-    .novel-info{padding:8px}
-    .novel-title{font-weight:bold;font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .novel-desc{font-size:11px;color:#888;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    .novel-author{font-size:11px;color:#aaa;margin-top:2px}
-    .flex-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0ece4}
+    button{background:#334155;color:#fff;border:none;padding:8px 18px;border-radius:40px;cursor:pointer;font-size:13px;font-weight:500;transition:background .2s,transform .1s;box-shadow:0 2px 8px rgba(51,65,85,0.25)}
+    button:hover{background:#1e293b;transform:scale(0.97)}
+    button.outline{background:transparent;border:1px solid #334155;color:#334155;box-shadow:none}
+    button.outline:hover{background:#33415510}
+    button.danger{background:#ef4444;box-shadow:0 2px 8px rgba(239,68,68,0.25)}
+    button.danger:hover{background:#dc2626}
+    button.gold{background:#eab308;color:#0f172a;box-shadow:0 2px 8px rgba(234,179,8,0.3)}
+    button.gold:hover{background:#ca8a04}
+    input,textarea,select{width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:12px;font-size:14px;background:#fff;transition:border .2s;margin-top:6px}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:#eab308;box-shadow:0 0 0 3px #eab30820}
+    .novel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+    .novel-card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.04);cursor:pointer;transition:transform .25s,box-shadow .25s}
+    .novel-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.08)}
+    .novel-cover{width:100%;aspect-ratio:2/3;object-fit:cover;background:#f1f5f9}
+    .novel-info{padding:10px}
+    .novel-title{font-weight:600;font-size:14px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .novel-desc{font-size:12px;color:#64748b;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .novel-author{font-size:12px;color:#94a3b8;margin-top:4px}
+    .flex-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9}
     .flex-row:last-child{border-bottom:none}
-    button{background:#8b7355;color:#fff;border:none;padding:6px 14px;border-radius:5px;cursor:pointer;font-size:13px}
-    button.outline{background:transparent;border:1px solid #8b7355;color:#8b7355}
-    button.danger{background:#b55}
-    input,textarea,select{width:100%;padding:8px;border:1px solid #ddd6c8;border-radius:5px;font-size:14px;margin-top:6px}
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100}
-    .modal-content{background:#fff;border-radius:12px;padding:25px;min-width:300px;max-width:90%;position:relative;animation:fadeIn 0.2s}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-    .close{position:absolute;top:10px;right:15px;font-size:18px;cursor:pointer;color:#8b7355}
-    .hidden{display:none !important}
-    a{color:#8b7355;cursor:pointer;text-decoration:none}
-    .meta{font-size:12px;color:#888}
-    .btn-group{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
-    .bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:#fff;border-top:1px solid #e0d7c6;display:flex;justify-content:space-around;padding:8px 0;z-index:99}
-    .bottom-nav button{background:none;border:none;color:#8b7355;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
-    .bottom-nav button.active{color:#3b3226;font-weight:bold}
-    .badge{position:absolute;top:0;right:8px;background:red;color:white;border-radius:10px;padding:0 4px;font-size:10px;line-height:16px;min-width:16px;text-align:center;display:none}
-    .badge.show{display:inline-block}
-    pre{white-space:pre-wrap;font-family:inherit}
-    .chapter-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ece4}
+    .meta{font-size:12px;color:#94a3b8}
+    .btn-group{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,0.5);display:flex;justify-content:space-around;padding:10px 0 14px;z-index:99}
+    .bottom-nav button{background:none;border:none;color:#94a3b8;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;border-radius:12px;transition:color .2s,background .2s;box-shadow:none}
+    .bottom-nav button i{font-size:20px}
+    .bottom-nav button.active{color:#0f172a;font-weight:600;background:#f1f5f9}
+    .bottom-nav button .badge{position:absolute;top:-2px;right:-6px;background:#ef4444;color:#fff;border-radius:30px;padding:0 6px;font-size:10px;line-height:16px;min-width:18px;text-align:center;display:none;font-weight:700}
+    .bottom-nav button .badge.show{display:inline-block}
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;animation:fadeIn .2s ease}
+    .modal-content{background:#fff;border-radius:24px;padding:28px 32px;min-width:300px;max-width:92%;position:relative;box-shadow:0 40px 80px rgba(0,0,0,0.2)}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(20px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .close{position:absolute;top:16px;right:20px;font-size:24px;cursor:pointer;color:#94a3b8;transition:color .2s}
+    .close:hover{color:#0f172a}
+    .hidden{display:none!important}
+    .chapter-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9}
     .chapter-item:last-child{border-bottom:none}
-    .nav-chapter{display:flex;justify-content:space-between;margin-top:15px}
-    .follow-btn{background:#4a6fa5;font-size:12px;padding:4px 12px}
-    .follow-btn.following{background:#aaa}
-    .post-item{border-bottom:1px solid #f0ece4;padding:12px 0}
+    .nav-chapter{display:flex;justify-content:space-between;margin-top:16px;gap:12px}
+    .follow-btn{background:#3b82f6;font-size:12px;padding:4px 14px}
+    .follow-btn.following{background:#94a3b8}
+    .post-item{border-bottom:1px solid #f1f5f9;padding:14px 0}
     .post-item:last-child{border-bottom:none}
-    .post-title{font-weight:bold}
-    .post-meta{font-size:12px;color:#888}
+    .post-title{font-weight:600;font-size:16px}
+    .post-meta{font-size:12px;color:#94a3b8}
     .vote-btns{display:flex;gap:8px;align-items:center}
-    .vote-btns button{background:transparent;border:1px solid #ddd;color:#555;padding:2px 8px;font-size:12px}
-    .vote-btns button.active{background:#8b7355;color:#fff;border-color:#8b7355}
-    .reply-item{margin-left:20px;margin-top:10px;padding:8px 0;border-bottom:1px solid #f0ece4}
+    .vote-btns button{background:transparent;border:1px solid #e2e8f0;color:#475569;padding:4px 14px;font-size:12px;border-radius:40px;box-shadow:none}
+    .vote-btns button.active{background:#334155;color:#fff;border-color:#334155}
+    .reply-item{margin-left:20px;margin-top:10px;padding:8px 0;border-bottom:1px solid #f1f5f9}
     .reply-item:last-child{border-bottom:none}
-    .checkin-btn{background:#4CAF50;font-size:14px}
-    .checkin-btn:disabled{background:#aaa}
-    .username-label{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:4px;vertical-align:middle;font-weight:bold}
+    .checkin-btn{background:#10b981;font-size:14px}
+    .checkin-btn:disabled{background:#94a3b8}
+    .username-label{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;margin-left:6px;font-weight:600}
     .label-admin{background:#FFD700;color:#000}
-    .label-violator{background:#b55;color:#fff;text-decoration:line-through}
-    .msg-list-item{display:flex;align-items:center;padding:12px;border-bottom:1px solid #f0ece4;cursor:pointer;transition:background 0.2s}
-    .msg-list-item:hover{background:#faf8f5}
-    .msg-avatar{width:45px;height:45px;border-radius:50%;background:#8b7355;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:12px;overflow:hidden;flex-shrink:0}
+    .label-violator{background:#ef4444;color:#fff;text-decoration:line-through}
+    .msg-list-item{display:flex;align-items:center;padding:12px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .2s;border-radius:12px}
+    .msg-list-item:hover{background:#f8fafc}
+    .msg-avatar{width:48px;height:48px;border-radius:50%;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:14px;flex-shrink:0;overflow:hidden}
     .msg-avatar img{width:100%;height:100%;object-fit:cover}
     .msg-content{flex:1;min-width:0}
-    .msg-content .username{font-weight:bold;font-size:16px}
-    .msg-content .last-msg{font-size:14px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .msg-time{font-size:12px;color:#aaa;white-space:nowrap}
-    .unread-dot{width:8px;height:8px;background:#f00;border-radius:50%;display:inline-block;margin-left:6px}
-    .chat-header{display:flex;align-items:center;padding:12px 15px;background:#fff;border-bottom:1px solid #f0ece4;position:sticky;top:0;z-index:10}
-    .chat-body{padding:15px;overflow-y:auto;flex:1;max-height:calc(100vh - 220px)}
-    .chat-input-area{display:flex;padding:10px;background:#fff;border-top:1px solid #f0ece4;position:sticky;bottom:0}
-    .chat-input-area textarea{flex:1;border:1px solid #ddd;border-radius:5px;padding:8px;resize:none}
-    .ad-carousel{position:relative;overflow:hidden;border-radius:10px;margin-bottom:12px;background:#f0ece4}
-    .ad-carousel img{width:100%;height:150px;object-fit:cover;display:block;cursor:pointer}
-    .ad-dots{text-align:center;padding:5px 0}
-    .ad-dot{display:inline-block;width:8px;height:8px;background:#ccc;border-radius:50%;margin:0 4px;cursor:pointer}
-    .ad-dot.active{background:#8b7355}
-    .mascot-icon{position:fixed;bottom:90px;right:15px;z-index:1000;width:50px;height:50px;border-radius:50%;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer}
+    .msg-content .username{font-weight:600;font-size:16px}
+    .msg-content .last-msg{font-size:14px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .msg-time{font-size:12px;color:#94a3b8;white-space:nowrap}
+    .unread-dot{width:10px;height:10px;background:#ef4444;border-radius:50%;display:inline-block;margin-left:8px}
+    .chat-header{display:flex;align-items:center;padding:12px 16px;background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);border-bottom:1px solid #f1f5f9;position:sticky;top:0;z-index:10;border-radius:16px 16px 0 0}
+    .chat-body{padding:16px;overflow-y:auto;flex:1;max-height:calc(100vh - 220px);background:#f8fafc;border-radius:0 0 16px 16px}
+    .chat-input-area{display:flex;padding:12px;background:#fff;border-top:1px solid #f1f5f9;border-radius:0 0 16px 16px;gap:8px}
+    .chat-input-area textarea{flex:1;border-radius:40px;padding:10px 18px;margin:0;resize:none}
+    .chat-input-area button{padding:10px 24px;border-radius:40px}
+    .chat-bubble{margin-bottom:12px;display:flex;flex-direction:column}
+    .chat-bubble.mine{align-items:flex-end}
+    .chat-bubble.other{align-items:flex-start}
+    .chat-bubble .bubble{display:inline-block;max-width:75%;padding:10px 18px;border-radius:20px;font-size:15px;line-height:1.6;word-wrap:break-word;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+    .chat-bubble.mine .bubble{background:#334155;color:#fff;border-bottom-right-radius:6px}
+    .chat-bubble.other .bubble{background:#fff;color:#1e293b;border:1px solid #e2e8f0;border-bottom-left-radius:6px}
+    .chat-bubble .time{font-size:11px;color:#94a3b8;margin-top:4px;padding:0 4px}
+    .ad-carousel{position:relative;overflow:hidden;border-radius:16px;margin-bottom:14px;background:#f1f5f9}
+    .ad-carousel img{width:100%;height:180px;object-fit:cover;display:block;cursor:pointer}
+    .ad-dots{text-align:center;padding:8px 0}
+    .ad-dot{display:inline-block;width:8px;height:8px;background:#cbd5e1;border-radius:50%;margin:0 5px;cursor:pointer;transition:background .2s}
+    .ad-dot.active{background:#eab308}
+    .mascot-icon{position:fixed;bottom:90px;right:18px;z-index:1000;width:56px;height:56px;border-radius:50%;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);cursor:pointer;border:2px solid #fff;transition:transform .2s}
+    .mascot-icon:hover{transform:scale(1.05)}
     .mascot-icon img{width:100%;height:100%;object-fit:cover}
-    .ai-chat{position:fixed;bottom:150px;right:15px;width:300px;max-height:400px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:none;flex-direction:column;z-index:1001}
+    .ai-chat{position:fixed;bottom:160px;right:18px;width:320px;max-height:420px;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.15);display:none;flex-direction:column;z-index:1001;border:1px solid rgba(255,255,255,0.3);backdrop-filter:blur(8px);overflow:hidden}
     .ai-chat.show{display:flex}
-    .ai-chat .ai-header{background:#8b7355;color:#fff;padding:10px 15px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center}
-    .ai-chat .ai-body{flex:1;overflow-y:auto;padding:10px;min-height:200px;max-height:250px;font-size:14px}
-    .ai-chat .ai-input{padding:10px;border-top:1px solid #ddd;display:flex}
-    .ai-chat .ai-input input{flex:1;padding:8px;border:1px solid #ddd;border-radius:5px}
-    .ai-chat .ai-input button{margin-left:5px;padding:8px 12px}
-    .notification-item{padding:10px;border-bottom:1px solid #f0ece4}
-    @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+    .ai-chat .ai-header{background:#0f172a;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+    .ai-chat .ai-body{flex:1;overflow-y:auto;padding:16px;min-height:180px;max-height:260px;font-size:14px;background:#f8fafc}
+    .ai-chat .ai-input{padding:12px;border-top:1px solid #f1f5f9;display:flex;gap:8px;background:#fff}
+    .ai-chat .ai-input input{flex:1;border-radius:40px;padding:10px 16px;margin:0}
+    .ai-chat .ai-input button{border-radius:40px;padding:10px 20px}
+    .notification-item{padding:12px 0;border-bottom:1px solid #f1f5f9}
+    .rank-item{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9}
+    .rank-item:last-child{border-bottom:none}
+    .rank-number{font-size:20px;font-weight:700;width:36px;text-align:center;color:#94a3b8}
+    .rank-number.gold{color:#eab308}
+    .rank-number.silver{color:#94a3b8}
+    .rank-number.bronze{color:#b45309}
+    .rank-info{flex:1;margin-left:12px}
+    .rank-title{font-weight:600;font-size:15px}
+    .rank-meta{font-size:12px;color:#94a3b8}
+    .rank-score{color:#eab308;font-weight:600}
+    .search-box{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .search-box input{flex:1;min-width:140px}
+    .search-box select{width:auto;min-width:80px;margin:0}
+    .search-results{margin-top:12px}
+    .fav-btn{background:transparent;border:1px solid #eab308;color:#eab308;padding:4px 12px;border-radius:40px;font-size:12px}
+    .fav-btn.active{background:#eab308;color:#0f172a;border-color:#eab308}
+    @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.ai-chat{width:90%;right:5%}.search-box select{min-width:60px;font-size:12px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="container" id="app"></div>
 <nav class="bottom-nav" id="bottom-nav">
-  <button onclick="navigate('#home')" class="active"><span>🏠</span>首页</button>
-  <button onclick="navigate('#community')"><span>💬</span>社区</button>
-  <button onclick="navigate('#new-novel')"><span>✏️</span>发布</button>
-  <button onclick="navigate('#messages')" id="msg-nav-btn"><span>✉️</span>私信 <span class="badge" id="msg-badge"></span></button>
-  <button onclick="navigate('#profile')"><span>👤</span>我的</button>
-  <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><span>⚙️</span>后台</button>
+  <button onclick="navigate('#home')" class="active"><i class="fas fa-home"></i><span>首页</span></button>
+  <button onclick="navigate('#community')"><i class="fas fa-comment"></i><span>社区</span></button>
+  <button onclick="navigate('#new-novel')"><i class="fas fa-pen"></i><span>发布</span></button>
+  <button onclick="navigate('#messages')" id="msg-nav-btn" style="position:relative;">
+    <i class="fas fa-envelope"></i><span>私信</span>
+    <span class="badge" id="msg-badge"></span>
+  </button>
+  <button onclick="navigate('#profile')"><i class="fas fa-user"></i><span>我的</span></button>
+  <button onclick="navigate('#bookpile')"><i class="fas fa-bookmark"></i><span>书堆</span></button>
+  <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><i class="fas fa-cog"></i><span>后台</span></button>
 </nav>
 <div id="modal-container"></div>
 <div class="mascot-icon" onclick="toggleAiChat()">
@@ -113,1217 +152,1237 @@
 </div>
 <div class="ai-chat" id="ai-chat">
   <div class="ai-header">
-    <span>🤖 小l · AI助手</span>
-    <span onclick="toggleAiChat()" style="cursor:pointer">&times;</span>
+    <span><i class="fas fa-robot"></i> 小l · AI助手</span>
+    <span onclick="toggleAiChat()" style="cursor:pointer;font-size:24px;">&times;</span>
   </div>
   <div class="ai-body" id="ai-body">
-    <p style="color:#888;">你好，我是小l，可以问我关于书库的问题哦~</p>
+    <p style="color:#94a3b8;">你好，我是小l，可以问我关于书库的问题哦~</p>
   </div>
   <div class="ai-input">
     <input type="text" id="ai-input" placeholder="问我关于书的问题...">
-    <button onclick="askAi()">发送</button>
+    <button onclick="askAi()"><i class="fas fa-paper-plane"></i></button>
   </div>
 </div>
-
 <script>
-  const SUPABASE_URL = 'https://srbibtnvtpygegmtehzb.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f0ece4%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
-  const ZHIPU_API_KEY = '75a65450c3314bdb90525cc13a356c8f.PiDT1xco3uFpfnmh';
-  const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+// ===== 核心配置 =====
+const SUPABASE_URL = 'https://srbibtnvtpygegmtehzb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f1f5f9%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
+const ZHIPU_API_KEY = '75a65450c3314bdb90525cc13a356c8f.PiDT1xco3uFpfnmh';
+const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
-  let user = null, profile = null, rendering = false;
-  const BANNED_WORDS = ['傻逼','赌博','色情','敏感词','违法','政治'];
-  const ALL_PERMISSIONS = ['删除帖子','删除小说','管理评论','管理用户','编辑公告','设置管理员','通过帖子','通过小说'];
+let user = null, profile = null, rendering = false;
+let currentChatChannel = null;
+let searchTimeout = null;
 
-  function containsBanned(text) { return BANNED_WORDS.some(w => text.includes(w)); }
-  function isContentValid(title, content) {
-    if (!title || title.length < 1) return false;
-    if (!content || content.length < 3) return false;
-    if (/^(.)\1+$/.test(content)) return false;
-    if (/^[\s\p{P}]+$/u.test(content)) return false;
-    return true;
+const BANNED_WORDS = ['傻逼','赌博','色情','敏感词','违法','政治'];
+const ALL_PERMISSIONS = ['删除帖子','删除小说','管理评论','管理用户','编辑公告','设置管理员','通过帖子','通过小说'];
+
+// ===== Toast =====
+function showToast(message, type = 'info') {
+  const colors={success:'#10b981',error:'#ef4444',info:'#3b82f6',warning:'#eab308'};
+  const icons={success:'fa-check-circle',error:'fa-exclamation-circle',info:'fa-info-circle',warning:'fa-exclamation-triangle'};
+  const toast=document.createElement('div');
+  toast.style.cssText=`
+    position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-120px);
+    background:${colors[type]||colors.info};color:#fff;
+    padding:14px 28px;border-radius:60px;font-size:14px;font-weight:500;
+    box-shadow:0 10px 40px rgba(0,0,0,0.15);
+    z-index:9999;transition:transform .5s cubic-bezier(.34,1.56,.64,1),opacity .4s;
+    max-width:90%;backdrop-filter:blur(4px);
+    display:flex;align-items:center;gap:12px;
+    border:1px solid rgba(255,255,255,0.2);
+    opacity:0;
+  `;
+  toast.innerHTML=`<i class="fas ${icons[type]}"></i> ${message}`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(()=>{toast.style.opacity='1';toast.style.transform='translateX(-50%) translateY(0)';});
+  setTimeout(()=>{toast.style.opacity='0';toast.style.transform='translateX(-50%) translateY(-120px)';setTimeout(()=>toast.remove(),500);},3500);
+}
+
+// ===== 工具 =====
+function containsBanned(t){return BANNED_WORDS.some(w=>t.includes(w));}
+function isContentValid(t,c){if(!t||t.length<1)return false;if(!c||c.length<3)return false;if(/^(.)\1+$/.test(c))return false;if(/^[\s\p{P}]+$/u.test(c))return false;return true;}
+function isMuted(p){return p?.muted_until&&new Date(p.muted_until)>new Date();}
+function hasPermission(perm){if(!profile)return false;if(profile.email==='18631167199@163.com')return true;return (profile.permissions||[]).includes(perm);}
+
+async function addViolation(userId,reason){
+  await supabaseClient.from('user_violations').insert({user_id:userId,reason});
+  const {data:p}=await supabaseClient.from('profiles').select('violation_count').eq('id',userId).single();
+  let count=(p?.violation_count||0)+1;
+  let muted_until=null;
+  if(count>=3)muted_until=new Date(Date.now()+86400000).toISOString();
+  await supabaseClient.from('profiles').update({violation_count:count,muted_until}).eq('id',userId);
+}
+
+async function getUserNameColor(p){
+  if(!p)return '#1e293b';
+  if(isMuted(p))return '#8B6914';
+  if(p.role==='admin')return '#FFD700';
+  const {data:novels}=await supabaseClient.from('novels').select('id').eq('author_id',p.id).eq('approval_status','approved');
+  const nCount=novels?.length||0;
+  const {count:checkinCount}=await supabaseClient.from('daily_checkins').select('*',{count:'exact',head:true}).eq('user_id',p.id);
+  const days=checkinCount||0;
+  const {data:ratings}=await supabaseClient.from('ratings').select('score').eq('user_id',p.id);
+  const total=ratings?.reduce((s,r)=>s+r.score,0)||0;
+  const points=nCount*10+days*2+total;
+  if(points>=100)return '#eab308';
+  if(points>=50)return '#3b82f6';
+  if(points>=20)return '#10b981';
+  return '#1e293b';
+}
+
+// ===== 【关键修正】标签显示逻辑 =====
+async function getUserLabel(p){
+  if(!p)return '';
+  if(isMuted(p))return '<span class="username-label label-violator">违规者</span>';
+  // 优先显示自定义标签（如果有），否则管理员显示“管理员”，普通用户无标签
+  if(p.label) return `<span class="username-label label-admin">${esc(p.label)}</span>`;
+  if(p.role==='admin') return '<span class="username-label label-admin">管理员</span>';
+  return '';
+}
+
+async function formatUsername(p,showLabel=true){
+  if(!p)return '未知';
+  const color=await getUserNameColor(p);
+  let labelHtml=showLabel?await getUserLabel(p):'';
+  return `<span style="color:${color};font-weight:600;">${esc(p.username)}</span> ${labelHtml}`;
+}
+
+function navigate(hash){window.location.hash=hash;}
+window.onhashchange=()=>render();
+
+// ===== 渲染 =====
+async function render(){
+  if(rendering)return;
+  rendering=true;
+  if(currentChatChannel){await supabaseClient.removeChannel(currentChatChannel);currentChatChannel=null;}
+  const app=document.getElementById('app');app.innerHTML='';
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  if(session){user=session.user;await loadProfile();}else{user=null;profile=null;}
+  updateMessageBadge();
+  const nav=document.createElement('div');nav.className='navbar';
+  nav.innerHTML=`<span class="logo" onclick="navigate('#home')"><i class="fas fa-book-open"></i> lyc书库</span>`;
+  if(user&&profile){
+    const avatarHtml=profile.avatar_url?`<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='${profile.username[0]}'">`:profile.username[0];
+    const formatted=await formatUsername(profile,true);
+    nav.innerHTML+=`<div class="user-badge"><a onclick="navigate('#user/${esc(profile.username)}')" style="display:flex;align-items:center;gap:6px;text-decoration:none;"><div class="avatar-circle">${avatarHtml}</div> ${formatted}</a><button onclick="signOut()" style="font-size:11px;padding:4px 14px;">退出</button></div>`;
+  }else{
+    nav.innerHTML+=`<div><button onclick="openModal('login')">登录</button><button onclick="openModal('register')" style="margin-left:6px;">注册</button></div>`;
   }
-  function isMuted(p) { return p?.muted_until && new Date(p.muted_until) > new Date(); }
-  function hasPermission(perm) {
-    if (!profile) return false;
-    if (profile.email === '18631167199@163.com') return true;
-    return (profile.permissions || []).includes(perm);
+  app.appendChild(nav);
+  document.getElementById('admin-nav').classList.toggle('hidden',profile?.role!=='admin');
+  const hash=location.hash||'#home';
+  if(hash==='#home')await home(app);
+  else if(hash==='#bookpile')await bookPile(app);
+  else if(hash.startsWith('#novel/')){
+    const parts=hash.split('/');
+    if(parts.length===3&&parts[2]==='chapters')await chapterList(app,parts[1]);
+    else await novelDetail(app,parts[1]);
+  }else if(hash.startsWith('#chapter/'))await chapterContent(app,hash.split('/')[1]);
+  else if(hash.startsWith('#user/'))await userPage(app,hash.split('/')[1]);
+  else if(hash==='#community')await communityList(app);
+  else if(hash.startsWith('#post/'))await postDetail(app,hash.split('/')[1]);
+  else if(hash==='#messages')await messagesPage(app);
+  else if(hash.startsWith('#chat/'))await chatPage(app,hash.split('/')[1]);
+  else if(hash==='#new-novel')await newNovel(app);
+  else if(hash==='#profile')await myProfile(app);
+  else if(hash==='#notifications')await notificationsPage(app);
+  else if(hash==='#admin'&&profile?.role==='admin')await adminPanel(app);
+  else home(app);
+  rendering=false;
+}
+
+async function loadProfile(){if(!user)return;const {data}=await supabaseClient.from('profiles').select('*').eq('id',user.id).single();profile=data||null;}
+
+// ===== 模态框（同前，完整） =====
+function openModal(type,data){
+  const container=document.getElementById('modal-container');
+  if(type==='login')container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
+  else if(type==='register')container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>注册</h3><input id="ruser" placeholder="用户名"><input id="remail" placeholder="邮箱" style="margin-top:8px;"><input id="rpass" type="password" placeholder="密码(6位+)" style="margin-top:8px;"><button onclick="doRegister()" style="width:100%;margin-top:12px;">注册</button><div id="err" style="color:red;"></div></div></div>`;
+  else if(type==='change-password')container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>修改密码</h3><input id="newpw" type="password" placeholder="新密码(至少6位)"><button onclick="changePassword()" style="width:100%;margin-top:12px;">确认修改</button><div id="err" style="color:red;"></div></div></div>`;
+  else if(type==='upload-avatar')container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传头像</h3><input type="file" id="avatar-file" accept="image/*"><button onclick="uploadAvatar()" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
+  else if(type==='upload-cover')container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传封面</h3><input type="file" id="cover-file" accept="image/*"><button onclick="uploadCover('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
+  else if(type==='upload-ad-image')container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传广告图片</h3><input type="file" id="ad-image-file" accept="image/*"><button onclick="uploadAdImage('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
+  else if(type==='edit-bio')container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑个人简介</h3><textarea id="bio-text" rows="4" placeholder="介绍一下自己...">${esc(profile?.bio||'')}</textarea><button onclick="saveBio()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
+  else if(type==='edit-label')container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑标签</h3><input id="new-label" value="${esc(profile?.label||'')}" placeholder="输入标签"><button onclick="updateLabel()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
+  else if(type==='permissions'){
+    const userPerms=data.permissions||[];
+    let permsHtml=ALL_PERMISSIONS.map(p=>`<label><input type="checkbox" value="${p}" ${userPerms.includes(p)?'checked':''}> ${p}</label><br>`).join('');
+    container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>设置权限 (${esc(data.username)})</h3>${permsHtml}<button onclick="savePermissions('${data.id}')" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
+    window._permUserId=data.id;
   }
+}
+function closeModal(){document.getElementById('modal-container').innerHTML='';}
 
-  async function addViolation(userId, reason) {
-    await supabaseClient.from('user_violations').insert({ user_id: userId, reason });
-    const { data: p } = await supabaseClient.from('profiles').select('violation_count').eq('id', userId).single();
-    let count = (p?.violation_count || 0) + 1;
-    let muted_until = null;
-    if (count >= 3) muted_until = new Date(Date.now() + 86400000).toISOString();
-    await supabaseClient.from('profiles').update({ violation_count: count, muted_until }).eq('id', userId);
+async function savePermissions(userId){
+  const checks=document.querySelectorAll('#modal-container input[type=checkbox]:checked');
+  const perms=Array.from(checks).map(c=>c.value);
+  const {error}=await supabaseClient.from('profiles').update({permissions:perms}).eq('id',userId);
+  if(error)return document.getElementById('err').textContent=error.message;
+  showToast('权限已更新','success');
+  closeModal();adminAdmins();
+}
+
+// ===== 认证 =====
+async function doLogin(){
+  const u=document.getElementById('luser').value.trim(),p=document.getElementById('lpass').value;
+  const e=document.getElementById('err');
+  if(!u||!p)return e.textContent='请输入用户名和密码';
+  const {data:pf}=await supabaseClient.from('profiles').select('email').eq('username',u).single();
+  if(!pf)return e.textContent='用户名不存在';
+  const {data,error}=await supabaseClient.auth.signInWithPassword({email:pf.email,password:p});
+  if(error)return e.textContent='密码错误';
+  closeModal();user=data.user;await loadProfile();render();
+  showToast('登录成功！欢迎回来','success');
+}
+
+async function doRegister(){
+  const u=document.getElementById('ruser').value.trim(),em=document.getElementById('remail').value.trim(),pw=document.getElementById('rpass').value;
+  const e=document.getElementById('err');e.textContent='';
+  if(!u||!em||!pw)return e.textContent='请填写完整';
+  if(pw.length<6)return e.textContent='密码至少6位';
+  const {data:exist}=await supabaseClient.from('profiles').select('id').or(`username.eq."${u}",email.eq."${em}"`).maybeSingle();
+  if(exist)return e.textContent='用户名或邮箱已被注册';
+  const {data:signUpData,error:signUpError}=await supabaseClient.auth.signUp({email:em,password:pw});
+  if(signUpError)return e.textContent=signUpError.message;
+  if(!signUpData?.user)return e.textContent='注册失败';
+  if(!signUpData.session){
+    const {data:loginData,error:loginError}=await supabaseClient.auth.signInWithPassword({email:em,password:pw});
+    if(loginError){closeModal();showToast('注册成功！请手动登录','info');return render();}
+    user=loginData.user;
+  }else{await supabaseClient.auth.setSession(signUpData.session);user=signUpData.user;}
+  const role=em==='18631167199@163.com'?'admin':'user';
+  const label=role==='admin'?'管理员':'';
+  const label_changes=role==='admin'?(em==='18631167199@163.com'?999:1):0;
+  await supabaseClient.from('profiles').upsert({id:user.id,username:u,email:em,role,label,label_changes_remaining:label_changes,permissions:[]});
+  closeModal();await loadProfile();render();
+  showToast('注册成功！','success');
+}
+
+async function changePassword(){
+  const pw=document.getElementById('newpw').value;
+  const e=document.getElementById('err');
+  if(!pw||pw.length<6)return e.textContent='密码至少6位';
+  const {error}=await supabaseClient.auth.updateUser({password:pw});
+  if(error)return e.textContent=error.message;
+  showToast('密码修改成功','success');
+  closeModal();
+}
+
+async function uploadAvatar(){
+  const file=document.getElementById('avatar-file').files[0];
+  const e=document.getElementById('err');
+  if(!file)return e.textContent='请选择文件';
+  const path=`${user.id}.${file.name.split('.').pop()}`;
+  const {error}=await supabaseClient.storage.from('avatars').upload(path,file,{upsert:true});
+  if(error)return e.textContent=error.message;
+  const {data:{publicUrl}}=supabaseClient.storage.from('avatars').getPublicUrl(path);
+  await supabaseClient.from('profiles').update({avatar_url:publicUrl}).eq('id',user.id);
+  await loadProfile();closeModal();render();
+  showToast('头像上传成功','success');
+}
+
+async function uploadCover(novelId){
+  const file=document.getElementById('cover-file').files[0];
+  const e=document.getElementById('err');
+  if(!file)return e.textContent='请选择文件';
+  const path=`${novelId}_cover.${file.name.split('.').pop()}`;
+  const {error}=await supabaseClient.storage.from('covers').upload(path,file,{upsert:true});
+  if(error)return e.textContent=error.message;
+  const {data:{publicUrl}}=supabaseClient.storage.from('covers').getPublicUrl(path);
+  await supabaseClient.from('novels').update({cover_url:publicUrl}).eq('id',novelId);
+  closeModal();navigate(`#novel/${novelId}`);
+  showToast('封面已更新','success');
+}
+
+async function uploadAdImage(postId){
+  const file=document.getElementById('ad-image-file').files[0];
+  const e=document.getElementById('err');
+  if(!file)return e.textContent='请选择文件';
+  const path=`ad_${postId}_${Date.now()}.${file.name.split('.').pop()}`;
+  const {error}=await supabaseClient.storage.from('posts').upload(path,file,{upsert:true});
+  if(error)return e.textContent=error.message;
+  const {data:{publicUrl}}=supabaseClient.storage.from('posts').getPublicUrl(path);
+  await supabaseClient.from('posts').update({ad_image_url:publicUrl,is_ad:true}).eq('id',postId);
+  closeModal();adminAds();
+  showToast('广告已设置','success');
+}
+
+async function saveBio(){
+  const bio=document.getElementById('bio-text').value.trim();
+  const {error}=await supabaseClient.from('profiles').update({bio}).eq('id',user.id);
+  if(error)return document.getElementById('err').textContent=error.message;
+  closeModal();await loadProfile();render();
+  showToast('简介已更新','success');
+}
+
+async function updateLabel(){
+  const newLabel=document.getElementById('new-label').value.trim();
+  if(profile.role==='admin'&&profile.email!=='18631167199@163.com'&&(profile.label_changes_remaining??0)<=0){
+    return document.getElementById('err').textContent='你没有更改标签的次数了';
   }
+  const {error}=await supabaseClient.from('profiles').update({
+    label:newLabel,
+    label_changes_remaining:profile.email==='18631167199@163.com'?999:(profile.label_changes_remaining??1)-1
+  }).eq('id',user.id);
+  if(error)return document.getElementById('err').textContent=error.message;
+  closeModal();await loadProfile();render();
+  showToast('标签已更新','success');
+}
 
-  async function getUserNameColor(profileData) {
-    if (!profileData) return '#3b3226';
-    if (isMuted(profileData)) return '#8B6914';
-    if (profileData.role === 'admin') return '#FFD700';
-    const { data: novels } = await supabaseClient.from('novels').select('id').eq('author_id', profileData.id).eq('approval_status', 'approved');
-    const novelCount = novels?.length || 0;
-    const { count: checkinCount } = await supabaseClient.from('daily_checkins').select('*', { count: 'exact', head: true }).eq('user_id', profileData.id);
-    const days = checkinCount || 0;
-    const { data: ratings } = await supabaseClient.from('ratings').select('score').eq('user_id', profileData.id);
-    const totalScore = ratings?.reduce((s,r)=>s+r.score,0) || 0;
-    const points = novelCount * 10 + days * 2 + totalScore;
-    if (points >= 100) return '#FF8C00';
-    if (points >= 50) return '#4682B4';
-    if (points >= 20) return '#32CD32';
-    return '#3b3226';
+async function signOut(){await supabaseClient.auth.signOut();user=null;profile=null;render();showToast('已退出','info');}
+
+async function performCheckin(button){
+  if(!user)return;
+  const today=new Date().toISOString().slice(0,10);
+  const {data:existing}=await supabaseClient.from('daily_checkins').select('*').eq('user_id',user.id).eq('checkin_date',today).maybeSingle();
+  if(existing)return;
+  const {data:recent}=await supabaseClient.from('daily_checkins').select('*').eq('user_id',user.id).order('checkin_date',{ascending:false}).limit(1);
+  let consecutive=1;
+  if(recent&&recent.length){
+    const lastDate=new Date(recent[0].checkin_date);
+    const diff=Math.floor((new Date(today)-lastDate)/(1000*60*60*24));
+    consecutive=(diff===1)?(recent[0].consecutive_days||0)+1:1;
   }
+  let points=Math.floor(Math.random()*5)+5;
+  if(consecutive>=7)points*=2;
+  const {error}=await supabaseClient.from('daily_checkins').insert({user_id:user.id,checkin_date:today,points,consecutive_days:consecutive});
+  if(error)return showToast('签到失败','error');
+  button.disabled=true;
+  button.textContent=`已签到 (${points}积分，连续${consecutive}天)`;
+  showToast(`签到成功！获得 ${points} 积分`,'success');
+}
 
-  async function getUserLabel(profileData) {
-    if (!profileData) return '';
-    if (isMuted(profileData)) return '<span class="username-label label-violator">违规者</span>';
-    if (profileData.label) return `<span class="username-label label-admin">${esc(profileData.label)}</span>`;
-    return '';
+// ===== 首页（含巅峰榜和增强搜索） =====
+async function home(container){
+  const {data:ann}=await supabaseClient.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);
+  if(ann?.length){
+    const div=document.createElement('div');div.className='card';
+    div.innerHTML=`<strong><i class="fas fa-bullhorn"></i> 公告</strong><br>${marked.parse(ann[0].content)}`;
+    container.appendChild(div);
   }
-
-  async function formatUsername(profileData, showLabel = true) {
-    if (!profileData) return '未知';
-    const color = await getUserNameColor(profileData);
-    let labelHtml = showLabel ? await getUserLabel(profileData) : '';
-    return `<span style="color:${color};font-weight:bold;">${esc(profileData.username)}</span> ${labelHtml}`;
-  }
-
-  function navigate(hash) { window.location.hash = hash; }
-  window.onhashchange = () => render();
-
-  async function render() {
-    if (rendering) return;
-    rendering = true;
-    const app = document.getElementById('app'); app.innerHTML = '';
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session) { user = session.user; await loadProfile(); }
-    else { user = null; profile = null; }
-
-    updateMessageBadge();
-
-    const nav = document.createElement('div'); nav.className = 'navbar';
-    nav.innerHTML = `<span class="logo" onclick="navigate('#home')">📖 lyc书库</span>`;
-    if (user && profile) {
-      const avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='${profile.username[0]}'">` : profile.username[0];
-      const formatted = await formatUsername(profile, true);
-      nav.innerHTML += `<div class="user-badge"><a onclick="navigate('#user/${esc(profile.username)}')" style="display:flex;align-items:center;gap:4px;"><div class="avatar-circle">${avatarHtml}</div> ${formatted}</a><button onclick="signOut()" style="font-size:11px;padding:3px 8px;">退出</button></div>`;
-    } else {
-      nav.innerHTML += `<div><button onclick="openModal('login')">登录</button><button onclick="openModal('register')" style="margin-left:4px;">注册</button></div>`;
-    }
-    app.appendChild(nav);
-    document.getElementById('admin-nav').classList.toggle('hidden', profile?.role !== 'admin');
-
-    const hash = location.hash || '#home';
-    if (hash === '#home') await home(app);
-    else if (hash.startsWith('#novel/')) {
-      const parts = hash.split('/');
-      if (parts.length === 3 && parts[2] === 'chapters') await chapterList(app, parts[1]);
-      else await novelDetail(app, parts[1]);
-    } else if (hash.startsWith('#chapter/')) await chapterContent(app, hash.split('/')[1]);
-    else if (hash.startsWith('#user/')) await userPage(app, hash.split('/')[1]);
-    else if (hash === '#community') await communityList(app);
-    else if (hash.startsWith('#post/')) await postDetail(app, hash.split('/')[1]);
-    else if (hash === '#messages') await messagesPage(app);
-    else if (hash.startsWith('#chat/')) await chatPage(app, hash.split('/')[1]);
-    else if (hash === '#new-novel') await newNovel(app);
-    else if (hash === '#profile') await myProfile(app);
-    else if (hash === '#notifications') await notificationsPage(app);
-    else if (hash === '#admin' && profile?.role === 'admin') await adminPanel(app);
-    else home(app);
-    rendering = false;
-  }
-
-  async function loadProfile() {
-    if (!user) return;
-    const { data } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
-    profile = data || null;
-  }
-
-  function openModal(type, data) {
-    const container = document.getElementById('modal-container');
-    if (type === 'login') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>登录</h3><input id="luser" placeholder="用户名"><input id="lpass" type="password" placeholder="密码" style="margin-top:8px;"><button onclick="doLogin()" style="width:100%;margin-top:12px;">登录</button><div id="err" style="color:red;"></div></div></div>`;
-    else if (type === 'register') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>注册</h3><input id="ruser" placeholder="用户名"><input id="remail" placeholder="邮箱" style="margin-top:8px;"><input id="rpass" type="password" placeholder="密码(6位+)" style="margin-top:8px;"><button onclick="doRegister()" style="width:100%;margin-top:12px;">注册</button><div id="err" style="color:red;"></div></div></div>`;
-    else if (type === 'change-password') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>修改密码</h3><input id="newpw" type="password" placeholder="新密码(至少6位)"><button onclick="changePassword()" style="width:100%;margin-top:12px;">确认修改</button><div id="err" style="color:red;"></div></div></div>`;
-    else if (type === 'upload-avatar') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传头像</h3><input type="file" id="avatar-file" accept="image/*"><button onclick="uploadAvatar()" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
-    else if (type === 'upload-cover') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传封面</h3><input type="file" id="cover-file" accept="image/*"><button onclick="uploadCover('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
-    else if (type === 'upload-ad-image') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>上传广告图片</h3><input type="file" id="ad-image-file" accept="image/*"><button onclick="uploadAdImage('${data}')" style="width:100%;margin-top:12px;">上传</button><div id="err" style="color:red;"></div></div></div>`;
-    else if (type === 'edit-bio') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑个人简介</h3><textarea id="bio-text" rows="4" placeholder="介绍一下自己...">${esc(profile?.bio||'')}</textarea><button onclick="saveBio()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
-    else if (type === 'edit-label') container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>编辑标签</h3><input id="new-label" value="${esc(profile?.label||'')}" placeholder="输入标签"><button onclick="updateLabel()" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
-    else if (type === 'permissions') {
-      const userPerms = data.permissions || [];
-      let permsHtml = ALL_PERMISSIONS.map(p => `<label><input type="checkbox" value="${p}" ${userPerms.includes(p)?'checked':''}> ${p}</label><br>`).join('');
-      container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>设置权限 (${esc(data.username)})</h3>${permsHtml}<button onclick="savePermissions('${data.id}')" style="width:100%;margin-top:12px;">保存</button><div id="err" style="color:red;"></div></div></div>`;
-      window._permUserId = data.id;
-    }
-  }
-  function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
-
-  async function savePermissions(userId) {
-    const checks = document.querySelectorAll('#modal-container input[type=checkbox]:checked');
-    const perms = Array.from(checks).map(c => c.value);
-    const { error } = await supabaseClient.from('profiles').update({ permissions: perms }).eq('id', userId);
-    if (error) return document.getElementById('err').textContent = error.message;
-    alert('权限已更新'); closeModal(); adminAdmins();
-  }
-
-  async function doLogin() {
-    const u = document.getElementById('luser').value.trim(), p = document.getElementById('lpass').value;
-    const e = document.getElementById('err');
-    if (!u || !p) return e.textContent = '请输入用户名和密码';
-    const { data: pf } = await supabaseClient.from('profiles').select('email').eq('username', u).single();
-    if (!pf) return e.textContent = '用户名不存在';
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email: pf.email, password: p });
-    if (error) return e.textContent = '密码错误';
-    closeModal(); user = data.user; await loadProfile(); render();
-  }
-
-  async function doRegister() {
-    const u = document.getElementById('ruser').value.trim(), em = document.getElementById('remail').value.trim(), pw = document.getElementById('rpass').value;
-    const e = document.getElementById('err'); e.textContent = '';
-    if (!u || !em || !pw) return e.textContent = '请填写完整';
-    if (pw.length < 6) return e.textContent = '密码至少6位';
-    const { data: exist } = await supabaseClient.from('profiles').select('id').or(`username.eq."${u}",email.eq."${em}"`).maybeSingle();
-    if (exist) return e.textContent = '用户名或邮箱已被注册';
-    const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email: em, password: pw });
-    if (signUpError) return e.textContent = signUpError.message;
-    if (!signUpData?.user) return e.textContent = '注册失败';
-    if (!signUpData.session) {
-      const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({ email: em, password: pw });
-      if (loginError) { closeModal(); alert('注册成功！请手动登录'); return render(); }
-      user = loginData.user;
-    } else { await supabaseClient.auth.setSession(signUpData.session); user = signUpData.user; }
-    const role = em === '18631167199@163.com' ? 'admin' : 'user';
-    const label = role === 'admin' ? '管理员' : '';
-    const label_changes = role === 'admin' ? (em === '18631167199@163.com' ? 999 : 1) : 0;
-    await supabaseClient.from('profiles').upsert({ id: user.id, username: u, email: em, role, label, label_changes_remaining: label_changes, permissions: [] });
-    closeModal(); await loadProfile(); render();
-  }
-
-  async function changePassword() {
-    const pw = document.getElementById('newpw').value;
-    const e = document.getElementById('err');
-    if (!pw || pw.length < 6) return e.textContent = '密码至少6位';
-    const { error } = await supabaseClient.auth.updateUser({ password: pw });
-    if (error) return e.textContent = error.message;
-    alert('密码修改成功'); closeModal();
-  }
-
-  async function uploadAvatar() {
-    const file = document.getElementById('avatar-file').files[0];
-    const e = document.getElementById('err');
-    if (!file) return e.textContent = '请选择文件';
-    const path = `${user.id}.${file.name.split('.').pop()}`;
-    const { error } = await supabaseClient.storage.from('avatars').upload(path, file, { upsert: true });
-    if (error) return e.textContent = error.message;
-    const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(path);
-    await supabaseClient.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
-    await loadProfile(); closeModal(); render();
-  }
-
-  async function uploadCover(novelId) {
-    const file = document.getElementById('cover-file').files[0];
-    const e = document.getElementById('err');
-    if (!file) return e.textContent = '请选择文件';
-    const path = `${novelId}_cover.${file.name.split('.').pop()}`;
-    const { error } = await supabaseClient.storage.from('covers').upload(path, file, { upsert: true });
-    if (error) return e.textContent = error.message;
-    const { data: { publicUrl } } = supabaseClient.storage.from('covers').getPublicUrl(path);
-    await supabaseClient.from('novels').update({ cover_url: publicUrl }).eq('id', novelId);
-    closeModal(); navigate(`#novel/${novelId}`);
-  }
-
-  async function uploadAdImage(postId) {
-    const file = document.getElementById('ad-image-file').files[0];
-    const e = document.getElementById('err');
-    if (!file) return e.textContent = '请选择文件';
-    const path = `ad_${postId}_${Date.now()}.${file.name.split('.').pop()}`;
-    const { error } = await supabaseClient.storage.from('posts').upload(path, file, { upsert: true });
-    if (error) return e.textContent = error.message;
-    const { data: { publicUrl } } = supabaseClient.storage.from('posts').getPublicUrl(path);
-    await supabaseClient.from('posts').update({ ad_image_url: publicUrl, is_ad: true }).eq('id', postId);
-    closeModal(); adminAds();
-  }
-
-  async function saveBio() {
-    const bio = document.getElementById('bio-text').value.trim();
-    const { error } = await supabaseClient.from('profiles').update({ bio }).eq('id', user.id);
-    if (error) return document.getElementById('err').textContent = error.message;
-    closeModal(); await loadProfile(); render();
-  }
-
-  async function updateLabel() {
-    const newLabel = document.getElementById('new-label').value.trim();
-    if (profile.role === 'admin' && profile.email !== '18631167199@163.com' && (profile.label_changes_remaining ?? 0) <= 0) {
-      return document.getElementById('err').textContent = '你没有更改标签的次数了';
-    }
-    const { error } = await supabaseClient.from('profiles').update({
-      label: newLabel,
-      label_changes_remaining: profile.email === '18631167199@163.com' ? 999 : (profile.label_changes_remaining ?? 1) - 1
-    }).eq('id', user.id);
-    if (error) return document.getElementById('err').textContent = error.message;
-    closeModal(); await loadProfile(); render();
-  }
-
-  async function signOut() { await supabaseClient.auth.signOut(); user = null; profile = null; render(); }
-
-  async function performCheckin(button) {
-    if (!user) return;
-    const today = new Date().toISOString().slice(0,10);
-    const { data: existing } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
-    if (existing) return;
-    const { data: recent } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).order('checkin_date', { ascending: false }).limit(1);
-    let consecutive = 1;
-    if (recent && recent.length) {
-      const lastDate = new Date(recent[0].checkin_date);
-      const diff = Math.floor((new Date(today) - lastDate) / (1000 * 60 * 60 * 24));
-      consecutive = (diff === 1) ? (recent[0].consecutive_days || 0) + 1 : 1;
-    }
-    let points = Math.floor(Math.random() * 5) + 5;
-    if (consecutive >= 7) points *= 2;
-    const { error } = await supabaseClient.from('daily_checkins').insert({ user_id: user.id, checkin_date: today, points, consecutive_days: consecutive });
-    if (error) return alert('签到失败');
-    button.disabled = true;
-    button.textContent = `已签到 (${points}积分，连续${consecutive}天)`;
-  }
-
-  // ================== 首页 ==================
-  async function home(container) {
-    const { data: ann } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false }).limit(1);
-    if (ann?.length) {
-      const div = document.createElement('div'); div.className = 'card';
-      div.innerHTML = `<strong>📢 公告</strong><br>${marked.parse(ann[0].content)}`;
-      container.appendChild(div);
-    }
-
-    const { data: ads } = await supabaseClient.from('posts').select('id, ad_image_url').eq('is_ad', true);
-    if (ads && ads.length > 0) {
-      const adContainer = document.createElement('div'); adContainer.className = 'ad-carousel';
-      let currentAd = 0;
-      const img = document.createElement('img');
-      img.src = ads[0].ad_image_url || PLACEHOLDER_IMAGE;
-      img.onclick = () => navigate(`#post/${ads[0].id}`);
-      adContainer.appendChild(img);
-
-      const dotsContainer = document.createElement('div'); dotsContainer.className = 'ad-dots';
-      ads.forEach((ad, i) => {
-        const dot = document.createElement('span');
-        dot.className = 'ad-dot' + (i === 0 ? ' active' : '');
-        dot.onclick = () => {
-          currentAd = i;
-          img.src = ads[i].ad_image_url || PLACEHOLDER_IMAGE;
-          img.onclick = () => navigate(`#post/${ads[i].id}`);
-          updateDots();
-        };
-        dotsContainer.appendChild(dot);
-      });
-      function updateDots() {
-        const dots = dotsContainer.querySelectorAll('.ad-dot');
-        dots.forEach((d, i) => d.classList.toggle('active', i === currentAd));
-      }
-      adContainer.appendChild(dotsContainer);
-      container.appendChild(adContainer);
-
-      setInterval(() => {
-        if (ads.length > 1) {
-          currentAd = (currentAd + 1) % ads.length;
-          img.src = ads[currentAd].ad_image_url || PLACEHOLDER_IMAGE;
-          img.onclick = () => navigate(`#post/${ads[currentAd].id}`);
-          updateDots();
-        }
-      }, 5000);
-    }
-
-    if (user) {
-      const today = new Date().toISOString().slice(0,10);
-      const { data: checkin } = await supabaseClient.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
-      const checkinDiv = document.createElement('div'); checkinDiv.className = 'card';
-      checkinDiv.innerHTML = `<h3>📅 每日签到</h3>`;
-      if (checkin) {
-        checkinDiv.innerHTML += `<p>今日已签到，获得 ${checkin.points} 积分，连续 ${checkin.consecutive_days} 天</p>`;
-      } else {
-        const btn = document.createElement('button');
-        btn.className = 'checkin-btn';
-        btn.textContent = '签到领积分';
-        btn.onclick = function() { performCheckin(btn); };
-        checkinDiv.appendChild(btn);
-      }
-      container.appendChild(checkinDiv);
-    }
-
-    const searchDiv = document.createElement('div'); searchDiv.className = 'card';
-    searchDiv.innerHTML = `<input id="search" placeholder="搜索小说、作者、用户..."><button onclick="search()" style="margin-top:6px;">搜索</button><div id="results" style="margin-top:10px;"></div>`;
-    container.appendChild(searchDiv);
-
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').eq('approval_status', 'approved').order('updated_at', { ascending: false }).limit(30);
-    const grid = document.createElement('div'); grid.className = 'novel-grid';
-    if (novels?.length) {
-      for (const n of novels) {
-        const authorFormatted = n.profiles ? await formatUsername(n.profiles, true) : '未知';
-        const card = document.createElement('div'); card.className = 'novel-card';
-        card.onclick = () => navigate(`#novel/${n.id}`);
-        card.innerHTML = `<img class="novel-cover" src="${n.cover_url || PLACEHOLDER_IMAGE}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${authorFormatted}</div></div>`;
-        grid.appendChild(card);
-      }
-    } else grid.innerHTML = '<p style="color:#888;">还没有小说，快来发布吧！</p>';
-    container.appendChild(grid);
-  }
-
-  async function search() {
-    const kw = document.getElementById('search').value.trim();
-    const resultsDiv = document.getElementById('results'); resultsDiv.innerHTML = '';
-    if (!kw) return;
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').ilike('title', `%${kw}%`).eq('approval_status', 'approved').limit(10);
-    const { data: users } = await supabaseClient.from('profiles').select('*').ilike('username', `%${kw}%`).limit(10);
-    if (users?.length) {
-      resultsDiv.innerHTML += '<b>👥 用户</b>';
-      for (const u of users) {
-        const formatted = await formatUsername(u, true);
-        resultsDiv.innerHTML += `<div><a onclick="navigate('#user/${esc(u.username)}')">${formatted}</a></div>`;
-      }
-    }
-    if (novels?.length) {
-      resultsDiv.innerHTML += '<b>📚 小说</b>';
-      for (const n of novels) {
-        const authorFormatted = n.profiles ? await formatUsername(n.profiles, true) : '未知';
-        resultsDiv.innerHTML += `<div class="flex-row"><div><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></div><span>${authorFormatted}</span></div>`;
-      }
-    }
-    if (!users?.length && !novels?.length) resultsDiv.innerHTML = '<p>无结果</p>';
-  }
-
-  // ================== 小说详情 ==================
-  async function novelDetail(container, novelId) {
-    const { data: novel } = await supabaseClient.from('novels').select('*, profiles(username,role,muted_until,label)').eq('id', novelId).single();
-    if (!novel) return container.innerHTML += '<p>不存在</p>';
-    const authorFormatted = novel.profiles ? await formatUsername(novel.profiles, true) : '未知';
-    const { data: ratings } = await supabaseClient.from('ratings').select('score').eq('novel_id', novelId);
-    const avg = ratings?.length ? (ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1) : '-';
-    const userRating = user ? ratings?.find(r=>r.user_id === user.id) : null;
-    let isFollowing = false;
-    if (user && user.id !== novel.author_id) {
-      const { data: f } = await supabaseClient.from('follows').select('*').eq('follower_id', user.id).eq('following_id', novel.author_id).maybeSingle();
-      isFollowing = !!f;
-    }
-    const infoCard = document.createElement('div'); infoCard.className = 'card';
-    infoCard.innerHTML = `
-      <a onclick="navigate('#home')" style="font-size:12px;">← 首页</a>
-      <div style="display:flex;gap:15px;margin-top:10px;flex-wrap:wrap;">
-        <img src="${novel.cover_url || PLACEHOLDER_IMAGE}" style="width:100px;height:140px;object-fit:cover;border-radius:8px;background:#f0ece4;" onerror="this.src='${PLACEHOLDER_IMAGE}'">
-        <div style="flex:1;min-width:200px;">
-          <h2>${esc(novel.title)}</h2>
-          <p>作者：<a onclick="navigate('#user/${esc(novel.profiles?.username)}')">${authorFormatted}</a> ${user && user.id!==novel.author_id ? `<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollow('${novel.author_id}')" style="margin-left:6px;">${isFollowing?'已关注':'+ 关注'}</button>` : ''}</p>
-          <p>⭐ ${avg} (${ratings?.length||0}人) | 状态：${novel.status} | 分类：${novel.genre||''}</p>
-          <p>${esc(novel.description||'')}</p>
-          <div class="btn-group">
-            <button onclick="navigate('#novel/${novelId}/chapters')">📖 章节列表</button>
-            ${user?.id===novel.author_id?`<button class="outline" onclick="openModal('upload-cover','${novelId}')">🖼️ 上传封面</button><button class="outline" onclick="editNovel(${novel.id})">✏️ 编辑</button><button class="danger" onclick="deleteNovel(${novel.id})">🗑️ 删除</button>`:''}
-            ${profile?.role==='admin'&&user?.id!==novel.author_id?`<button class="danger" onclick="deleteNovel(${novel.id})">管理员删除</button>`:''}
+  // 巅峰榜
+  const {data:allNovels}=await supabaseClient.from('novels').select('id,title,author_id,cover_url,description,profiles(username)').eq('approval_status','approved');
+  if(allNovels&&allNovels.length>0){
+    const novelIds=allNovels.map(n=>n.id);
+    const {data:ratings}=await supabaseClient.from('ratings').select('novel_id,score').in('novel_id',novelIds);
+    const scoreMap={};
+    ratings?.forEach(r=>{if(!scoreMap[r.novel_id])scoreMap[r.novel_id]=[];scoreMap[r.novel_id].push(r.score);});
+    const ranked=allNovels.map(n=>{
+      const scores=scoreMap[n.id]||[];
+      const avg=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):0;
+      return {...n,avg:parseFloat(avg),count:scores.length};
+    }).sort((a,b)=>b.avg-a.avg).slice(0,5);
+    if(ranked.length>0&&ranked[0].avg>0){
+      const rankCard=document.createElement('div');rankCard.className='card';
+      rankCard.innerHTML=`<h3><i class="fas fa-trophy" style="color:#eab308;"></i> 巅峰榜</h3>`;
+      ranked.forEach((n,i)=>{
+        const rankLabel=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
+        const div=document.createElement('div');div.className='rank-item';
+        div.innerHTML=`
+          <div class="rank-number">${rankLabel}</div>
+          <div class="rank-info" onclick="navigate('#novel/${n.id}')" style="cursor:pointer;">
+            <div class="rank-title">${esc(n.title)}</div>
+            <div class="rank-meta">${esc(n.profiles?.username||'未知')} · ⭐ <span class="rank-score">${n.avg}</span> (${n.count}人)</div>
           </div>
-          ${user?`<div style="margin-top:10px;"><label>我的评分：</label><select id="my-rating" style="width:auto;"><option value="0">未评分</option>${[1,2,3,4,5].map(s=>`<option value="${s}" ${userRating?.score===s?'selected':''}>${s}星</option>`).join('')}</select><button onclick="rateNovel(${novel.id})">提交评分</button></div>`:'<p>登录后可评分</p>'}
-        </div>
-      </div>`;
-    container.appendChild(infoCard);
-    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username,role,muted_until,label)').eq('novel_id', novelId).is('chapter_id', null).order('created_at', { ascending: false });
-    const commCard = document.createElement('div'); commCard.className = 'card';
-    commCard.innerHTML = '<h3>💬 小说评论区</h3>';
-    if (comments?.length) {
-      for (const c of comments) {
-        const commentUserFormatted = c.profiles ? await formatUsername(c.profiles, true) : '匿名';
-        commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${commentUserFormatted}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`;
-      }
-    } else commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
-    if (user && !isMuted(profile)) {
-      commCard.innerHTML += `<textarea id="novel-comment" placeholder="写下你的看法..." rows="3"></textarea><button onclick="addNovelComment(${novel.id})" style="margin-top:6px;">发表评论</button>`;
-    } else if (isMuted(profile)) commCard.innerHTML += '<p style="color:red;">你已被禁言</p>';
-    else commCard.innerHTML += '<p>登录后可评论</p>';
-    container.appendChild(commCard);
-  }
-
-  async function rateNovel(novelId) {
-    const score = parseInt(document.getElementById('my-rating').value);
-    if (score === 0) { await supabaseClient.from('ratings').delete().eq('novel_id', novelId).eq('user_id', user.id); alert('已取消评分'); }
-    else { const { error } = await supabaseClient.from('ratings').upsert({ novel_id: novelId, user_id: user.id, score }, { onConflict: 'novel_id,user_id' }); if (error) alert(error.message); else alert('评分成功'); }
-    navigate(`#novel/${novelId}`);
-  }
-
-  async function addNovelComment(novelId) {
-    if (isMuted(profile)) return alert('你已被禁言');
-    const content = document.getElementById('novel-comment').value.trim();
-    if (!content) return alert('评论不能为空');
-    if (!isContentValid('占位', content) || containsBanned(content)) {
-      await addViolation(user.id, '违规评论');
-      return alert('内容违规，已记录违规');
-    }
-    await supabaseClient.from('comments').insert({ novel_id: novelId, user_id: user.id, content, chapter_id: null });
-    navigate(`#novel/${novelId}`);
-  }
-
-  async function toggleFollow(authorId) {
-    if (!user) return alert('请先登录');
-    const { data: follow } = await supabaseClient.from('follows').select('*').eq('follower_id', user.id).eq('following_id', authorId).maybeSingle();
-    if (follow) await supabaseClient.from('follows').delete().eq('follower_id', user.id).eq('following_id', authorId);
-    else await supabaseClient.from('follows').insert({ follower_id: user.id, following_id: authorId });
-    navigate(`#novel/${location.hash.split('/')[1]}`);
-  }
-
-  async function deleteNovel(id) { if (!confirm('确定删除该小说及所有章节？')) return; await supabaseClient.from('novels').delete().eq('id', id); alert('已删除'); navigate('#home'); }
-
-  function editNovel(novelId) {
-    supabaseClient.from('novels').select('*').eq('id', novelId).single().then(({data:n}) => {
-      openGenericForm('编辑小说', `<input id="et" value="${esc(n.title)}" placeholder="标题"><input id="eg" value="${esc(n.genre||'')}" placeholder="分类" style="margin-top:6px;"><textarea id="ed" rows="4" style="margin-top:6px;">${esc(n.description||'')}</textarea>`, async () => {
-        const t = document.getElementById('et').value.trim(); if (!t) throw new Error('标题不能为空');
-        await supabaseClient.from('novels').update({ title: t, genre: document.getElementById('eg').value.trim(), description: document.getElementById('ed').value.trim(), updated_at: new Date() }).eq('id', novelId);
-        navigate(`#novel/${novelId}`);
+          <img src="${n.cover_url||PLACEHOLDER_IMAGE}" style="width:40px;height:56px;object-fit:cover;border-radius:6px;background:#f1f5f9;" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+        `;
+        rankCard.appendChild(div);
       });
+      container.appendChild(rankCard);
+    }
+  }
+  // 广告
+  const {data:ads}=await supabaseClient.from('posts').select('id,ad_image_url').eq('is_ad',true);
+  if(ads&&ads.length>0){
+    const adContainer=document.createElement('div');adContainer.className='ad-carousel';
+    let currentAd=0;
+    const img=document.createElement('img');
+    img.src=ads[0].ad_image_url||PLACEHOLDER_IMAGE;
+    img.onclick=()=>navigate(`#post/${ads[0].id}`);
+    adContainer.appendChild(img);
+    const dotsContainer=document.createElement('div');dotsContainer.className='ad-dots';
+    ads.forEach((ad,i)=>{
+      const dot=document.createElement('span');
+      dot.className='ad-dot'+(i===0?' active':'');
+      dot.onclick=()=>{currentAd=i;img.src=ads[i].ad_image_url||PLACEHOLDER_IMAGE;img.onclick=()=>navigate(`#post/${ads[i].id}`);updateDots();};
+      dotsContainer.appendChild(dot);
     });
+    function updateDots(){const dots=dotsContainer.querySelectorAll('.ad-dot');dots.forEach((d,i)=>d.classList.toggle('active',i===currentAd));}
+    adContainer.appendChild(dotsContainer);
+    container.appendChild(adContainer);
+    setInterval(()=>{if(ads.length>1){currentAd=(currentAd+1)%ads.length;img.src=ads[currentAd].ad_image_url||PLACEHOLDER_IMAGE;img.onclick=()=>navigate(`#post/${ads[currentAd].id}`);updateDots();}},5000);
   }
-
-  // ================== 章节列表 ==================
-  async function chapterList(container, novelId) {
-    const { data: novel, error: novelError } = await supabaseClient.from('novels').select('*').eq('id', novelId).maybeSingle();
-    if (novelError || !novel) { container.innerHTML += '<p>小说不存在</p>'; return; }
-    const { data: chapters, error: chaptersError } = await supabaseClient.from('chapters').select('*').eq('novel_id', novelId).order('chapter_number');
-    if (chaptersError) { container.innerHTML += '<p>加载章节失败</p>'; return; }
-    const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<a onclick="navigate('#novel/${novelId}')" style="font-size:12px;">← 详情</a><h2>${esc(novel.title)} · 章节</h2>`;
-    if (chapters?.length) {
-      for (const ch of chapters) {
-        card.innerHTML += `<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>${user?.id===novel.author_id?`<div><button class="outline" style="padding:2px 8px;font-size:11px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 8px;font-size:11px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>`:''}</div>`;
+  // 签到
+  if(user){
+    const today=new Date().toISOString().slice(0,10);
+    const {data:checkin}=await supabaseClient.from('daily_checkins').select('*').eq('user_id',user.id).eq('checkin_date',today).maybeSingle();
+    const checkinDiv=document.createElement('div');checkinDiv.className='card';
+    checkinDiv.innerHTML=`<h3><i class="fas fa-calendar-check"></i> 每日签到</h3>`;
+    if(checkin){
+      checkinDiv.innerHTML+=`<p>今日已签到，获得 ${checkin.points} 积分，连续 ${checkin.consecutive_days} 天</p>`;
+    }else{
+      const btn=document.createElement('button');btn.className='checkin-btn';btn.textContent='签到领积分';btn.onclick=function(){performCheckin(btn);};
+      checkinDiv.appendChild(btn);
+    }
+    container.appendChild(checkinDiv);
+  }
+  // 增强搜索
+  const searchDiv=document.createElement('div');searchDiv.className='card';
+  searchDiv.innerHTML=`
+    <div class="search-box">
+      <input id="search-input" placeholder="搜索小说、作者、分类...">
+      <select id="search-type">
+        <option value="all">全部</option>
+        <option value="novel">小说</option>
+        <option value="user">用户</option>
+      </select>
+      <button id="search-btn"><i class="fas fa-search"></i> 搜索</button>
+    </div>
+    <div id="search-results" class="search-results"></div>
+  `;
+  container.appendChild(searchDiv);
+  const searchInput=document.getElementById('search-input');
+  const searchType=document.getElementById('search-type');
+  const resultsDiv=document.getElementById('search-results');
+  async function performSearch(){
+    const kw=searchInput.value.trim();
+    const type=searchType.value;
+    if(!kw){resultsDiv.innerHTML='';return;}
+    resultsDiv.innerHTML='<p style="color:#94a3b8;">搜索中...</p>';
+    let novelResults=[],userResults=[];
+    if(type==='all'||type==='novel'){
+      const {data:novels}=await supabaseClient.from('novels')
+        .select('*,profiles(username)')
+        .eq('approval_status','approved')
+        .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,genre.ilike.%${kw}%`)
+        .limit(10);
+      novelResults=novels||[];
+    }
+    if(type==='all'||type==='user'){
+      const {data:users}=await supabaseClient.from('profiles')
+        .select('*')
+        .ilike('username',`%${kw}%`)
+        .limit(10);
+      userResults=users||[];
+    }
+    let html='';
+    if(novelResults.length){
+      html+='<b><i class="fas fa-book"></i> 小说</b>';
+      for(const n of novelResults){
+        const author=n.profiles?await formatUsername(n.profiles,true):'未知';
+        html+=`<div class="flex-row"><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a><span>${author}</span></div>`;
       }
-    } else card.innerHTML += '<p>暂无章节</p>';
-    if (user?.id === novel.author_id) card.innerHTML += `<button onclick="addChapter(${novelId})" style="margin-top:10px;">+ 新章节</button>`;
-    container.appendChild(card);
+    }
+    if(userResults.length){
+      html+='<b><i class="fas fa-users"></i> 用户</b>';
+      for(const u of userResults){
+        const formatted=await formatUsername(u,true);
+        html+=`<div><a onclick="navigate('#user/${esc(u.username)}')">${formatted}</a></div>`;
+      }
+    }
+    if(!html)html='<p>无结果</p>';
+    resultsDiv.innerHTML=html;
   }
+  searchInput.addEventListener('input',()=>{clearTimeout(searchTimeout);searchTimeout=setTimeout(performSearch,500);});
+  searchType.addEventListener('change',performSearch);
+  document.getElementById('search-btn').onclick=performSearch;
+  // 小说列表
+  const {data:novels}=await supabaseClient.from('novels').select('*,profiles(username,role,muted_until,label)').eq('approval_status','approved').order('updated_at',{ascending:false}).limit(30);
+  const grid=document.createElement('div');grid.className='novel-grid';
+  if(novels?.length){
+    for(const n of novels){
+      const authorFormatted=n.profiles?await formatUsername(n.profiles,true):'未知';
+      const card=document.createElement('div');card.className='novel-card';
+      card.onclick=()=>navigate(`#novel/${n.id}`);
+      card.innerHTML=`<img class="novel-cover" src="${n.cover_url||PLACEHOLDER_IMAGE}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${authorFormatted}</div></div>`;
+      grid.appendChild(card);
+    }
+  }else grid.innerHTML='<p style="color:#94a3b8;">还没有小说，快来发布吧！</p>';
+  container.appendChild(grid);
+}
 
-  function addChapter(novelId) {
-    openGenericForm('添加章节', `<input id="ct" placeholder="标题"><input type="number" id="cn" placeholder="序号" style="margin-top:6px;"><textarea id="cc" rows="6" placeholder="正文" style="margin-top:6px;"></textarea>`, async () => {
-      const t = document.getElementById('ct').value.trim(), n = parseInt(document.getElementById('cn').value), c = document.getElementById('cc').value.trim();
-      if (!t || isNaN(n) || !c) throw new Error('请填写完整');
-      await supabaseClient.from('chapters').insert({ novel_id: novelId, title: t, content: c, chapter_number: n });
-      await supabaseClient.from('novels').update({ updated_at: new Date() }).eq('id', novelId);
+// ===== 我的书堆 =====
+async function bookPile(container){
+  if(!user)return container.innerHTML='<p>请先登录</p>';
+  const {data:favorites}=await supabaseClient.from('favorites').select('novel_id').eq('user_id',user.id);
+  if(!favorites||favorites.length===0){
+    container.innerHTML=`<div class="card"><h3><i class="fas fa-bookmark"></i> 我的书堆</h3><p style="color:#94a3b8;">你还没有收藏任何小说，去逛逛吧！</p></div>`;
+    return;
+  }
+  const novelIds=favorites.map(f=>f.novel_id);
+  const {data:novels}=await supabaseClient.from('novels').select('*,profiles(username)').in('id',novelIds).eq('approval_status','approved');
+  if(!novels||novels.length===0){
+    container.innerHTML=`<div class="card"><h3><i class="fas fa-bookmark"></i> 我的书堆</h3><p>暂无收藏</p></div>`;
+    return;
+  }
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML=`<h3><i class="fas fa-bookmark" style="color:#eab308;"></i> 我的书堆 (${novels.length})</h3>`;
+  const grid=document.createElement('div');grid.className='novel-grid';
+  for(const n of novels){
+    const author=n.profiles?await formatUsername(n.profiles,true):'未知';
+    const div=document.createElement('div');div.className='novel-card';
+    div.onclick=()=>navigate(`#novel/${n.id}`);
+    div.innerHTML=`<img class="novel-cover" src="${n.cover_url||PLACEHOLDER_IMAGE}" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-author">${author}</div></div>`;
+    grid.appendChild(div);
+  }
+  card.appendChild(grid);
+  container.appendChild(card);
+}
+
+// ===== 小说详情（含收藏） =====
+async function novelDetail(container,novelId){
+  const {data:novel}=await supabaseClient.from('novels').select('*,profiles(username,role,muted_until,label)').eq('id',novelId).single();
+  if(!novel)return container.innerHTML+='<p>不存在</p>';
+  const authorFormatted=novel.profiles?await formatUsername(novel.profiles,true):'未知';
+  const {data:ratings}=await supabaseClient.from('ratings').select('score').eq('novel_id',novelId);
+  const avg=ratings?.length?(ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1):'-';
+  const userRating=user?ratings?.find(r=>r.user_id===user.id):null;
+  let isFollowing=false;
+  if(user&&user.id!==novel.author_id){
+    const {data:f}=await supabaseClient.from('follows').select('*').eq('follower_id',user.id).eq('following_id',novel.author_id).maybeSingle();
+    isFollowing=!!f;
+  }
+  let isFavorited=false;
+  if(user){
+    const {data:fav}=await supabaseClient.from('favorites').select('*').eq('user_id',user.id).eq('novel_id',novelId).maybeSingle();
+    isFavorited=!!fav;
+  }
+  const infoCard=document.createElement('div');infoCard.className='card';
+  infoCard.innerHTML=`
+    <a onclick="navigate('#home')" style="font-size:12px;"><i class="fas fa-arrow-left"></i> 首页</a>
+    <div style="display:flex;gap:15px;margin-top:10px;flex-wrap:wrap;">
+      <img src="${novel.cover_url||PLACEHOLDER_IMAGE}" style="width:100px;height:150px;object-fit:cover;border-radius:12px;background:#f1f5f9;" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+      <div style="flex:1;min-width:200px;">
+        <h2>${esc(novel.title)}</h2>
+        <p>作者：<a onclick="navigate('#user/${esc(novel.profiles?.username)}')">${authorFormatted}</a> ${user&&user.id!==novel.author_id?`<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollow('${novel.author_id}')" style="margin-left:6px;">${isFollowing?'已关注':'<i class="fas fa-user-plus"></i> 关注'}</button>`:''}</p>
+        <p><i class="fas fa-star" style="color:#eab308;"></i> ${avg} (${ratings?.length||0}人) | 状态：${novel.status} | 分类：${novel.genre||''}</p>
+        <p>${esc(novel.description||'')}</p>
+        <div class="btn-group">
+          <button onclick="navigate('#novel/${novelId}/chapters')"><i class="fas fa-list"></i> 章节列表</button>
+          ${user?`<button class="${isFavorited?'gold':'outline'}" onclick="toggleFavorite('${novelId}')"><i class="fas fa-bookmark"></i> ${isFavorited?'已收藏':'收藏'}</button>`:''}
+          ${user?.id===novel.author_id?`<button class="outline" onclick="openModal('upload-cover','${novelId}')"><i class="fas fa-image"></i> 上传封面</button><button class="outline" onclick="editNovel(${novel.id})"><i class="fas fa-edit"></i> 编辑</button><button class="danger" onclick="deleteNovel(${novel.id})"><i class="fas fa-trash"></i> 删除</button>`:''}
+          ${profile?.role==='admin'&&user?.id!==novel.author_id?`<button class="danger" onclick="deleteNovel(${novel.id})">管理员删除</button>`:''}
+        </div>
+        ${user?`<div style="margin-top:10px;"><label>我的评分：</label><select id="my-rating" style="width:auto;"><option value="0">未评分</option>${[1,2,3,4,5].map(s=>`<option value="${s}" ${userRating?.score===s?'selected':''}>${s}星</option>`).join('')}</select><button onclick="rateNovel(${novel.id})">提交评分</button></div>`:'<p>登录后可评分</p>'}
+      </div>
+    </div>`;
+  container.appendChild(infoCard);
+  const {data:comments}=await supabaseClient.from('comments').select('*,profiles(username,role,muted_until,label)').eq('novel_id',novelId).is('chapter_id',null).order('created_at',{ascending:false});
+  const commCard=document.createElement('div');commCard.className='card';
+  commCard.innerHTML='<h3><i class="fas fa-comment-dots"></i> 小说评论区</h3>';
+  if(comments?.length){
+    for(const c of comments){
+      const commentUserFormatted=c.profiles?await formatUsername(c.profiles,true):'匿名';
+      commCard.innerHTML+=`<div style="margin-bottom:8px;"><strong>${commentUserFormatted}</strong>：${esc(c.content)} <small class="meta">${new Date(c.created_at).toLocaleString()}</small></div>`;
+    }
+  }else commCard.innerHTML+='<p style="color:#94a3b8;">暂无评论</p>';
+  if(user&&!isMuted(profile)){
+    commCard.innerHTML+=`<textarea id="novel-comment" placeholder="写下你的看法..." rows="3"></textarea><button onclick="addNovelComment(${novel.id})" style="margin-top:6px;"><i class="fas fa-paper-plane"></i> 发表评论</button>`;
+  }else if(isMuted(profile))commCard.innerHTML+='<p style="color:red;">你已被禁言</p>';
+  else commCard.innerHTML+='<p>登录后可评论</p>';
+  container.appendChild(commCard);
+}
+
+async function rateNovel(novelId){
+  const score=parseInt(document.getElementById('my-rating').value);
+  if(score===0){await supabaseClient.from('ratings').delete().eq('novel_id',novelId).eq('user_id',user.id);showToast('已取消评分','info');}
+  else{const {error}=await supabaseClient.from('ratings').upsert({novel_id:novelId,user_id:user.id,score},{onConflict:'novel_id,user_id'});if(error)showToast(error.message,'error');else showToast('评分成功','success');}
+  navigate(`#novel/${novelId}`);
+}
+
+async function addNovelComment(novelId){
+  if(isMuted(profile))return showToast('你已被禁言','error');
+  const content=document.getElementById('novel-comment').value.trim();
+  if(!content)return showToast('评论不能为空','error');
+  if(!isContentValid('占位',content)||containsBanned(content)){
+    await addViolation(user.id,'违规评论');
+    return showToast('内容违规，已记录违规','error');
+  }
+  await supabaseClient.from('comments').insert({novel_id:novelId,user_id:user.id,content,chapter_id:null});
+  showToast('评论发表成功','success');
+  navigate(`#novel/${novelId}`);
+}
+
+async function toggleFollow(authorId){
+  if(!user)return showToast('请先登录','error');
+  const {data:follow}=await supabaseClient.from('follows').select('*').eq('follower_id',user.id).eq('following_id',authorId).maybeSingle();
+  if(follow)await supabaseClient.from('follows').delete().eq('follower_id',user.id).eq('following_id',authorId);
+  else await supabaseClient.from('follows').insert({follower_id:user.id,following_id:authorId});
+  navigate(`#novel/${location.hash.split('/')[1]}`);
+}
+
+async function deleteNovel(id){if(!confirm('确定删除该小说及所有章节？'))return;await supabaseClient.from('novels').delete().eq('id',id);showToast('已删除','success');navigate('#home');}
+
+function editNovel(novelId){
+  supabaseClient.from('novels').select('*').eq('id',novelId).single().then(({data:n})=>{
+    openGenericForm('编辑小说',`<input id="et" value="${esc(n.title)}" placeholder="标题"><input id="eg" value="${esc(n.genre||'')}" placeholder="分类" style="margin-top:6px;"><textarea id="ed" rows="4" style="margin-top:6px;">${esc(n.description||'')}</textarea>`,async ()=>{
+      const t=document.getElementById('et').value.trim();if(!t)throw new Error('标题不能为空');
+      await supabaseClient.from('novels').update({title:t,genre:document.getElementById('eg').value.trim(),description:document.getElementById('ed').value.trim(),updated_at:new Date()}).eq('id',novelId);
+      showToast('小说已更新','success');
+      navigate(`#novel/${novelId}`);
+    });
+  });
+}
+
+async function toggleFavorite(novelId){
+  if(!user)return showToast('请先登录','error');
+  const {data:existing}=await supabaseClient.from('favorites').select('*').eq('user_id',user.id).eq('novel_id',novelId).maybeSingle();
+  if(existing){await supabaseClient.from('favorites').delete().eq('id',existing.id);showToast('已取消收藏','info');}
+  else{await supabaseClient.from('favorites').insert({user_id:user.id,novel_id:novelId});showToast('收藏成功！','success');}
+  navigate(`#novel/${novelId}`);
+}
+
+// ===== 章节列表、章节内容 =====
+async function chapterList(container,novelId){
+  const {data:novel}=await supabaseClient.from('novels').select('*').eq('id',novelId).maybeSingle();
+  if(!novel)return container.innerHTML+='<p>小说不存在</p>';
+  const {data:chapters}=await supabaseClient.from('chapters').select('*').eq('novel_id',novelId).order('chapter_number');
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML=`<a onclick="navigate('#novel/${novelId}')" style="font-size:12px;"><i class="fas fa-arrow-left"></i> 详情</a><h2>${esc(novel.title)} · 章节</h2>`;
+  if(chapters?.length){
+    for(const ch of chapters){
+      card.innerHTML+=`<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>${user?.id===novel.author_id?`<div><button class="outline" style="padding:2px 12px;font-size:12px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 12px;font-size:12px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>`:''}</div>`;
+    }
+  }else card.innerHTML+='<p>暂无章节</p>';
+  if(user?.id===novel.author_id)card.innerHTML+=`<button onclick="addChapter(${novelId})" style="margin-top:10px;"><i class="fas fa-plus"></i> 新章节</button>`;
+  container.appendChild(card);
+}
+
+function addChapter(novelId){
+  openGenericForm('添加章节',`<input id="ct" placeholder="标题"><input type="number" id="cn" placeholder="序号" style="margin-top:6px;"><textarea id="cc" rows="6" placeholder="正文" style="margin-top:6px;"></textarea>`,async ()=>{
+    const t=document.getElementById('ct').value.trim(),n=parseInt(document.getElementById('cn').value),c=document.getElementById('cc').value.trim();
+    if(!t||isNaN(n)||!c)throw new Error('请填写完整');
+    await supabaseClient.from('chapters').insert({novel_id:novelId,title:t,content:c,chapter_number:n});
+    await supabaseClient.from('novels').update({updated_at:new Date()}).eq('id',novelId);
+    showToast('章节已添加','success');
+    navigate(`#novel/${novelId}/chapters`);
+  });
+}
+
+function editChapter(chapterId,novelId){
+  supabaseClient.from('chapters').select('*').eq('id',chapterId).single().then(({data:ch})=>{
+    openGenericForm('编辑章节',`<input id="ct" value="${esc(ch.title)}" placeholder="标题"><input type="number" id="cn" value="${ch.chapter_number}" placeholder="序号" style="margin-top:6px;"><textarea id="cc" rows="6" style="margin-top:6px;">${esc(ch.content)}</textarea>`,async ()=>{
+      const t=document.getElementById('ct').value.trim(),n=parseInt(document.getElementById('cn').value),c=document.getElementById('cc').value.trim();
+      if(!t||isNaN(n)||!c)throw new Error('请填写完整');
+      await supabaseClient.from('chapters').update({title:t,content:c,chapter_number:n}).eq('id',chapterId);
+      await supabaseClient.from('novels').update({updated_at:new Date()}).eq('id',novelId);
+      showToast('章节已更新','success');
       navigate(`#novel/${novelId}/chapters`);
     });
-  }
+  });
+}
 
-  function editChapter(chapterId, novelId) {
-    supabaseClient.from('chapters').select('*').eq('id', chapterId).single().then(({data:ch}) => {
-      openGenericForm('编辑章节', `<input id="ct" value="${esc(ch.title)}" placeholder="标题"><input type="number" id="cn" value="${ch.chapter_number}" placeholder="序号" style="margin-top:6px;"><textarea id="cc" rows="6" style="margin-top:6px;">${esc(ch.content)}</textarea>`, async () => {
-        const t = document.getElementById('ct').value.trim(), n = parseInt(document.getElementById('cn').value), c = document.getElementById('cc').value.trim();
-        if (!t || isNaN(n) || !c) throw new Error('请填写完整');
-        await supabaseClient.from('chapters').update({ title: t, content: c, chapter_number: n }).eq('id', chapterId);
-        await supabaseClient.from('novels').update({ updated_at: new Date() }).eq('id', novelId);
-        navigate(`#novel/${novelId}/chapters`);
-      });
+function deleteChapter(chapterId,novelId){showConfirm('删除该章节？',async ()=>{await supabaseClient.from('chapters').delete().eq('id',chapterId);navigate(`#novel/${novelId}/chapters`);});}
+
+async function chapterContent(container,chapterId){
+  const {data:chapter}=await supabaseClient.from('chapters').select('*').eq('id',chapterId).maybeSingle();
+  if(!chapter)return container.innerHTML+='<p>章节不存在</p>';
+  const {data:novel}=await supabaseClient.from('novels').select('id,title,author_id').eq('id',chapter.novel_id).maybeSingle();
+  if(!novel)return container.innerHTML+='<p>所属小说不存在</p>';
+  const {data:allChapters}=await supabaseClient.from('chapters').select('id,chapter_number').eq('novel_id',novel.id).order('chapter_number');
+  const list=allChapters||[];
+  const idx=list.findIndex(ch=>ch.id==chapterId);
+  const prev=idx>0?list[idx-1]:null;
+  const next=idx<list.length-1?list[idx+1]:null;
+  const {data:comments}=await supabaseClient.from('comments').select('*,profiles(username,role,muted_until,label)').eq('novel_id',novel.id).eq('chapter_id',chapterId).order('created_at',{ascending:true});
+  const contentCard=document.createElement('div');contentCard.className='card';
+  contentCard.innerHTML=`<a onclick="navigate('#novel/${novel.id}/chapters')" style="font-size:12px;"><i class="fas fa-arrow-left"></i> 返回章节列表</a><h2>${esc(chapter.title)}</h2><pre style="white-space:pre-wrap;font-family:inherit;">${esc(chapter.content)}</pre><div class="nav-chapter"><button onclick="navigate('#chapter/${prev?.id||''}')" ${prev?'':'disabled'}><i class="fas fa-chevron-left"></i> 上一章</button><button onclick="navigate('#chapter/${next?.id||''}')" ${next?'':'disabled'}>下一章 <i class="fas fa-chevron-right"></i></button></div>${user?.id===novel.author_id?`<div class="btn-group" style="margin-top:10px;"><button class="outline" onclick="editChapter(${chapter.id},${novel.id})">编辑</button><button class="danger" onclick="deleteChapter(${chapter.id},${novel.id})">删除</button></div>`:''}`;
+  container.appendChild(contentCard);
+  const commCard=document.createElement('div');commCard.className='card';
+  commCard.innerHTML='<h3><i class="fas fa-comment-dots"></i> 本章评论区</h3>';
+  if(comments?.length){
+    for(const c of comments){
+      const commentUserFormatted=c.profiles?await formatUsername(c.profiles,true):'匿名';
+      commCard.innerHTML+=`<div style="margin-bottom:8px;"><strong>${commentUserFormatted}</strong>：${esc(c.content)} <small class="meta">${new Date(c.created_at).toLocaleString()}</small></div>`;
+    }
+  }else commCard.innerHTML+='<p style="color:#94a3b8;">暂无评论</p>';
+  if(user&&!isMuted(profile)){
+    commCard.innerHTML+=`<textarea id="chapter-comment" placeholder="写下你的评论..." rows="3" style="margin-top:8px;"></textarea><button onclick="addChapterComment('${novel.id}','${chapterId}')" style="margin-top:6px;"><i class="fas fa-paper-plane"></i> 发表评论</button>`;
+  }else if(isMuted(profile))commCard.innerHTML+='<p style="color:red;">你已被禁言</p>';
+  else commCard.innerHTML+='<p>登录后可评论</p>';
+  container.appendChild(commCard);
+}
+
+async function addChapterComment(novelId,chapterId){
+  if(isMuted(profile))return showToast('你已被禁言','error');
+  const content=document.getElementById('chapter-comment').value.trim();
+  if(!content)return showToast('评论不能为空','error');
+  if(!isContentValid('占位',content)||containsBanned(content)){
+    await addViolation(user.id,'违规评论');
+    return showToast('内容违规，已记录违规','error');
+  }
+  await supabaseClient.from('comments').insert({novel_id:novelId,user_id:user.id,content,chapter_id:chapterId});
+  showToast('评论发表成功','success');
+  navigate(`#chapter/${chapterId}`);
+}
+
+// ===== 用户主页 =====
+async function userPage(container,username){
+  const {data:p}=await supabaseClient.from('profiles').select('*').eq('username',username).single();
+  if(!p)return container.innerHTML+='<p>用户不存在</p>';
+  const {data:novels}=await supabaseClient.from('novels').select('*').eq('author_id',p.id).eq('approval_status','approved').order('updated_at',{ascending:false});
+  const {count:followers}=await supabaseClient.from('follows').select('*',{count:'exact',head:true}).eq('following_id',p.id);
+  const {count:following}=await supabaseClient.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',p.id);
+  const isFollowing=user?!!(await supabaseClient.from('follows').select('*').eq('follower_id',user.id).eq('following_id',p.id).maybeSingle()):false;
+  const formatted=await formatUsername(p,true);
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML=`<a onclick="history.back()" style="font-size:12px;"><i class="fas fa-arrow-left"></i> 返回</a><div style="display:flex;gap:15px;margin-top:10px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;">${p.avatar_url?`<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:p.username[0]}</div><div><h2>${formatted}</h2><p>${esc(p.bio||'这个人很懒，什么都没写')}</p><p class="meta"><i class="fas fa-users"></i> 关注者 ${followers||0} · 关注中 ${following||0}</p>${user&&user.id!==p.id?`<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${p.id}')">${isFollowing?'已关注':'<i class="fas fa-user-plus"></i> 关注'}</button>`:''}</div></div><h3 style="margin-top:15px;"><i class="fas fa-book"></i> 作品</h3>${novels?.length?novels.map(n=>`<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join(''):'<p>暂无</p>'}`;
+  container.appendChild(card);
+}
+
+async function toggleFollowUser(userId){
+  if(!user)return showToast('请先登录','error');
+  const {data:follow}=await supabaseClient.from('follows').select('*').eq('follower_id',user.id).eq('following_id',userId).maybeSingle();
+  if(follow)await supabaseClient.from('follows').delete().eq('follower_id',user.id).eq('following_id',userId);
+  else await supabaseClient.from('follows').insert({follower_id:user.id,following_id:userId});
+  navigate(`#user/${location.hash.split('/')[1]}`);
+}
+
+// ===== 个人中心 =====
+async function myProfile(container){
+  if(!user)return navigate('#home');
+  const {data:checkins}=await supabaseClient.from('daily_checkins').select('points');
+  const totalPoints=checkins?.reduce((s,c)=>s+c.points,0)||0;
+  const card=document.createElement('div');card.className='card';
+  const formatted=await formatUsername(profile,true);
+  card.innerHTML=`<div style="display:flex;gap:15px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url?`<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:profile.username[0]}</div><div><h2>${formatted}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;"><i class="fas fa-pen"></i></a></p><p><i class="fas fa-star" style="color:#eab308;"></i> 我的积分：${totalPoints}</p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>${profile.role==='admin'?`<button onclick="openModal('edit-label')" class="outline" style="margin-top:6px;">编辑标签</button>`:''}</div></div><h3 style="margin-top:15px;"><i class="fas fa-book"></i> 我的小说</h3><div id="my-novels"></div><h3 style="margin-top:15px;"><i class="fas fa-comment"></i> 我的评论</h3><div id="my-comments"></div><h3 style="margin-top:15px;"><i class="fas fa-star"></i> 我的评分</h3><div id="my-ratings"></div><h3 style="margin-top:15px;"><a onclick="navigate('#notifications')"><i class="fas fa-bell"></i> 我的消息</a></h3>`;
+  container.appendChild(card);
+  const {data:novels}=await supabaseClient.from('novels').select('*').eq('author_id',user.id).order('updated_at',{ascending:false});
+  document.getElementById('my-novels').innerHTML=novels?.length?novels.map(n=>`<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join(''):'<p>暂无</p>';
+  const {data:comments}=await supabaseClient.from('comments').select('*,novels(title)').eq('user_id',user.id);
+  document.getElementById('my-comments').innerHTML=comments?.length?comments.map(c=>`<p>《${esc(c.novels.title)}》：${esc(c.content)}</p>`).join(''):'<p>暂无</p>';
+  const {data:ratings}=await supabaseClient.from('ratings').select('*,novels(title)').eq('user_id',user.id);
+  document.getElementById('my-ratings').innerHTML=ratings?.length?ratings.map(r=>`<p>《${esc(r.novels.title)}》：${r.score}星</p>`).join(''):'<p>暂无</p>';
+}
+
+// ===== 发布小说 =====
+async function newNovel(container){
+  if(isMuted(profile))return showToast('你已被禁言，无法发布小说','error');
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML=`<h2><i class="fas fa-pen-fancy"></i> 发布新小说</h2><input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;"><textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea><button onclick="publishNovel()" style="width:100%;margin-top:12px;">提交审核</button><div id="err" style="color:red;"></div>`;
+  container.appendChild(card);
+}
+
+async function publishNovel(){
+  if(isMuted(profile))return showToast('你已被禁言','error');
+  const title=document.getElementById('ntitle').value.trim(),genre=document.getElementById('ngenre').value.trim(),desc=document.getElementById('ndesc').value.trim();
+  if(!title||!desc)return document.getElementById('err').textContent='请填写标题和简介';
+  if(!isContentValid(title,desc)||containsBanned(title)||containsBanned(desc)){
+    await addViolation(user.id,'发布违规小说');
+    return document.getElementById('err').textContent='内容违规或无意义，已记录违规';
+  }
+  const {error}=await supabaseClient.from('novels').insert({title,genre,description:desc,author_id:user.id,status:'连载中',approval_status:'pending'});
+  if(error)return document.getElementById('err').textContent=error.message;
+  showToast('提交成功，等待审核','success');
+  navigate('#home');
+}
+
+// ===== 社区 =====
+async function communityList(container){
+  const {data:posts}=await supabaseClient.from('posts').select('*,profiles(username,role,muted_until,label)').eq('approval_status','approved').order('is_pinned',{ascending:false}).order('created_at',{ascending:false});
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML='<h2><i class="fas fa-comments"></i> 社区</h2>';
+  if(user&&!isMuted(profile))card.innerHTML+=`<button onclick="openNewPostModal()" style="margin-bottom:10px;"><i class="fas fa-plus"></i> 发帖</button>`;
+  else if(isMuted(profile))card.innerHTML+='<p style="color:red;">你已被禁言</p>';
+  if(posts?.length){
+    for(const p of posts){
+      const authorFormatted=p.profiles?await formatUsername(p.profiles,true):'未知';
+      const div=document.createElement('div');div.className='post-item';
+      div.innerHTML=`${p.is_pinned?'<span style="background:#0f172a;color:#fff;padding:2px 10px;border-radius:40px;font-size:11px;margin-right:6px;">置顶</span> ':''}<a onclick="navigate('#post/${p.id}')" class="post-title">${esc(p.title)}</a><div class="post-meta">${authorFormatted} · ${new Date(p.created_at).toLocaleString()} · <i class="fas fa-thumbs-up"></i> ${p.like_count||0} · <i class="fas fa-thumbs-down"></i> ${p.dislike_count||0}</div>`;
+      card.appendChild(div);
+    }
+  }else card.innerHTML+='<p>暂无帖子</p>';
+  container.appendChild(card);
+}
+
+async function openNewPostModal(){
+  if(isMuted(profile))return showToast('你已被禁言','error');
+  openGenericForm('发布帖子',`
+    <input id="post-title" placeholder="标题（至少2个字）">
+    <textarea id="post-content" rows="4" placeholder="内容（至少3个字）" style="margin-top:6px;"></textarea>
+    <input type="file" id="post-image" accept="image/*" style="margin-top:6px;">
+    <small style="color:#94a3b8;">可选：上传图片</small>
+  `,async ()=>{
+    const title=document.getElementById('post-title').value.trim();
+    const content=document.getElementById('post-content').value.trim();
+    const fileInput=document.getElementById('post-image');
+    const file=fileInput.files[0];
+    if(!isContentValid(title,content)||containsBanned(title)||containsBanned(content)){
+      await addViolation(user.id,'发布违规帖子');
+      throw new Error('内容违规或无意义，已记录违规');
+    }
+    let finalContent=content;
+    if(file){
+      const path=`post_${Date.now()}_${file.name}`;
+      const {error:uploadError}=await supabaseClient.storage.from('posts').upload(path,file);
+      if(uploadError)throw new Error('图片上传失败：'+uploadError.message);
+      const {data:{publicUrl}}=supabaseClient.storage.from('posts').getPublicUrl(path);
+      finalContent+=`\n![image](${publicUrl})`;
+    }
+    const {error}=await supabaseClient.from('posts').insert({author_id:user.id,title,content:finalContent,approval_status:'pending'});
+    if(error)throw error;
+    showToast('提交成功，等待审核','success');
+    navigate('#community');
+  });
+}
+
+// ===== 帖子详情 =====
+async function postDetail(container,postId){
+  const {data:post}=await supabaseClient.from('posts').select('*,profiles(username,role,muted_until,label)').eq('id',postId).single();
+  if(!post)return container.innerHTML+='<p>帖子不存在</p>';
+  const authorFormatted=post.profiles?await formatUsername(post.profiles,true):'未知';
+  let userVote=null;
+  if(user){
+    const {data:vote}=await supabaseClient.from('post_votes').select('*').eq('post_id',postId).eq('user_id',user.id).maybeSingle();
+    userVote=vote?.vote_type||null;
+  }
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML=`
+    <a onclick="navigate('#community')" style="font-size:12px;"><i class="fas fa-arrow-left"></i> 社区</a>
+    <h2>${esc(post.title)}</h2>
+    <div class="post-meta">${authorFormatted} · ${new Date(post.created_at).toLocaleString()}</div>
+    <div style="margin:12px 0;">${marked.parse(post.content)}</div>
+    <div class="vote-btns">
+      <button onclick="votePost(${post.id},'like')" class="${userVote==='like'?'active':''}"><i class="fas fa-thumbs-up"></i> ${post.like_count||0}</button>
+      <button onclick="votePost(${post.id},'dislike')" class="${userVote==='dislike'?'active':''}"><i class="fas fa-thumbs-down"></i> ${post.dislike_count||0}</button>
+      ${profile?.role==='admin'?`<button onclick="togglePin(${post.id})">${post.is_pinned?'取消置顶':'置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>`:''}
+    </div>
+  `;
+  container.appendChild(card);
+  const {data:replies}=await supabaseClient.from('post_replies').select('*,profiles(username,role,muted_until,label)').eq('post_id',postId).order('created_at',{ascending:true});
+  const replyCard=document.createElement('div');replyCard.className='card';
+  replyCard.innerHTML='<h3><i class="fas fa-reply-all"></i> 回复</h3>';
+  if(replies?.length){
+    const rootReplies=replies.filter(r=>!r.parent_id);
+    for(const r of rootReplies)replyCard.appendChild(await renderReply(r,replies));
+  }else replyCard.innerHTML+='<p>暂无回复</p>';
+  if(user&&!isMuted(profile))replyCard.innerHTML+=`<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="window.addTopReply(${post.id})" style="margin-top:6px;"><i class="fas fa-paper-plane"></i> 回复</button>`;
+  else if(isMuted(profile))replyCard.innerHTML+='<p style="color:red;">你已被禁言</p>';
+  else replyCard.innerHTML+='<p>登录后可回复</p>';
+  container.appendChild(replyCard);
+}
+
+window.addTopReply=async function(postId){
+  if(isMuted(profile))return showToast('你已被禁言','error');
+  const content=document.getElementById('reply-content').value.trim();
+  if(!content)return showToast('内容不能为空','error');
+  if(containsBanned(content)){await addViolation(user.id,'违规回复');return showToast('包含违规词，已记录违规','error');}
+  await supabaseClient.from('post_replies').insert({post_id:postId,author_id:user.id,content,parent_id:null});
+  showToast('回复成功','success');
+  navigate(`#post/${postId}`);
+};
+
+async function renderReply(reply,allReplies,depth=0){
+  const authorFormatted=reply.profiles?await formatUsername(reply.profiles,true):'未知';
+  const div=document.createElement('div');
+  div.className='reply-item';
+  div.style.marginLeft=depth>0?'20px':'0';
+  div.innerHTML=`<strong>${authorFormatted}</strong> <small class="meta">${new Date(reply.created_at).toLocaleString()}</small><div>${esc(reply.content).replace(/\n/g,'<br>')}</div>${user&&!isMuted(profile)?`<a onclick="window.openReplyForm(${reply.id})" style="font-size:12px;cursor:pointer;">回复</a>`:''}${profile?.role==='admin'?`<a onclick="window.deleteReply(${reply.id})" class="danger" style="font-size:12px;cursor:pointer;margin-left:8px;">删除</a>`:''}<div id="reply-form-${reply.id}" style="display:none;margin-top:6px;"></div>`;
+  const children=allReplies.filter(r=>r.parent_id===reply.id);
+  for(const ch of children){
+    div.appendChild(await renderReply(ch,allReplies,depth+1));
+  }
+  return div;
+}
+
+window.openReplyForm=function(replyId){
+  const formDiv=document.getElementById(`reply-form-${replyId}`);
+  formDiv.style.display='block';
+  formDiv.innerHTML=`<textarea id="child-reply-${replyId}" rows="2" placeholder="回复..."></textarea><button onclick="window.addChildReply(${replyId})" style="margin-top:4px;">提交</button>`;
+};
+
+window.addChildReply=async function(parentId){
+  if(isMuted(profile))return showToast('你已被禁言','error');
+  const content=document.getElementById(`child-reply-${parentId}`).value.trim();
+  if(!content)return showToast('内容不能为空','error');
+  if(containsBanned(content)){await addViolation(user.id,'违规回复');return showToast('包含违规词，已记录违规','error');}
+  const {data:parent}=await supabaseClient.from('post_replies').select('post_id').eq('id',parentId).single();
+  if(!parent)return;
+  await supabaseClient.from('post_replies').insert({post_id:parent.post_id,author_id:user.id,content,parent_id:parentId});
+  showToast('回复成功','success');
+  navigate(`#post/${parent.post_id}`);
+};
+
+window.deleteReply=async function(replyId){
+  if(!confirm('删除回复？'))return;
+  const {data:reply}=await supabaseClient.from('post_replies').select('post_id').eq('id',replyId).single();
+  await supabaseClient.from('post_replies').delete().eq('id',replyId);
+  navigate(`#post/${reply.post_id}`);
+};
+
+async function votePost(postId,type){
+  if(!user)return showToast('请先登录','error');
+  const {data:existing}=await supabaseClient.from('post_votes').select('*').eq('post_id',postId).eq('user_id',user.id).maybeSingle();
+  if(existing){
+    if(existing.vote_type===type)await supabaseClient.from('post_votes').delete().eq('id',existing.id);
+    else await supabaseClient.from('post_votes').update({vote_type:type}).eq('id',existing.id);
+  }else await supabaseClient.from('post_votes').insert({post_id:postId,user_id:user.id,vote_type:type});
+  await updateVoteCounts(postId);
+  navigate(`#post/${postId}`);
+}
+
+async function updateVoteCounts(postId){
+  const {data:likes}=await supabaseClient.from('post_votes').select('*').eq('post_id',postId).eq('vote_type','like');
+  const {data:dislikes}=await supabaseClient.from('post_votes').select('*').eq('post_id',postId).eq('vote_type','dislike');
+  await supabaseClient.from('posts').update({like_count:(likes||[]).length,dislike_count:(dislikes||[]).length}).eq('id',postId);
+}
+
+async function togglePin(postId){
+  const {data:post}=await supabaseClient.from('posts').select('is_pinned').eq('id',postId).single();
+  await supabaseClient.from('posts').update({is_pinned:!post.is_pinned}).eq('id',postId);
+  navigate(`#post/${postId}`);
+}
+
+async function deletePost(postId){if(!confirm('删除帖子？'))return;await supabaseClient.from('posts').delete().eq('id',postId);showToast('已删除','success');navigate('#community');}
+
+// ===== 私信 =====
+async function updateMessageBadge(){
+  if(!user)return;
+  const {count}=await supabaseClient.from('pm').select('*',{count:'exact',head:true}).eq('receiver_id',user.id).eq('is_read',false);
+  const badge=document.getElementById('msg-badge');
+  if(badge){if(count>0){badge.textContent=count;badge.classList.add('show');}else badge.classList.remove('show');}
+}
+
+async function messagesPage(container){
+  if(!user)return container.innerHTML='<p>请先登录</p>';
+  const searchCard=document.createElement('div');searchCard.className='card';
+  searchCard.innerHTML=`<h2><i class="fas fa-envelope"></i> 私信</h2><input id="msg-search" placeholder="搜索用户名发起私信..."><div id="msg-search-results" style="margin-top:10px;"></div>`;
+  container.appendChild(searchCard);
+  const {data:msgs}=await supabaseClient.from('pm').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at',{ascending:false});
+  const conversations=new Map();
+  if(msgs){
+    msgs.forEach(m=>{
+      const otherId=m.sender_id===user.id?m.receiver_id:m.sender_id;
+      if(!conversations.has(otherId)||new Date(m.created_at)>new Date(conversations.get(otherId).created_at)){
+        conversations.set(otherId,m);
+      }
     });
   }
-
-  function deleteChapter(chapterId, novelId) { showConfirm('删除该章节？', async () => { await supabaseClient.from('chapters').delete().eq('id', chapterId); navigate(`#novel/${novelId}/chapters`); }); }
-
-  // ================== 章节内容 ==================
-  async function chapterContent(container, chapterId) {
-    const { data: chapter, error: chapterError } = await supabaseClient.from('chapters').select('*').eq('id', chapterId).maybeSingle();
-    if (chapterError || !chapter) { container.innerHTML += '<p>章节不存在</p>'; return; }
-    if (!chapter.novel_id) { container.innerHTML += '<p>章节数据异常</p>'; return; }
-    const { data: novel } = await supabaseClient.from('novels').select('id, title, author_id').eq('id', chapter.novel_id).maybeSingle();
-    if (!novel) { container.innerHTML += '<p>所属小说不存在</p>'; return; }
-    const { data: allChapters } = await supabaseClient.from('chapters').select('id, chapter_number').eq('novel_id', novel.id).order('chapter_number');
-    const list = allChapters || [];
-    const idx = list.findIndex(ch => ch.id == chapterId);
-    const prev = idx > 0 ? list[idx-1] : null;
-    const next = idx < list.length-1 ? list[idx+1] : null;
-    const { data: comments } = await supabaseClient.from('comments').select('*, profiles(username,role,muted_until,label)').eq('novel_id', novel.id).eq('chapter_id', chapterId).order('created_at', { ascending: true });
-    const contentCard = document.createElement('div'); contentCard.className = 'card';
-    contentCard.innerHTML = `<a onclick="navigate('#novel/${novel.id}/chapters')" style="font-size:12px;">← 返回章节列表</a><h2>${esc(chapter.title)}</h2><pre>${esc(chapter.content)}</pre><div class="nav-chapter"><button onclick="navigate('#chapter/${prev?.id||''}')" ${prev?'':'disabled'}>← 上一章</button><button onclick="navigate('#chapter/${next?.id||''}')" ${next?'':'disabled'}>下一章 →</button></div>${user?.id===novel.author_id?`<div class="btn-group" style="margin-top:10px;"><button class="outline" onclick="editChapter(${chapter.id},${novel.id})">编辑</button><button class="danger" onclick="deleteChapter(${chapter.id},${novel.id})">删除</button></div>`:''}`;
-    container.appendChild(contentCard);
-    const commCard = document.createElement('div'); commCard.className = 'card';
-    commCard.innerHTML = '<h3>💬 本章评论区</h3>';
-    if (comments?.length) {
-      for (const c of comments) {
-        const commentUserFormatted = c.profiles ? await formatUsername(c.profiles, true) : '匿名';
-        commCard.innerHTML += `<div style="margin-bottom:8px;"><strong>${commentUserFormatted}</strong>：${esc(c.content)} <small>${new Date(c.created_at).toLocaleString()}</small></div>`;
+  const userIds=Array.from(conversations.keys());
+  if(userIds.length>0){
+    const {data:profiles}=await supabaseClient.from('profiles').select('*').in('id',userIds);
+    const listCard=document.createElement('div');listCard.className='card';
+    listCard.innerHTML='<h3>最近会话</h3>';
+    if(profiles){
+      for(const p of profiles){
+        const lastMsg=conversations.get(p.id);
+        const unread=lastMsg&&!lastMsg.is_read&&lastMsg.receiver_id===user.id;
+        const avatarHtml=p.avatar_url?`<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">`:p.username[0];
+        const div=document.createElement('div');
+        div.className='msg-list-item';
+        div.onclick=()=>navigate(`#chat/${p.id}`);
+        div.innerHTML=`
+          <div class="msg-avatar">${avatarHtml}</div>
+          <div class="msg-content">
+            <div class="username" style="display:flex;align-items:center;">${esc(p.username)} ${unread?'<span class="unread-dot"></span>':''}</div>
+            <div class="last-msg">${esc(lastMsg?.content?.substring(0,40)||'')}</div>
+          </div>
+          <div class="msg-time">${lastMsg?new Date(lastMsg.created_at).toLocaleTimeString():''}</div>
+        `;
+        listCard.appendChild(div);
       }
-    } else commCard.innerHTML += '<p style="color:#888;">暂无评论</p>';
-    if (user && !isMuted(profile)) {
-      commCard.innerHTML += `<textarea id="chapter-comment" placeholder="写下你的评论..." rows="3" style="margin-top:8px;"></textarea><button onclick="addChapterComment('${novel.id}','${chapterId}')" style="margin-top:6px;">发表评论</button>`;
-    } else if (isMuted(profile)) commCard.innerHTML += '<p style="color:red;">你已被禁言</p>';
-    else commCard.innerHTML += '<p>登录后可评论</p>';
-    container.appendChild(commCard);
-  }
-
-  async function addChapterComment(novelId, chapterId) {
-    if (isMuted(profile)) return alert('你已被禁言');
-    const content = document.getElementById('chapter-comment').value.trim();
-    if (!content) return alert('评论不能为空');
-    if (!isContentValid('占位', content) || containsBanned(content)) {
-      await addViolation(user.id, '违规评论');
-      return alert('内容违规，已记录违规');
     }
-    await supabaseClient.from('comments').insert({ novel_id: novelId, user_id: user.id, content, chapter_id: chapterId });
-    navigate(`#chapter/${chapterId}`);
+    container.appendChild(listCard);
+  }else{
+    container.innerHTML+='<p style="text-align:center;color:#94a3b8;">暂无消息</p>';
   }
-
-  // ================== 用户主页 ==================
-  async function userPage(container, username) {
-    const { data: p } = await supabaseClient.from('profiles').select('*').eq('username', username).single();
-    if (!p) return container.innerHTML += '<p>用户不存在</p>';
-    const { data: novels } = await supabaseClient.from('novels').select('*').eq('author_id', p.id).eq('approval_status', 'approved').order('updated_at', { ascending: false });
-    const { count: followers } = await supabaseClient.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', p.id);
-    const { count: following } = await supabaseClient.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', p.id);
-    const isFollowing = user ? !!(await supabaseClient.from('follows').select('*').eq('follower_id', user.id).eq('following_id', p.id).maybeSingle()) : false;
-    const formatted = await formatUsername(p, true);
-    const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<a onclick="history.back()" style="font-size:12px;">← 返回</a><div style="display:flex;gap:15px;margin-top:10px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;">${p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : p.username[0]}</div><div><h2>${formatted}</h2><p>${esc(p.bio||'这个人很懒，什么都没写')}</p><p class="meta">关注者 ${followers||0} · 关注中 ${following||0}</p>${user&&user.id!==p.id?`<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollowUser('${p.id}')">${isFollowing?'已关注':'+ 关注'}</button>`:''}</div></div><h3 style="margin-top:15px;">📖 作品</h3>${novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>'}`;
-    container.appendChild(card);
-  }
-
-  async function toggleFollowUser(userId) {
-    if (!user) return alert('请先登录');
-    const { data: follow } = await supabaseClient.from('follows').select('*').eq('follower_id', user.id).eq('following_id', userId).maybeSingle();
-    if (follow) await supabaseClient.from('follows').delete().eq('follower_id', user.id).eq('following_id', userId);
-    else await supabaseClient.from('follows').insert({ follower_id: user.id, following_id: userId });
-    navigate(`#user/${location.hash.split('/')[1]}`);
-  }
-
-  // ================== 个人中心 ==================
-  async function myProfile(container) {
-    if (!user) return navigate('#home');
-    const { data: checkins } = await supabaseClient.from('daily_checkins').select('points');
-    const totalPoints = checkins?.reduce((s,c)=>s+c.points,0) || 0;
-    const card = document.createElement('div'); card.className = 'card';
-    const formatted = await formatUsername(profile, true);
-    card.innerHTML = `<div style="display:flex;gap:15px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url ? `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : profile.username[0]}</div><div><h2>${formatted}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;">✏️</a></p><p>🌟 我的积分：${totalPoints}</p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>${profile.role==='admin'?`<button onclick="openModal('edit-label')" class="outline" style="margin-top:6px;">编辑标签</button>`:''}</div></div><h3 style="margin-top:15px;">📖 我的小说</h3><div id="my-novels"></div><h3 style="margin-top:15px;">💬 我的评论</h3><div id="my-comments"></div><h3 style="margin-top:15px;">⭐ 我的评分</h3><div id="my-ratings"></div><h3 style="margin-top:15px;"><a onclick="navigate('#notifications')">📬 我的消息</a></h3>`;
-    container.appendChild(card);
-    const { data: novels } = await supabaseClient.from('novels').select('*').eq('author_id', user.id).order('updated_at', { ascending: false });
-    document.getElementById('my-novels').innerHTML = novels?.length ? novels.map(n => `<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join('') : '<p>暂无</p>';
-    const { data: comments } = await supabaseClient.from('comments').select('*, novels(title)').eq('user_id', user.id);
-    document.getElementById('my-comments').innerHTML = comments?.length ? comments.map(c => `<p>《${esc(c.novels.title)}》：${esc(c.content)}</p>`).join('') : '<p>暂无</p>';
-    const { data: ratings } = await supabaseClient.from('ratings').select('*, novels(title)').eq('user_id', user.id);
-    document.getElementById('my-ratings').innerHTML = ratings?.length ? ratings.map(r => `<p>《${esc(r.novels.title)}》：${r.score}星</p>`).join('') : '<p>暂无</p>';
-  }
-
-  // ================== 发布小说（需审核） ==================
-  async function newNovel(container) {
-    if (isMuted(profile)) return alert('你已被禁言，无法发布小说');
-    const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `<h2>📝 发布新小说</h2><input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;"><textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea><button onclick="publishNovel()" style="width:100%;margin-top:12px;">提交审核</button><div id="err" style="color:red;"></div>`;
-    container.appendChild(card);
-  }
-
-  async function publishNovel() {
-    if (isMuted(profile)) return alert('你已被禁言');
-    const title = document.getElementById('ntitle').value.trim(), genre = document.getElementById('ngenre').value.trim(), desc = document.getElementById('ndesc').value.trim();
-    if (!title || !desc) return document.getElementById('err').textContent = '请填写标题和简介';
-    if (!isContentValid(title, desc) || containsBanned(title) || containsBanned(desc)) {
-      await addViolation(user.id, '发布违规小说');
-      return document.getElementById('err').textContent = '内容违规或无意义，已记录违规';
-    }
-    const { error } = await supabaseClient.from('novels').insert({
-      title, genre, description: desc, author_id: user.id,
-      status: '连载中', approval_status: 'pending'
-    });
-    if (error) return document.getElementById('err').textContent = error.message;
-    alert('提交成功，等待审核'); navigate('#home');
-  }
-
-  // ================== 社区 ==================
-  async function communityList(container) {
-    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').eq('approval_status', 'approved').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
-    const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = '<h2>💬 社区</h2>';
-    if (user && !isMuted(profile)) card.innerHTML += `<button onclick="openNewPostModal()" style="margin-bottom:10px;">+ 发帖</button>`;
-    else if (isMuted(profile)) card.innerHTML += '<p style="color:red;">你已被禁言</p>';
-    if (posts?.length) {
-      for (const p of posts) {
-        const authorFormatted = p.profiles ? await formatUsername(p.profiles, true) : '未知';
-        const div = document.createElement('div'); div.className = 'post-item';
-        div.innerHTML = `${p.is_pinned?'<span style="background:#8b7355;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">置顶</span> ':''}<a onclick="navigate('#post/${p.id}')" class="post-title">${esc(p.title)}</a><div class="post-meta">${authorFormatted} · ${new Date(p.created_at).toLocaleString()} · 👍 ${p.like_count||0} · 👎 ${p.dislike_count||0}</div>`;
-        card.appendChild(div);
+  const inp=document.getElementById('msg-search');
+  if(inp){
+    inp.addEventListener('input',async ()=>{
+      const kw=inp.value.trim();
+      const resultsDiv=document.getElementById('msg-search-results');
+      if(!kw){resultsDiv.innerHTML='';return;}
+      const {data:users}=await supabaseClient.from('profiles').select('*').ilike('username',`%${kw}%`).neq('id',user.id).limit(5);
+      resultsDiv.innerHTML='';
+      if(users){
+        users.forEach(u=>{
+          resultsDiv.innerHTML+=`<div class="msg-list-item" onclick="navigate('#chat/${u.id}')"><div class="msg-avatar">${u.username[0]}</div><div class="msg-content"><div class="username">${esc(u.username)}</div></div></div>`;
+        });
       }
-    } else card.innerHTML += '<p>暂无帖子</p>';
-    container.appendChild(card);
-  }
-
-  async function openNewPostModal() {
-    if (isMuted(profile)) return alert('你已被禁言');
-    openGenericForm('发布帖子', `
-      <input id="post-title" placeholder="标题（至少2个字）">
-      <textarea id="post-content" rows="4" placeholder="内容（至少3个字）" style="margin-top:6px;"></textarea>
-      <input type="file" id="post-image" accept="image/*" style="margin-top:6px;">
-      <small style="color:#888;">可选：上传图片</small>
-    `, async () => {
-      const title = document.getElementById('post-title').value.trim();
-      const content = document.getElementById('post-content').value.trim();
-      const fileInput = document.getElementById('post-image');
-      const file = fileInput.files[0];
-      if (!isContentValid(title, content) || containsBanned(title) || containsBanned(content)) {
-        await addViolation(user.id, '发布违规帖子');
-        throw new Error('内容违规或无意义，已记录违规');
-      }
-      let finalContent = content;
-      if (file) {
-        const path = `post_${Date.now()}_${file.name}`;
-        const { error: uploadError } = await supabaseClient.storage.from('posts').upload(path, file);
-        if (uploadError) throw new Error('图片上传失败：' + uploadError.message);
-        const { data: { publicUrl } } = supabaseClient.storage.from('posts').getPublicUrl(path);
-        finalContent += `\n![image](${publicUrl})`;
-      }
-      const { error } = await supabaseClient.from('posts').insert({
-        author_id: user.id, title, content: finalContent,
-        approval_status: 'pending'
-      });
-      if (error) throw error;
-      alert('提交成功，等待审核'); navigate('#community');
     });
   }
+}
 
-  // ================== 帖子详情 ==================
-  async function postDetail(container, postId) {
-    const { data: post } = await supabaseClient.from('posts').select('*, profiles(username,role,muted_until,label)').eq('id', postId).single();
-    if (!post) return container.innerHTML += '<p>帖子不存在</p>';
-    const authorFormatted = post.profiles ? await formatUsername(post.profiles, true) : '未知';
-    let userVote = null;
-    if (user) {
-      const { data: vote } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
-      userVote = vote?.vote_type || null;
-    }
-    const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = `
-      <a onclick="navigate('#community')" style="font-size:12px;">← 社区</a>
-      <h2>${esc(post.title)}</h2>
-      <div class="post-meta">${authorFormatted} · ${new Date(post.created_at).toLocaleString()}</div>
-      <div style="margin:10px 0;">${marked.parse(post.content)}</div>
-      <div class="vote-btns">
-        <button onclick="votePost(${post.id},'like')" class="${userVote==='like'?'active':''}">👍 ${post.like_count||0}</button>
-        <button onclick="votePost(${post.id},'dislike')" class="${userVote==='dislike'?'active':''}">👎 ${post.dislike_count||0}</button>
-        ${profile?.role==='admin'?`<button onclick="togglePin(${post.id})">${post.is_pinned?'取消置顶':'置顶'}</button> <button class="danger" onclick="deletePost(${post.id})">删除</button>`:''}
-      </div>
-    `;
-    container.appendChild(card);
-
-    const { data: replies } = await supabaseClient.from('post_replies').select('*, profiles(username,role,muted_until,label)').eq('post_id', postId).order('created_at', { ascending: true });
-    const replyCard = document.createElement('div'); replyCard.className = 'card';
-    replyCard.innerHTML = '<h3>回复</h3>';
-    if (replies?.length) {
-      const rootReplies = replies.filter(r => !r.parent_id);
-      for (const r of rootReplies) replyCard.appendChild(await renderReply(r, replies));
-    } else replyCard.innerHTML += '<p>暂无回复</p>';
-    if (user && !isMuted(profile)) replyCard.innerHTML += `<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="window.addTopReply(${post.id})" style="margin-top:6px;">回复</button>`;
-    else if (isMuted(profile)) replyCard.innerHTML += '<p style="color:red;">你已被禁言</p>';
-    else replyCard.innerHTML += '<p>登录后可回复</p>';
-    container.appendChild(replyCard);
+// ===== 私信聊天（含 Realtime） =====
+async function chatPage(container,partnerId){
+  if(!user)return container.innerHTML='<p>请先登录</p>';
+  const {data:partner}=await supabaseClient.from('profiles').select('*').eq('id',partnerId).single();
+  if(!partner)return container.innerHTML+='<p>用户不存在</p>';
+  const {data:unreadMsgs}=await supabaseClient.from('pm').select('id').eq('sender_id',partnerId).eq('receiver_id',user.id).eq('is_read',false);
+  if(unreadMsgs?.length){await supabaseClient.from('pm').update({is_read:true}).in('id',unreadMsgs.map(m=>m.id));}
+  const {data:msgs}=await supabaseClient.from('pm').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at',{ascending:true});
+  const avatarHtml=partner.avatar_url?`<img src="${partner.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`:partner.username[0];
+  const header=document.createElement('div');header.className='chat-header';
+  header.innerHTML=`<div class="msg-avatar" style="width:40px;height:40px;font-size:16px;margin-right:10px;">${avatarHtml}</div><div style="font-weight:bold;font-size:18px;">${esc(partner.username)}</div><button onclick="navigate('#messages')" style="margin-left:auto;">返回</button>`;
+  container.appendChild(header);
+  const body=document.createElement('div');body.className='chat-body';body.id=`chat-body-${partnerId}`;
+  function appendMessage(msg,isMine){
+    const outerDiv=document.createElement('div');outerDiv.className=`chat-bubble ${isMine?'mine':'other'}`;
+    const innerDiv=document.createElement('div');
+    const bubbleSpan=document.createElement('span');bubbleSpan.className='bubble';
+    bubbleSpan.innerHTML=esc(msg.content).replace(/\n/g,'<br>');
+    const timeSpan=document.createElement('div');timeSpan.className='time';
+    timeSpan.textContent=new Date(msg.created_at||Date.now()).toLocaleTimeString();
+    innerDiv.appendChild(bubbleSpan);innerDiv.appendChild(timeSpan);
+    outerDiv.appendChild(innerDiv);
+    body.appendChild(outerDiv);
+    body.scrollTop=body.scrollHeight;
   }
-
-  window.addTopReply = async function(postId) {
-    if (isMuted(profile)) return alert('你已被禁言');
-    const content = document.getElementById('reply-content').value.trim();
-    if (!content) return alert('内容不能为空');
-    if (containsBanned(content)) { await addViolation(user.id, '违规回复'); return alert('包含违规词，已记录违规'); }
-    await supabaseClient.from('post_replies').insert({ post_id: postId, author_id: user.id, content, parent_id: null });
-    navigate(`#post/${postId}`);
+  if(msgs?.length){msgs.forEach(m=>{const isMe=m.sender_id===user.id;appendMessage(m,isMe);});}else{body.innerHTML='<p style="text-align:center;color:#94a3b8;">暂无消息</p>';}
+  container.appendChild(body);
+  if(currentChatChannel){await supabaseClient.removeChannel(currentChatChannel);currentChatChannel=null;}
+  const channel=supabaseClient.channel(`pm-${user.id}-${partnerId}`)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'pm',filter:`receiver_id=eq.${user.id}`},(payload)=>{
+      const newMsg=payload.new;
+      if(newMsg.sender_id===partnerId){
+        const placeholder=body.querySelector('p');
+        if(placeholder&&placeholder.style.textAlign==='center')placeholder.remove();
+        appendMessage(newMsg,false);
+        supabaseClient.from('pm').update({is_read:true}).eq('id',newMsg.id);
+        updateMessageBadge();
+      }
+    })
+    .subscribe();
+  currentChatChannel=channel;
+  const inputArea=document.createElement('div');inputArea.className='chat-input-area';
+  inputArea.innerHTML=`<textarea id="msg-input" rows="2" placeholder="输入消息..."></textarea><button id="send-btn" style="margin-left:8px;padding:10px 20px;"><i class="fas fa-paper-plane"></i> 发送</button>`;
+  container.appendChild(inputArea);
+  document.getElementById('send-btn').onclick=async ()=>{
+    const content=document.getElementById('msg-input').value.trim();
+    if(!content)return;
+    const tempMsg={content,sender_id:user.id,receiver_id:partnerId,created_at:new Date().toISOString()};
+    const placeholder=body.querySelector('p');
+    if(placeholder&&placeholder.style.textAlign==='center')placeholder.remove();
+    appendMessage(tempMsg,true);
+    document.getElementById('msg-input').value='';
+    body.scrollTop=body.scrollHeight;
+    const {error}=await supabaseClient.from('pm').insert({sender_id:user.id,receiver_id:partnerId,content});
+    if(error){showToast('发送失败：'+error.message,'error');}
   };
+  document.getElementById('msg-input').addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('send-btn').click();}});
+  setTimeout(()=>{body.scrollTop=body.scrollHeight;},100);
+}
 
-  async function renderReply(reply, allReplies, depth = 0) {
-    const authorFormatted = reply.profiles ? await formatUsername(reply.profiles, true) : '未知';
-    const div = document.createElement('div');
-    div.className = 'reply-item';
-    div.style.marginLeft = depth > 0 ? '20px' : '0';
-    div.innerHTML = `<strong>${authorFormatted}</strong> <small>${new Date(reply.created_at).toLocaleString()}</small><div>${esc(reply.content).replace(/\n/g,'<br>')}</div>${user&&!isMuted(profile)?`<a onclick="window.openReplyForm(${reply.id})" style="font-size:12px;">回复</a>`:''}${profile?.role==='admin'?`<a onclick="window.deleteReply(${reply.id})" class="danger" style="font-size:12px;margin-left:8px;">删除</a>`:''}<div id="reply-form-${reply.id}" style="display:none;margin-top:6px;"></div>`;
-    const children = allReplies.filter(r => r.parent_id === reply.id);
-    for (const ch of children) {
-      div.appendChild(await renderReply(ch, allReplies, depth + 1));
-    }
-    return div;
+// ===== 通知 =====
+async function notificationsPage(container){
+  if(!user)return container.innerHTML='<p>请先登录</p>';
+  const back=document.createElement('div');back.className='back-link';back.textContent='← 返回';back.onclick=()=>navigate('#profile');
+  container.appendChild(back);
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML='<h2><i class="fas fa-bell"></i> 我的消息</h2><div id="notif-list">加载中...</div>';
+  container.appendChild(card);
+  const {data:votes}=await supabaseClient.from('post_votes').select('post_id,vote_type,created_at').eq('user_id',user.id).order('created_at',{ascending:false});
+  const {data:replies}=await supabaseClient.from('post_replies').select('id,post_id,content,created_at').eq('author_id',user.id);
+  const {data:myReplies}=await supabaseClient.from('post_replies').select('id,post_id,content,parent_id,created_at').in('parent_id',replies.map(r=>r.id));
+  const {data:myNovels}=await supabaseClient.from('novels').select('id,title').eq('author_id',user.id);
+  const novelIds=myNovels?.map(n=>n.id)||[];
+  const {data:novelComms}=await supabaseClient.from('comments').select('*,novels(title)').in('novel_id',novelIds).order('created_at',{ascending:false});
+  let html='';
+  if(votes?.length){html+='<h4>帖子投票</h4>';votes.forEach(v=>html+=`<div class="notification-item">你的帖子被${v.vote_type==='like'?'赞':'踩'}了 <small class="meta">${new Date(v.created_at).toLocaleString()}</small></div>`);}
+  if(replies?.length){html+='<h4>帖子回复</h4>';for(const r of replies){const {data:post}=await supabaseClient.from('posts').select('title').eq('id',r.post_id).single();html+=`<div class="notification-item">你的帖子《${esc(post?.title||'')}》有新回复 <small class="meta">${new Date(r.created_at).toLocaleString()}</small></div>`;}}
+  if(myReplies?.length){html+='<h4>回复被引用</h4>';myReplies.forEach(r=>html+=`<div class="notification-item">你的回复被回复了 <small class="meta">${new Date(r.created_at).toLocaleString()}</small></div>`);}
+  if(novelComms?.length){html+='<h4>小说评论</h4>';novelComms.forEach(c=>html+=`<div class="notification-item">你的小说《${esc(c.novels.title)}》有新评论 <small class="meta">${new Date(c.created_at).toLocaleString()}</small></div>`);}
+  if(!html)html='<p>暂无新消息</p>';
+  document.getElementById('notif-list').innerHTML=html;
+}
+
+// ===== 管理员后台 =====
+async function adminPanel(container){
+  const card=document.createElement('div');card.className='card';
+  let buttons=`<button onclick="adminComments()">管理评论</button>`;
+  if(hasPermission('通过帖子'))buttons+=`<button onclick="adminPostApprovals()">审核帖子</button>`;
+  if(hasPermission('通过小说'))buttons+=`<button onclick="adminNovelApprovals()">审核小说</button>`;
+  if(hasPermission('管理用户'))buttons+=`<button onclick="adminUsers()" style="margin-left:6px;">管理用户</button>`;
+  if(profile?.email==='18631167199@163.com')buttons+=`<button onclick="adminAdmins()">管理管理员</button>`;
+  buttons+=`<button onclick="adminAds()">管理广告</button><button onclick="editAnnouncement()">编辑公告</button>`;
+  if(profile?.email==='18631167199@163.com')buttons+=`<button onclick="adminMessages()" style="background:#ef4444;">私信监控</button>`;
+  card.innerHTML=buttons;
+  container.appendChild(card);
+  const content=document.createElement('div');content.id='admin-content';container.appendChild(content);
+  adminComments();
+}
+
+async function adminPostApprovals(){
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data:posts}=await supabaseClient.from('posts').select('*,profiles(username)').eq('approval_status','pending').order('created_at',{ascending:false});
+  if(!posts?.length){c.innerHTML='<p>暂无待审核帖子</p>';return;}
+  posts.forEach(p=>{
+    const div=document.createElement('div');div.style.borderBottom='1px solid #f1f5f9';div.style.padding='8px 0';
+    div.innerHTML=`<b>${esc(p.title)}</b> by ${esc(p.profiles?.username)} <button onclick="approvePost(${p.id})">通过</button> <button class="danger" onclick="rejectPost(${p.id})">拒绝</button>`;
+    c.appendChild(div);
+  });
+}
+async function approvePost(id){await supabaseClient.from('posts').update({approval_status:'approved'}).eq('id',id);showToast('已通过','success');adminPostApprovals();}
+async function rejectPost(id){await supabaseClient.from('posts').delete().eq('id',id);showToast('已拒绝','info');adminPostApprovals();}
+
+async function adminNovelApprovals(){
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data:novels}=await supabaseClient.from('novels').select('*,profiles(username)').eq('approval_status','pending').order('created_at',{ascending:false});
+  if(!novels?.length){c.innerHTML='<p>暂无待审核小说</p>';return;}
+  novels.forEach(n=>{
+    const div=document.createElement('div');div.style.borderBottom='1px solid #f1f5f9';div.style.padding='8px 0';
+    div.innerHTML=`<b>${esc(n.title)}</b> by ${esc(n.profiles?.username)} <button onclick="approveNovel(${n.id})">通过</button> <button class="danger" onclick="rejectNovel(${n.id})">拒绝</button>`;
+    c.appendChild(div);
+  });
+}
+async function approveNovel(id){await supabaseClient.from('novels').update({approval_status:'approved'}).eq('id',id);showToast('已通过','success');adminNovelApprovals();}
+async function rejectNovel(id){await supabaseClient.from('novels').delete().eq('id',id);showToast('已拒绝','info');adminNovelApprovals();}
+
+async function adminAds(){
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data:posts}=await supabaseClient.from('posts').select('*').order('created_at',{ascending:false});
+  if(!posts){c.innerHTML='<p>暂无帖子</p>';return;}
+  c.innerHTML='<h3>广告管理</h3>';
+  posts.forEach(p=>{
+    const div=document.createElement('div');div.style.borderBottom='1px solid #f1f5f9';div.style.padding='8px 0';
+    div.innerHTML=`<b>${esc(p.title)}</b> `;
+    if(p.is_ad){div.innerHTML+=` <span style="color:#10b981;">[广告中]</span> <button onclick="removeAd(${p.id})">撤下广告</button>`;}
+    else{div.innerHTML+=`<button onclick="setAd(${p.id})">设为广告</button>`;}
+    c.appendChild(div);
+  });
+}
+async function setAd(postId){openModal('upload-ad-image',postId);}
+async function removeAd(postId){await supabaseClient.from('posts').update({is_ad:false,ad_image_url:null}).eq('id',postId);showToast('广告已撤下','success');adminAds();}
+
+async function adminUsers(){
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data:users}=await supabaseClient.from('profiles').select('*').order('username');
+  if(!users){c.innerHTML='<p>暂无用户</p>';return;}
+  for(const u of users){
+    const formatted=await formatUsername(u,true);
+    c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;">${formatted} (${u.role}) <button onclick="editUserLabel('${u.id}')">编辑标签</button> <button onclick="toggleMute('${u.id}')">${isMuted(u)?'解除禁言':'禁言1天'}</button> <button class="danger" onclick="resetViolations('${u.id}')">清零违规</button></div>`;
   }
-
-  window.openReplyForm = function(replyId) {
-    const formDiv = document.getElementById(`reply-form-${replyId}`);
-    formDiv.style.display = 'block';
-    formDiv.innerHTML = `<textarea id="child-reply-${replyId}" rows="2" placeholder="回复..."></textarea><button onclick="window.addChildReply(${replyId})" style="margin-top:4px;">提交</button>`;
-  };
-
-  window.addChildReply = async function(parentId) {
-    if (isMuted(profile)) return alert('你已被禁言');
-    const content = document.getElementById(`child-reply-${parentId}`).value.trim();
-    if (!content) return alert('内容不能为空');
-    if (containsBanned(content)) { await addViolation(user.id, '违规回复'); return alert('包含违规词，已记录违规'); }
-    const { data: parent } = await supabaseClient.from('post_replies').select('post_id').eq('id', parentId).single();
-    if (!parent) return;
-    await supabaseClient.from('post_replies').insert({ post_id: parent.post_id, author_id: user.id, content, parent_id: parentId });
-    navigate(`#post/${parent.post_id}`);
-  };
-
-  window.deleteReply = async function(replyId) {
-    if (!confirm('删除回复？')) return;
-    const { data: reply } = await supabaseClient.from('post_replies').select('post_id').eq('id', replyId).single();
-    await supabaseClient.from('post_replies').delete().eq('id', replyId);
-    navigate(`#post/${reply.post_id}`);
-  };
-
-  async function votePost(postId, type) {
-    if (!user) return alert('请先登录');
-    const { data: existing } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
-    if (existing) {
-      if (existing.vote_type === type) await supabaseClient.from('post_votes').delete().eq('id', existing.id);
-      else await supabaseClient.from('post_votes').update({ vote_type: type }).eq('id', existing.id);
-    } else await supabaseClient.from('post_votes').insert({ post_id: postId, user_id: user.id, vote_type: type });
-    await updateVoteCounts(postId);
-    navigate(`#post/${postId}`);
-  }
-
-  async function updateVoteCounts(postId) {
-    const { data: likes } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('vote_type', 'like');
-    const { data: dislikes } = await supabaseClient.from('post_votes').select('*').eq('post_id', postId).eq('vote_type', 'dislike');
-    await supabaseClient.from('posts').update({ like_count: (likes||[]).length, dislike_count: (dislikes||[]).length }).eq('id', postId);
-  }
-
-  async function togglePin(postId) {
-    const { data: post } = await supabaseClient.from('posts').select('is_pinned').eq('id', postId).single();
-    await supabaseClient.from('posts').update({ is_pinned: !post.is_pinned }).eq('id', postId);
-    navigate(`#post/${postId}`);
-  }
-
-  async function deletePost(postId) { if (!confirm('删除帖子？')) return; await supabaseClient.from('posts').delete().eq('id', postId); alert('已删除'); navigate('#community'); }
-
-  // ================== 私信功能 ==================
-  async function updateMessageBadge() {
-    if (!user) return;
-    const { count } = await supabaseClient.from('pm').select('*', { count: 'exact', head: true }).eq('receiver_id', user.id).eq('is_read', false);
-    const badge = document.getElementById('msg-badge');
-    if (badge) {
-      if (count > 0) { badge.textContent = count; badge.classList.add('show'); }
-      else badge.classList.remove('show');
-    }
-  }
-
-  async function messagesPage(container) {
-    if (!user) return container.innerHTML = '<p>请先登录</p>';
-    const searchCard = document.createElement('div'); searchCard.className = 'card';
-    searchCard.innerHTML = `<h2>✉️ 私信</h2><input id="msg-search" placeholder="搜索用户名发起私信..."><div id="msg-search-results" style="margin-top:10px;"></div>`;
-    container.appendChild(searchCard);
-
-    const { data: msgs } = await supabaseClient.from('pm').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at', { ascending: false });
-    const conversations = new Map();
-    if (msgs) {
-      msgs.forEach(m => {
-        const otherId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
-        if (!conversations.has(otherId) || new Date(m.created_at) > new Date(conversations.get(otherId).created_at)) {
-          conversations.set(otherId, m);
-        }
-      });
-    }
-    const userIds = Array.from(conversations.keys());
-    if (userIds.length > 0) {
-      const { data: profiles } = await supabaseClient.from('profiles').select('*').in('id', userIds);
-      const listCard = document.createElement('div'); listCard.className = 'card';
-      listCard.innerHTML = '<h3>最近会话</h3>';
-      if (profiles) {
-        for (const p of profiles) {
-          const lastMsg = conversations.get(p.id);
-          const unread = lastMsg && !lastMsg.is_read && lastMsg.receiver_id === user.id;
-          const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">` : p.username[0];
-          const div = document.createElement('div');
-          div.className = 'msg-list-item';
-          div.onclick = () => navigate(`#chat/${p.id}`);
-          div.innerHTML = `
-            <div class="msg-avatar">${avatarHtml}</div>
-            <div class="msg-content">
-              <div class="username" style="display:flex;align-items:center;">${esc(p.username)} ${unread ? '<span class="unread-dot"></span>' : ''}</div>
-              <div class="last-msg">${esc(lastMsg?.content?.substring(0,40) || '')}</div>
-            </div>
-            <div class="msg-time">${lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString() : ''}</div>
-          `;
-          listCard.appendChild(div);
-        }
-      }
-      container.appendChild(listCard);
-    } else {
-      container.innerHTML += '<p style="text-align:center;color:#888;">暂无消息</p>';
-    }
-
-    const inp = document.getElementById('msg-search');
-    if (inp) {
-      inp.addEventListener('input', async () => {
-        const kw = inp.value.trim();
-        const resultsDiv = document.getElementById('msg-search-results');
-        if (!kw) { resultsDiv.innerHTML = ''; return; }
-        const { data: users } = await supabaseClient.from('profiles').select('*').ilike('username', `%${kw}%`).neq('id', user.id).limit(5);
-        resultsDiv.innerHTML = '';
-        if (users) {
-          users.forEach(u => {
-            resultsDiv.innerHTML += `<div class="msg-list-item" onclick="navigate('#chat/${u.id}')"><div class="msg-avatar">${u.username[0]}</div><div class="msg-content"><div class="username">${esc(u.username)}</div></div></div>`;
-          });
-        }
-      });
-    }
-  }
-
-  // ========== ⭐ 私信聊天页（彻底修复） ==========
-  async function chatPage(container, partnerId) {
-    if (!user) return container.innerHTML = '<p>请先登录</p>';
-    const { data: partner } = await supabaseClient.from('profiles').select('*').eq('id', partnerId).single();
-    if (!partner) return container.innerHTML += '<p>用户不存在</p>';
-
-    const { data: unreadMsgs } = await supabaseClient.from('pm').select('id').eq('sender_id', partnerId).eq('receiver_id', user.id).eq('is_read', false);
-    if (unreadMsgs?.length) {
-      await supabaseClient.from('pm').update({ is_read: true }).in('id', unreadMsgs.map(m => m.id));
-    }
-
-    const { data: msgs } = await supabaseClient.from('pm').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at', { ascending: true });
-
-    const avatarHtml = partner.avatar_url ? `<img src="${partner.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : partner.username[0];
-    const header = document.createElement('div');
-    header.className = 'chat-header';
-    header.innerHTML = `<div class="msg-avatar" style="width:40px;height:40px;font-size:16px;margin-right:10px;">${avatarHtml}</div><div style="font-weight:bold;font-size:18px;">${esc(partner.username)}</div><button onclick="navigate('#messages')" style="margin-left:auto;">返回</button>`;
-    container.appendChild(header);
-
-    const body = document.createElement('div');
-    body.className = 'chat-body';
-
-    if (msgs?.length) {
-      msgs.forEach(m => {
-        const isMe = m.sender_id === user.id;
-        const outerDiv = document.createElement('div');
-        outerDiv.className = `chat-bubble ${isMe ? 'mine' : 'other'}`;
-
-        // 用 inner 包裹内容和时间
-        const innerDiv = document.createElement('div');
-
-        const bubbleSpan = document.createElement('span');
-        bubbleSpan.className = 'bubble';
-        // ⭐ 核心修复：直接把样式写在元素上，绝对生效
-        bubbleSpan.style.display = 'inline-block';
-        bubbleSpan.style.maxWidth = '75%';
-        bubbleSpan.style.padding = '10px 15px';
-        bubbleSpan.style.borderRadius = '18px';
-        bubbleSpan.style.fontSize = '15px';
-        bubbleSpan.style.lineHeight = '1.5';
-        bubbleSpan.style.wordWrap = 'break-word';
-        bubbleSpan.style.overflowWrap = 'break-word';
-        bubbleSpan.style.whiteSpace = 'normal';
-        bubbleSpan.style.wordBreak = 'normal';
-        if (isMe) {
-          bubbleSpan.style.background = '#8b7355';
-          bubbleSpan.style.color = '#fff';
-          bubbleSpan.style.borderBottomRightRadius = '4px';
-        } else {
-          bubbleSpan.style.background = '#fff';
-          bubbleSpan.style.color = '#000';
-          bubbleSpan.style.border = '1px solid #e0e0e0';
-          bubbleSpan.style.borderBottomLeftRadius = '4px';
-        }
-        // 把换行转为 <br>
-        bubbleSpan.innerHTML = esc(m.content).replace(/\n/g, '<br>');
-
-        const timeSpan = document.createElement('div');
-        timeSpan.className = 'time';
-        timeSpan.style.fontSize = '11px';
-        timeSpan.style.color = '#aaa';
-        timeSpan.style.marginTop = '4px';
-        timeSpan.textContent = new Date(m.created_at).toLocaleTimeString();
-
-        innerDiv.appendChild(bubbleSpan);
-        innerDiv.appendChild(timeSpan);
-        outerDiv.appendChild(innerDiv);
-        body.appendChild(outerDiv);
-      });
-    } else {
-      body.innerHTML = '<p style="text-align:center;color:#888;">暂无消息</p>';
-    }
-    container.appendChild(body);
-
-    const inputArea = document.createElement('div');
-    inputArea.className = 'chat-input-area';
-    inputArea.innerHTML = `<textarea id="msg-input" rows="2" placeholder="输入消息..."></textarea><button id="send-btn" style="margin-left:8px;padding:10px 16px;">发送</button>`;
-    container.appendChild(inputArea);
-
-    document.getElementById('send-btn').onclick = async () => {
-      const content = document.getElementById('msg-input').value.trim();
-      if (!content) return;
-      const { error } = await supabaseClient.from('pm').insert({ sender_id: user.id, receiver_id: partnerId, content });
-      if (error) { alert('发送失败：' + error.message); }
-      else { render(); }
-    };
-
-    setTimeout(() => { body.scrollTop = body.scrollHeight; }, 100);
-  }
-
-  // ================== 通知页面 ==================
-  async function notificationsPage(container) {
-    if (!user) return container.innerHTML = '<p>请先登录</p>';
-    const back = document.createElement('div'); back.className = 'back-link'; back.textContent = '← 返回'; back.onclick = () => navigate('#profile');
-    container.appendChild(back);
-    const card = document.createElement('div'); card.className = 'card';
-    card.innerHTML = '<h2>📬 我的消息</h2><div id="notif-list">加载中...</div>';
-    container.appendChild(card);
-
-    const { data: votes } = await supabaseClient.from('post_votes').select('post_id, vote_type, created_at').eq('user_id', user.id).order('created_at', { ascending: false });
-    const { data: replies } = await supabaseClient.from('post_replies').select('id, post_id, content, created_at').eq('author_id', user.id);
-    const { data: myReplies } = await supabaseClient.from('post_replies').select('id, post_id, content, parent_id, created_at').in('parent_id', replies.map(r => r.id));
-    const { data: myNovels } = await supabaseClient.from('novels').select('id, title').eq('author_id', user.id);
-    const novelIds = myNovels?.map(n => n.id) || [];
-    const { data: novelComms } = await supabaseClient.from('comments').select('*, novels(title)').in('novel_id', novelIds).order('created_at', { ascending: false });
-
-    let html = '';
-    if (votes?.length) {
-      html += '<h4>帖子投票</h4>';
-      votes.forEach(v => html += `<div class="notification-item">你的帖子被${v.vote_type==='like'?'赞':'踩'}了 <small>${new Date(v.created_at).toLocaleString()}</small></div>`);
-    }
-    if (replies?.length) {
-      html += '<h4>帖子回复</h4>';
-      for (const r of replies) {
-        const { data: post } = await supabaseClient.from('posts').select('title').eq('id', r.post_id).single();
-        html += `<div class="notification-item">你的帖子《${esc(post?.title||'')}》有新回复 <small>${new Date(r.created_at).toLocaleString()}</small></div>`;
-      }
-    }
-    if (myReplies?.length) {
-      html += '<h4>回复被引用</h4>';
-      myReplies.forEach(r => html += `<div class="notification-item">你的回复被回复了 <small>${new Date(r.created_at).toLocaleString()}</small></div>`);
-    }
-    if (novelComms?.length) {
-      html += '<h4>小说评论</h4>';
-      novelComms.forEach(c => html += `<div class="notification-item">你的小说《${esc(c.novels.title)}》有新评论 <small>${new Date(c.created_at).toLocaleString()}</small></div>`);
-    }
-    if (!html) html = '<p>暂无新消息</p>';
-    document.getElementById('notif-list').innerHTML = html;
-  }
-
-  // ================== 管理员后台 ==================
-  async function adminPanel(container) {
-    const card = document.createElement('div'); card.className = 'card';
-    let buttons = `<button onclick="adminComments()">管理评论</button>`;
-    if (hasPermission('通过帖子')) buttons += `<button onclick="adminPostApprovals()">审核帖子</button>`;
-    if (hasPermission('通过小说')) buttons += `<button onclick="adminNovelApprovals()">审核小说</button>`;
-    if (hasPermission('管理用户')) buttons += `<button onclick="adminUsers()" style="margin-left:6px;">管理用户</button>`;
-    if (profile?.email === '18631167199@163.com') buttons += `<button onclick="adminAdmins()">管理管理员</button>`;
-    buttons += `<button onclick="adminAds()">管理广告</button><button onclick="editAnnouncement()">编辑公告</button>`;
-    if (profile?.email === '18631167199@163.com') buttons += `<button onclick="adminMessages()" style="background:#b55;">私信监控</button>`;
-    card.innerHTML = buttons;
-    container.appendChild(card);
-    const content = document.createElement('div'); content.id = 'admin-content'; container.appendChild(content);
-    adminComments();
-  }
-
-  async function adminPostApprovals() {
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').eq('approval_status', 'pending').order('created_at', { ascending: false });
-    if (!posts?.length) { c.innerHTML = '<p>暂无待审核帖子</p>'; return; }
-    posts.forEach(p => {
-      const div = document.createElement('div'); div.style.borderBottom='1px solid #eee'; div.style.padding='8px 0';
-      div.innerHTML = `<b>${esc(p.title)}</b> by ${esc(p.profiles?.username)} <button onclick="approvePost(${p.id})">通过</button> <button class="danger" onclick="rejectPost(${p.id})">拒绝</button>`;
-      c.appendChild(div);
+}
+function editUserLabel(userId){
+  supabaseClient.from('profiles').select('label').eq('id',userId).single().then(({data})=>{
+    const currentLabel=data?.label||'';
+    openGenericForm('编辑用户标签',`<input id="editlabel" value="${esc(currentLabel)}" placeholder="标签内容">`,async ()=>{
+      const newLabel=document.getElementById('editlabel').value.trim();
+      await supabaseClient.from('profiles').update({label:newLabel}).eq('id',userId);
+      showToast('标签已更新','success');
+      adminUsers();
     });
-  }
+  });
+}
+async function toggleMute(userId){
+  const {data:p}=await supabaseClient.from('profiles').select('muted_until').eq('id',userId).single();
+  const muted=p?.muted_until&&new Date(p.muted_until)>new Date();
+  if(muted)await supabaseClient.from('profiles').update({muted_until:null}).eq('id',userId);
+  else await supabaseClient.from('profiles').update({muted_until:new Date(Date.now()+86400000).toISOString()}).eq('id',userId);
+  showToast(muted?'已解除禁言':'已禁言1天','info');
+  adminUsers();
+}
+async function resetViolations(userId){await supabaseClient.from('profiles').update({violation_count:0,muted_until:null}).eq('id',userId);showToast('违规记录已清零','success');adminUsers();}
 
-  async function approvePost(id) {
-    await supabaseClient.from('posts').update({ approval_status: 'approved' }).eq('id', id);
-    adminPostApprovals();
-  }
-  async function rejectPost(id) {
-    await supabaseClient.from('posts').delete().eq('id', id);
-    adminPostApprovals();
-  }
+async function adminComments(){
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data}=await supabaseClient.from('comments').select('*,profiles(username),novels(title)').order('created_at',{ascending:false});
+  if(data?.length)data.forEach(d=>c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;">${esc(d.profiles?.username)} 评《${esc(d.novels.title)}》：${esc(d.content)} <button class="danger" onclick="deleteComment(${d.id})">删除</button></div>`);
+  else c.innerHTML='<p>暂无评论</p>';
+}
+async function deleteComment(id){if(confirm('删除？')){await supabaseClient.from('comments').delete().eq('id',id);showToast('已删除','success');adminComments();}}
 
-  async function adminNovelApprovals() {
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: novels } = await supabaseClient.from('novels').select('*, profiles(username)').eq('approval_status', 'pending').order('created_at', { ascending: false });
-    if (!novels?.length) { c.innerHTML = '<p>暂无待审核小说</p>'; return; }
-    novels.forEach(n => {
-      const div = document.createElement('div'); div.style.borderBottom='1px solid #eee'; div.style.padding='8px 0';
-      div.innerHTML = `<b>${esc(n.title)}</b> by ${esc(n.profiles?.username)} <button onclick="approveNovel(${n.id})">通过</button> <button class="danger" onclick="rejectNovel(${n.id})">拒绝</button>`;
-      c.appendChild(div);
+async function adminNovels(){
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data}=await supabaseClient.from('novels').select('*,profiles(username)').order('updated_at',{ascending:false});
+  if(data?.length)data.forEach(d=>c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;"><b>${esc(d.title)}</b> 作者：${esc(d.profiles?.username)} <button class="danger" style="float:right;" onclick="deleteNovelAdmin('${d.id}')">删除</button></div>`);
+  else c.innerHTML='<p>暂无小说</p>';
+}
+async function deleteNovelAdmin(id){if(confirm('强制删除？')){await supabaseClient.from('novels').delete().eq('id',id);showToast('已删除','success');adminNovels();}}
+
+async function adminPosts(){
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data:posts}=await supabaseClient.from('posts').select('*,profiles(username)').order('created_at',{ascending:false});
+  if(posts?.length)posts.forEach(p=>c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
+  else c.innerHTML='<p>暂无帖子</p>';
+}
+
+async function adminAdmins(){
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data:profiles}=await supabaseClient.from('profiles').select('*');
+  if(profiles)profiles.forEach(p=>{
+    c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;">${esc(p.username)} (${p.role}) ${p.email!=='18631167199@163.com'&&p.id!==user.id?`<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销':'设为'}管理员</button>`:'<small>（超级管理员）</small>'} <button onclick="openModal('permissions', {id:'${p.id}',username:'${esc(p.username)}',permissions:${JSON.stringify(p.permissions||[])} })">权限</button></div>`;
+  });
+}
+async function toggleAdmin(userId){
+  const {data:p}=await supabaseClient.from('profiles').select('role,email').eq('id',userId).single();
+  if(p.email==='18631167199@163.com')return showToast('超级管理员不可更改','error');
+  await supabaseClient.from('profiles').update({role:p.role==='admin'?'user':'admin'}).eq('id',userId);
+  showToast('已更新','success');
+  adminAdmins();
+}
+
+async function adminMessages(){
+  if(profile?.email!=='18631167199@163.com')return;
+  const c=document.getElementById('admin-content');c.innerHTML='';
+  const {data:messages}=await supabaseClient.from('pm').select('*').order('created_at',{ascending:false}).limit(100);
+  if(!messages){c.innerHTML='<p>暂无私信记录</p>';return;}
+  const userIds=[...new Set([...messages.map(m=>m.sender_id),...messages.map(m=>m.receiver_id)])];
+  const {data:profiles}=await supabaseClient.from('profiles').select('id,username').in('id',userIds);
+  const userMap={};if(profiles)profiles.forEach(p=>userMap[p.id]=p.username);
+  messages.forEach(m=>{
+    const senderName=userMap[m.sender_id]||'未知';
+    const receiverName=userMap[m.receiver_id]||'未知';
+    c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;"><b>${esc(senderName)}</b> → <b>${esc(receiverName)}</b>：${esc(m.content)} <small class="meta">${new Date(m.created_at).toLocaleString()}</small></div>`;
+  });
+}
+
+function editAnnouncement(){
+  openGenericForm('编辑公告（支持 Markdown）',`<textarea id="ann" rows="6" placeholder="公告内容..."></textarea><small class="meta">支持 Markdown 语法</small>`,async ()=>{
+    const content=document.getElementById('ann').value.trim();
+    if(!content)throw new Error('公告不能为空');
+    await supabaseClient.from('announcements').insert({content});
+    showToast('公告已更新','success');
+  });
+}
+
+// ===== AI =====
+function toggleAiChat(){document.getElementById('ai-chat').classList.toggle('show');}
+async function askAi(){
+  const input=document.getElementById('ai-input');
+  const question=input.value.trim();
+  if(!question)return;
+  const body=document.getElementById('ai-body');
+  body.innerHTML+=`<div style="text-align:right;margin:5px 0;"><span style="background:#334155;color:#fff;padding:6px 14px;border-radius:16px;display:inline-block;">${esc(question)}</span></div>`;
+  input.value='';
+  try{
+    const response=await fetch(ZHIPU_API_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${ZHIPU_API_KEY}`},
+      body:JSON.stringify({model:'glm-4',messages:[{role:'user',content:`你是一个书库助手小，你是一个叫lyc的人编写的，你需要读这个书库的所有书，请根据以下问题回答：${question}`}],temperature:0.7})
     });
-  }
+    const data=await response.json();
+    const answer=data.choices?.[0]?.message?.content||'你问的这个东西很有意思，不过我不回。';
+    body.innerHTML+=`<div style="text-align:left;margin:5px 0;"><span style="background:#f1f5f9;padding:6px 14px;border-radius:16px;display:inline-block;">${esc(answer)}</span></div>`;
+  }catch(e){body.innerHTML+=`<div>请求失败：${e.message}</div>`;}
+  body.scrollTop=body.scrollHeight;
+}
 
-  async function approveNovel(id) {
-    await supabaseClient.from('novels').update({ approval_status: 'approved' }).eq('id', id);
-    adminNovelApprovals();
-  }
-  async function rejectNovel(id) {
-    await supabaseClient.from('novels').delete().eq('id', id);
-    adminNovelApprovals();
-  }
+// ===== 通用工具 =====
+function openGenericForm(title,html,cb){
+  const container=document.getElementById('modal-container');
+  container.innerHTML=`<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
+  window.__genericCallback=cb;
+}
+function submitGenericForm(){
+  const cb=window.__genericCallback;
+  if(!cb)return;
+  const err=document.getElementById('generic-err');
+  if(err)err.textContent='';
+  cb().then(()=>closeModal()).catch(e=>{if(err)err.textContent=e.message;});
+}
+function showConfirm(msg,onConfirm){
+  const container=document.getElementById('modal-container');
+  container.innerHTML=`<div class="modal"><div class="modal-content" style="text-align:center;"><p>${msg}</p><div class="btn-group" style="justify-content:center;margin-top:15px;"><button class="outline" onclick="closeModal()">取消</button><button class="danger" id="confirm-ok">确认</button></div></div></div>`;
+  document.getElementById('confirm-ok').onclick=()=>{closeModal();onConfirm();};
+}
+function esc(text){const div=document.createElement('div');div.textContent=text;return div.innerHTML;}
 
-  async function adminAds() {
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: posts } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: false });
-    if (!posts) { c.innerHTML = '<p>暂无帖子</p>'; return; }
-    c.innerHTML = '<h3>广告管理</h3>';
-    posts.forEach(p => {
-      const div = document.createElement('div'); div.style.borderBottom='1px solid #eee'; div.style.padding='8px 0';
-      div.innerHTML = `<b>${esc(p.title)}</b> `;
-      if (p.is_ad) {
-        div.innerHTML += ` <span style="color:green;">[广告中]</span> <button onclick="removeAd(${p.id})">撤下广告</button>`;
-      } else {
-        div.innerHTML += `<button onclick="setAd(${p.id})">设为广告</button>`;
-      }
-      c.appendChild(div);
-    });
-  }
-
-  async function setAd(postId) {
-    openModal('upload-ad-image', postId);
-  }
-
-  async function removeAd(postId) {
-    await supabaseClient.from('posts').update({ is_ad: false, ad_image_url: null }).eq('id', postId);
-    alert('广告已撤下');
-    adminAds();
-  }
-
-  async function adminUsers() {
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: users } = await supabaseClient.from('profiles').select('*').order('username');
-    if (!users) { c.innerHTML = '<p>暂无用户</p>'; return; }
-    for (const u of users) {
-      const formatted = await formatUsername(u, true);
-      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${formatted} (${u.role}) <button onclick="editUserLabel('${u.id}')">编辑标签</button> <button onclick="toggleMute('${u.id}')">${isMuted(u)?'解除禁言':'禁言1天'}</button> <button class="danger" onclick="resetViolations('${u.id}')">清零违规</button></div>`;
-    }
-  }
-
-  function editUserLabel(userId) {
-    supabaseClient.from('profiles').select('label').eq('id', userId).single().then(({data}) => {
-      const currentLabel = data?.label || '';
-      openGenericForm('编辑用户标签', `<input id="editlabel" value="${esc(currentLabel)}" placeholder="标签内容">`, async () => {
-        const newLabel = document.getElementById('editlabel').value.trim();
-        await supabaseClient.from('profiles').update({ label: newLabel }).eq('id', userId);
-        alert('标签已更新'); adminUsers();
-      });
-    });
-  }
-
-  async function toggleMute(userId) {
-    const { data: p } = await supabaseClient.from('profiles').select('muted_until').eq('id', userId).single();
-    const muted = p?.muted_until && new Date(p.muted_until) > new Date();
-    if (muted) await supabaseClient.from('profiles').update({ muted_until: null }).eq('id', userId);
-    else await supabaseClient.from('profiles').update({ muted_until: new Date(Date.now() + 86400000).toISOString() }).eq('id', userId);
-    alert(muted ? '已解除禁言' : '已禁言1天'); adminUsers();
-  }
-
-  async function resetViolations(userId) { await supabaseClient.from('profiles').update({ violation_count: 0, muted_until: null }).eq('id', userId); alert('违规记录已清零'); adminUsers(); }
-
-  async function adminComments() {
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data } = await supabaseClient.from('comments').select('*, profiles(username), novels(title)').order('created_at', { ascending: false });
-    if (data?.length) data.forEach(d => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(d.profiles?.username)} 评《${esc(d.novels.title)}》：${esc(d.content)} <button class="danger" onclick="deleteComment(${d.id})">删除</button></div>`);
-    else c.innerHTML = '<p>暂无评论</p>';
-  }
-  async function deleteComment(id) { if (confirm('删除？')) { await supabaseClient.from('comments').delete().eq('id', id); adminComments(); } }
-
-  async function adminNovels() {
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data } = await supabaseClient.from('novels').select('*, profiles(username)').order('updated_at', { ascending: false });
-    if (data?.length) data.forEach(d => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(d.title)}</b> 作者：${esc(d.profiles?.username)} <button class="danger" style="float:right;" onclick="deleteNovelAdmin('${d.id}')">删除</button></div>`);
-    else c.innerHTML = '<p>暂无小说</p>';
-  }
-  async function deleteNovelAdmin(id) { if (confirm('强制删除？')) { await supabaseClient.from('novels').delete().eq('id', id); adminNovels(); } }
-
-  async function adminPosts() {
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: posts } = await supabaseClient.from('posts').select('*, profiles(username)').order('created_at', { ascending: false });
-    if (posts?.length) posts.forEach(p => c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
-    else c.innerHTML = '<p>暂无帖子</p>';
-  }
-
-  async function adminAdmins() {
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: profiles } = await supabaseClient.from('profiles').select('*');
-    if (profiles) profiles.forEach(p => {
-      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;">${esc(p.username)} (${p.role}) ${p.email!=='18631167199@163.com'&&p.id!==user.id?`<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销':'设为'}管理员</button>`:'<small>（超级管理员）</small>'} <button onclick="openModal('permissions', {id:'${p.id}',username:'${esc(p.username)}',permissions:${JSON.stringify(p.permissions||[])} })">权限</button></div>`;
-    });
-  }
-  async function toggleAdmin(userId) {
-    const { data: p } = await supabaseClient.from('profiles').select('role,email').eq('id', userId).single();
-    if (p.email==='18631167199@163.com') return alert('超级管理员不可更改');
-    await supabaseClient.from('profiles').update({ role: p.role==='admin'?'user':'admin' }).eq('id', userId);
-    adminAdmins();
-  }
-
-  async function adminMessages() {
-    if (profile?.email !== '18631167199@163.com') return;
-    const c = document.getElementById('admin-content'); c.innerHTML = '';
-    const { data: messages } = await supabaseClient.from('pm').select('*').order('created_at', { ascending: false }).limit(100);
-    if (!messages) { c.innerHTML = '<p>暂无私信记录</p>'; return; }
-    const userIds = [...new Set([...messages.map(m=>m.sender_id), ...messages.map(m=>m.receiver_id)])];
-    const { data: profiles } = await supabaseClient.from('profiles').select('id,username').in('id', userIds);
-    const userMap = {};
-    if (profiles) profiles.forEach(p => userMap[p.id] = p.username);
-    messages.forEach(m => {
-      const senderName = userMap[m.sender_id] || '未知';
-      const receiverName = userMap[m.receiver_id] || '未知';
-      c.innerHTML += `<div style="border-bottom:1px solid #eee;padding:8px 0;"><b>${esc(senderName)}</b> → <b>${esc(receiverName)}</b>：${esc(m.content)} <small>${new Date(m.created_at).toLocaleString()}</small></div>`;
-    });
-  }
-
-  function editAnnouncement() {
-    openGenericForm('编辑公告（支持 Markdown）', `<textarea id="ann" rows="6" placeholder="公告内容..."></textarea><small>支持 Markdown 语法</small>`, async () => {
-      const content = document.getElementById('ann').value.trim();
-      if (!content) throw new Error('公告不能为空');
-      await supabaseClient.from('announcements').insert({ content });
-      alert('公告已更新');
-    });
-  }
-
-  // ================== AI 聊天 ==================
-  function toggleAiChat() {
-    document.getElementById('ai-chat').classList.toggle('show');
-  }
-
-  async function askAi() {
-    const input = document.getElementById('ai-input');
-    const question = input.value.trim();
-    if (!question) return;
-    const body = document.getElementById('ai-body');
-    body.innerHTML += `<div style="text-align:right;margin:5px 0;"><span style="background:#8b7355;color:#fff;padding:5px 10px;border-radius:10px;display:inline-block;">${esc(question)}</span></div>`;
-    input.value = '';
-    try {
-      const response = await fetch(ZHIPU_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ZHIPU_API_KEY}` },
-        body: JSON.stringify({
-          model: 'glm-4',
-          messages: [{ role: 'user', content: `你是一个书库助手小，你是一个叫lyc的人编写的，你需要读这个书库的所有书，请根据以下问题回答：${question}` }],
-          temperature: 0.7
-        })
-      });
-      const data = await response.json();
-      const answer = data.choices?.[0]?.message?.content || '你问的这个东西很有意思，不过我不回。';
-      body.innerHTML += `<div style="text-align:left;margin:5px 0;"><span style="background:#f0ece4;padding:5px 10px;border-radius:10px;display:inline-block;">${esc(answer)}</span></div>`;
-    } catch(e) {
-      body.innerHTML += `<div>请求失败：${e.message}</div>`;
-    }
-    body.scrollTop = body.scrollHeight;
-  }
-
-  // ================== 通用工具 ==================
-  function openGenericForm(title, html, cb) {
-    const container = document.getElementById('modal-container');
-    container.innerHTML = `<div class="modal"><div class="modal-content"><span class="close" onclick="closeModal()">&times;</span><h3>${title}</h3><div id="generic-form-body">${html}</div><button id="generic-submit" onclick="submitGenericForm()" style="width:100%;margin-top:12px;">提交</button><div id="generic-err" style="color:red;"></div></div></div>`;
-    window.__genericCallback = cb;
-  }
-  function submitGenericForm() {
-    const cb = window.__genericCallback;
-    if (!cb) return;
-    const err = document.getElementById('generic-err');
-    if (err) err.textContent = '';
-    cb().then(() => closeModal()).catch(e => { if (err) err.textContent = e.message; });
-  }
-  function showConfirm(msg, onConfirm) {
-    const container = document.getElementById('modal-container');
-    container.innerHTML = `<div class="modal"><div class="modal-content" style="text-align:center;"><p>${msg}</p><div class="btn-group" style="justify-content:center;margin-top:15px;"><button class="outline" onclick="closeModal()">取消</button><button class="danger" id="confirm-ok">确认</button></div></div></div>`;
-    document.getElementById('confirm-ok').onclick = () => { closeModal(); onConfirm(); };
-  }
-  function esc(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  if (typeof marked !== 'undefined') marked.setOptions({ breaks: true, gfm: true });
-  render();
+if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
+render();
 </script>
 </body>
 </html>
