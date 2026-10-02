@@ -200,7 +200,7 @@
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.ai-chat{width:90%;right:5%}.search-box select{min-width:60px;font-size:12px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
+<link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/></head>
 <body>
 <div class="container" id="app"></div>
 <nav class="bottom-nav" id="bottom-nav">
@@ -329,6 +329,67 @@ async function formatUsername(p,showLabel=true){
 
 function navigate(hash){window.location.hash=hash;}
 window.onhashchange=()=>render();
+
+// ===== 阅读进度 & 收藏更新提醒（本地存储） =====
+function getReadingProgressMap(){
+  if(!user)return {};
+  try{return JSON.parse(localStorage.getItem(`lyc_reading_progress_${user.id}`)||'{}');}
+  catch(e){return {};}
+}
+function getFavoriteSeenMap(){
+  if(!user)return {};
+  try{return JSON.parse(localStorage.getItem(`lyc_favorite_seen_${user.id}`)||'{}');}
+  catch(e){return {};}
+}
+function saveFavoriteSeenMap(map){
+  if(!user)return;
+  localStorage.setItem(`lyc_favorite_seen_${user.id}`,JSON.stringify(map));
+}
+function saveReadingProgress(novel,chapter){
+  if(!user||!novel||!chapter)return;
+  const map=getReadingProgressMap();
+  map[novel.id]={
+    novel_id:novel.id,
+    novel_title:novel.title,
+    chapter_id:chapter.id,
+    chapter_title:chapter.title,
+    chapter_number:Number(chapter.chapter_number)||0,
+    read_at:new Date().toISOString()
+  };
+  localStorage.setItem(`lyc_reading_progress_${user.id}`,JSON.stringify(map));
+  const seen=getFavoriteSeenMap();
+  const current=Number(chapter.chapter_number)||0;
+  if(current>Number(seen[novel.id]||0)){
+    seen[novel.id]=current;
+    saveFavoriteSeenMap(seen);
+  }
+}
+async function setFavoriteBaseline(novelId){
+  if(!user)return;
+  const {data:latest}=await supabaseClient.from('chapters')
+    .select('chapter_number')
+    .eq('novel_id',novelId)
+    .order('chapter_number',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  const seen=getFavoriteSeenMap();
+  seen[novelId]=Number(latest?.chapter_number)||0;
+  saveFavoriteSeenMap(seen);
+}
+function removeFavoriteBaseline(novelId){
+  if(!user)return;
+  const seen=getFavoriteSeenMap();
+  delete seen[novelId];
+  saveFavoriteSeenMap(seen);
+}
+function statusBadge(status){
+  const s=status||'连载';
+  const map={'连载':'#3b82f6','连载中':'#3b82f6','完结':'#10b981','已完结':'#10b981','断更':'#ef4444'};
+  const color=map[s]||'#64748b';
+  const label=s==='连载中'?'连载':(s==='已完结'?'完结':s);
+  return `<span style="display:inline-block;padding:2px 9px;border-radius:999px;background:${color}18;color:${color};font-size:11px;font-weight:700;border:1px solid ${color}40;">${esc(label)}</span>`;
+}
+
 
 // ===== 渲染 =====
 async function render(){
@@ -609,6 +670,22 @@ async function home(container){
     }
     container.appendChild(checkinDiv);
   }
+  // 最近阅读
+  if(user){
+    const progressMap=getReadingProgressMap();
+    const recent=Object.values(progressMap).sort((a,b)=>new Date(b.read_at)-new Date(a.read_at)).slice(0,3);
+    if(recent.length){
+      const recentCard=document.createElement('div');recentCard.className='card';
+      recentCard.innerHTML='<h3><i class="fas fa-history"></i> 最近阅读</h3>';
+      recent.forEach(item=>{
+        const row=document.createElement('div');row.className='flex-row';
+        row.innerHTML=`<div style="min-width:0;flex:1;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.novel_title||'未知小说')}</div><div class="meta">读到：第${item.chapter_number||'?'}章 ${esc(item.chapter_title||'')}</div></div><button onclick="navigate('#chapter/${item.chapter_id}')"><i class="fas fa-book-open"></i> 继续阅读</button>`;
+        recentCard.appendChild(row);
+      });
+      container.appendChild(recentCard);
+    }
+  }
+
   const searchDiv=document.createElement('div');searchDiv.className='card';
   searchDiv.innerHTML=`
     <div class="search-box">
@@ -675,7 +752,7 @@ async function home(container){
       const authorFormatted=n.profiles?await formatUsername(n.profiles,true):'未知';
       const card=document.createElement('div');card.className='novel-card';
       card.onclick=()=>navigate(`#novel/${n.id}`);
-      card.innerHTML=`<img class="novel-cover" src="${n.cover_url||PLACEHOLDER_IMAGE}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${authorFormatted}</div></div>`;
+      card.innerHTML=`<img class="novel-cover" src="${n.cover_url||PLACEHOLDER_IMAGE}" loading="lazy" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div style="margin:4px 0;">${statusBadge(n.status)}</div><div class="novel-desc">${esc(n.description||'暂无简介')}</div><div class="novel-author">${authorFormatted}</div></div>`;
       grid.appendChild(card);
     }
   }else grid.innerHTML='<p style="color:#94a3b8;">还没有小说，快来发布吧！</p>';
@@ -703,7 +780,7 @@ async function bookPile(container){
     const author=n.profiles?await formatUsername(n.profiles,true):'未知';
     const div=document.createElement('div');div.className='novel-card';
     div.onclick=()=>navigate(`#novel/${n.id}`);
-    div.innerHTML=`<img class="novel-cover" src="${n.cover_url||PLACEHOLDER_IMAGE}" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div class="novel-author">${author}</div></div>`;
+    div.innerHTML=`<img class="novel-cover" src="${n.cover_url||PLACEHOLDER_IMAGE}" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div class="novel-info"><div class="novel-title">${esc(n.title)}</div><div style="margin:4px 0;">${statusBadge(n.status)}</div><div class="novel-author">${author}</div></div>`;
     grid.appendChild(div);
   }
   card.appendChild(grid);
@@ -736,7 +813,7 @@ async function novelDetail(container,novelId){
       <div style="flex:1;min-width:200px;">
         <h2>${esc(novel.title)}</h2>
         <p>作者：<a onclick="navigate('#user/${esc(novel.profiles?.username)}')">${authorFormatted}</a> ${user&&user.id!==novel.author_id?`<button class="follow-btn ${isFollowing?'following':''}" onclick="toggleFollow('${novel.author_id}')" style="margin-left:6px;">${isFollowing?'已关注':'<i class="fas fa-user-plus"></i> 关注'}</button>`:''}</p>
-        <p><i class="fas fa-star" style="color:#eab308;"></i> ${avg} (${ratings?.length||0}人) | 状态：${novel.status} | 分类：${novel.genre||''}</p>
+        <p><i class="fas fa-star" style="color:#eab308;"></i> ${avg} (${ratings?.length||0}人) | 状态：${statusBadge(novel.status)} | 分类：${esc(novel.genre||'')}</p>
         <p>${esc(novel.description||'')}</p>
         <div class="btn-group">
           <button onclick="navigate('#novel/${novelId}/chapters')"><i class="fas fa-list"></i> 章节列表</button>
@@ -796,9 +873,10 @@ async function deleteNovel(id){if(!confirm('确定删除该小说及所有章节
 
 function editNovel(novelId){
   supabaseClient.from('novels').select('*').eq('id',novelId).single().then(({data:n})=>{
-    openGenericForm('编辑小说',`<input id="et" value="${esc(n.title)}" placeholder="标题"><input id="eg" value="${esc(n.genre||'')}" placeholder="分类" style="margin-top:6px;"><textarea id="ed" rows="4" style="margin-top:6px;">${esc(n.description||'')}</textarea>`,async ()=>{
+    const currentStatus=(n.status==='连载中'?'连载':(n.status==='已完结'?'完结':(n.status||'连载')));
+    openGenericForm('编辑小说',`<input id="et" value="${esc(n.title)}" placeholder="标题"><input id="eg" value="${esc(n.genre||'')}" placeholder="分类" style="margin-top:6px;"><select id="es" style="margin-top:6px;"><option value="连载" ${currentStatus==='连载'?'selected':''}>连载</option><option value="完结" ${currentStatus==='完结'?'selected':''}>完结</option><option value="断更" ${currentStatus==='断更'?'selected':''}>断更</option></select><textarea id="ed" rows="4" style="margin-top:6px;">${esc(n.description||'')}</textarea>`,async ()=>{
       const t=document.getElementById('et').value.trim();if(!t)throw new Error('标题不能为空');
-      await supabaseClient.from('novels').update({title:t,genre:document.getElementById('eg').value.trim(),description:document.getElementById('ed').value.trim(),updated_at:new Date()}).eq('id',novelId);
+      await supabaseClient.from('novels').update({title:t,genre:document.getElementById('eg').value.trim(),status:document.getElementById('es').value,description:document.getElementById('ed').value.trim(),updated_at:new Date()}).eq('id',novelId);
       showToast('小说已更新','success');
       navigate(`#novel/${novelId}`);
     });
@@ -808,8 +886,15 @@ function editNovel(novelId){
 async function toggleFavorite(novelId){
   if(!user)return showToast('请先登录','error');
   const {data:existing}=await supabaseClient.from('favorites').select('*').eq('user_id',user.id).eq('novel_id',novelId).maybeSingle();
-  if(existing){await supabaseClient.from('favorites').delete().eq('id',existing.id);showToast('已取消收藏','info');}
-  else{await supabaseClient.from('favorites').insert({user_id:user.id,novel_id:novelId});showToast('收藏成功！','success');}
+  if(existing){
+    await supabaseClient.from('favorites').delete().eq('id',existing.id);
+    removeFavoriteBaseline(novelId);
+    showToast('已取消收藏','info');
+  }else{
+    await supabaseClient.from('favorites').insert({user_id:user.id,novel_id:novelId});
+    await setFavoriteBaseline(novelId);
+    showToast('收藏成功！以后有新章节会提醒你','success');
+  }
   navigate(`#novel/${novelId}`);
 }
 
@@ -956,6 +1041,7 @@ async function chapterContent(container,chapterId){
   const idx=list.findIndex(ch=>ch.id==chapterId);
   const prev=idx>0?list[idx-1]:null;
   const next=idx<list.length-1?list[idx+1]:null;
+  if(user)saveReadingProgress(novel,chapter);
   const {data:comments}=await supabaseClient.from('comments').select('*,profiles(username,role,muted_until,label)').eq('novel_id',novel.id).eq('chapter_id',chapterId).order('created_at',{ascending:true});
   const contentCard=document.createElement('div');contentCard.className='card';
   let contentHtml = chapter.content;
@@ -1047,19 +1133,19 @@ async function myProfile(container){
 async function newNovel(container){
   if(isMuted(profile))return showToast('你已被禁言，无法发布小说','error');
   const card=document.createElement('div');card.className='card';
-  card.innerHTML=`<h2><i class="fas fa-pen-fancy"></i> 发布新小说</h2><input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;"><textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea><button onclick="publishNovel()" style="width:100%;margin-top:12px;">提交审核</button><div id="err" style="color:red;"></div>`;
+  card.innerHTML=`<h2><i class="fas fa-pen-fancy"></i> 发布新小说</h2><input id="ntitle" placeholder="标题"><input id="ngenre" placeholder="分类" style="margin-top:6px;"><select id="nstatus" style="margin-top:6px;"><option value="连载">连载</option><option value="完结">完结</option><option value="断更">断更</option></select><textarea id="ndesc" rows="4" placeholder="简介" style="margin-top:6px;"></textarea><button onclick="publishNovel()" style="width:100%;margin-top:12px;">提交审核</button><div id="err" style="color:red;"></div>`;
   container.appendChild(card);
 }
 
 async function publishNovel(){
   if(isMuted(profile))return showToast('你已被禁言','error');
-  const title=document.getElementById('ntitle').value.trim(),genre=document.getElementById('ngenre').value.trim(),desc=document.getElementById('ndesc').value.trim();
+  const title=document.getElementById('ntitle').value.trim(),genre=document.getElementById('ngenre').value.trim(),status=document.getElementById('nstatus').value,desc=document.getElementById('ndesc').value.trim();
   if(!title||!desc)return document.getElementById('err').textContent='请填写标题和简介';
   if(!isContentValid(title,desc)||containsBanned(title)||containsBanned(desc)){
     await addViolation(user.id,'发布违规小说');
     return document.getElementById('err').textContent='内容违规或无意义，已记录违规';
   }
-  const {error}=await supabaseClient.from('novels').insert({title,genre,description:desc,author_id:user.id,status:'连载中',approval_status:'pending'});
+  const {error}=await supabaseClient.from('novels').insert({title,genre,description:desc,author_id:user.id,status,approval_status:'pending'});
   if(error)return document.getElementById('err').textContent=error.message;
   showToast('提交成功，等待审核','success');
   navigate('#home');
@@ -1374,7 +1460,32 @@ async function notificationsPage(container){
   const {data:myNovels}=await supabaseClient.from('novels').select('id,title').eq('author_id',user.id);
   const novelIds=myNovels?.map(n=>n.id)||[];
   const {data:novelComms}=await supabaseClient.from('comments').select('*,novels(title)').in('novel_id',novelIds).order('created_at',{ascending:false});
+
+  const {data:favorites}=await supabaseClient.from('favorites').select('novel_id,novels(id,title)').eq('user_id',user.id);
+  const seenMap=getFavoriteSeenMap();
+  const favoriteUpdates=[];
+  let seenChanged=false;
+  for(const fav of (favorites||[])){
+    const {data:latest}=await supabaseClient.from('chapters').select('id,title,chapter_number').eq('novel_id',fav.novel_id).order('chapter_number',{ascending:false}).limit(1).maybeSingle();
+    if(!latest)continue;
+    if(seenMap[fav.novel_id]===undefined){
+      seenMap[fav.novel_id]=Number(latest.chapter_number)||0;
+      seenChanged=true;
+      continue;
+    }
+    if((Number(latest.chapter_number)||0)>(Number(seenMap[fav.novel_id])||0)){
+      favoriteUpdates.push({novel_id:fav.novel_id,novel_title:fav.novels?.title||'未知小说',chapter_id:latest.id,chapter_title:latest.title,chapter_number:latest.chapter_number});
+    }
+  }
+  if(seenChanged)saveFavoriteSeenMap(seenMap);
+
   let html='';
+  if(favoriteUpdates.length){
+    html+='<h4><i class="fas fa-book-open"></i> 收藏更新</h4>';
+    favoriteUpdates.forEach(u=>{
+      html+=`<div class="notification-item"><a onclick="navigate('#chapter/${u.chapter_id}')" style="font-weight:600;">《${esc(u.novel_title)}》更新到第${u.chapter_number}章：${esc(u.chapter_title)}</a></div>`;
+    });
+  }
   if(votes?.length){html+='<h4>帖子投票</h4>';votes.forEach(v=>html+=`<div class="notification-item">你的帖子被${v.vote_type==='like'?'赞':'踩'}了 <small class="meta">${new Date(v.created_at).toLocaleString()}</small></div>`);}
   if(replies?.length){html+='<h4>帖子回复</h4>';for(const r of replies){const {data:post}=await supabaseClient.from('posts').select('title').eq('id',r.post_id).single();html+=`<div class="notification-item">你的帖子《${esc(post?.title||'')}》有新回复 <small class="meta">${new Date(r.created_at).toLocaleString()}</small></div>`;}}
   if(myReplies?.length){html+='<h4>回复被引用</h4>';myReplies.forEach(r=>html+=`<div class="notification-item">你的回复被回复了 <small class="meta">${new Date(r.created_at).toLocaleString()}</small></div>`);}
@@ -1579,5 +1690,5 @@ initDarkMode();
 if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
 render();
 </script>
-</body>
+<script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script></body>
 </html>
