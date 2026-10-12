@@ -216,30 +216,12 @@
   <button id="admin-nav" class="hidden" onclick="navigate('#admin')"><i class="fas fa-cog"></i><span>后台</span></button>
 </nav>
 <div id="modal-container"></div>
-<div class="mascot-icon" onclick="toggleAiChat()">
-  <img src="小l.jpg" alt="小l" onerror="this.style.display='none'">
-</div>
-<div class="ai-chat" id="ai-chat">
-  <div class="ai-header">
-    <span><i class="fas fa-robot"></i> 小l · AI助手</span>
-    <span onclick="toggleAiChat()" style="cursor:pointer;font-size:24px;">&times;</span>
-  </div>
-  <div class="ai-body" id="ai-body">
-    <p style="color:#94a3b8;">你好，我是小l，可以问我关于书库的问题哦~</p>
-  </div>
-  <div class="ai-input">
-    <input type="text" id="ai-input" placeholder="问我关于书的问题...">
-    <button onclick="askAi()"><i class="fas fa-paper-plane"></i></button>
-  </div>
-</div>
 <script>
 // ===== 核心配置 =====
 const SUPABASE_URL = 'https://srbibtnvtpygegmtehzb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f1f5f9%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
-const ZHIPU_API_KEY = '75a65450c3314bdb90525cc13a356c8f.PiDT1xco3uFpfnmh';
-const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
 let user = null, profile = null, rendering = false;
 let currentChatChannel = null;
@@ -320,10 +302,14 @@ async function getUserLabel(p){
   let labels=p.label?`<span class="username-label label-admin">${esc(p.label)}</span>`:(p.role==='admin'?'<span class="username-label label-admin">管理员</span>':'');
   if(p.id){
     if(!rewardCache.has(p.id)){
-      const {data}=await supabaseClient.from('user_reward_titles').select('reward_titles(title,color)').eq('user_id',p.id);
-      rewardCache.set(p.id,(data||[]).map(x=>x.reward_titles).filter(Boolean));
+      const {data,error}=await supabaseClient.from('user_equipped_titles')
+        .select('reward_titles(title,color)').eq('user_id',p.id).maybeSingle();
+      if(error)console.warn('读取佩戴称号失败',error);
+      rewardCache.set(p.id,data?.reward_titles||null);
     }
-    for(const r of rewardCache.get(p.id))if(/^#[0-9a-fA-F]{6}$/.test(r.color))labels+=`<span class="username-label" style="background:${r.color}22;color:${r.color};border:1px solid ${r.color}">${esc(r.title)}</span>`;
+    const r=rewardCache.get(p.id);
+    if(r && /^#[0-9a-fA-F]{6}$/.test(r.color))
+      labels+=`<span class="username-label" style="background:${r.color}22;color:${r.color};border:1px solid ${r.color}">${esc(r.title)}</span>`;
   }
   return labels;
 }
@@ -1133,12 +1119,63 @@ async function myProfile(container){
   const formatted=await formatUsername(profile,true);
   card.innerHTML=`<div style="display:flex;gap:15px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url?`<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:profile.username[0]}</div><div><h2>${formatted}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;"><i class="fas fa-pen"></i></a></p><p><i class="fas fa-star" style="color:#eab308;"></i> 我的积分：${totalPoints}</p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>${profile.role==='admin'?`<button onclick="openModal('edit-label')" class="outline" style="margin-top:6px;">编辑标签</button>`:''}</div></div><h3 style="margin-top:15px;"><i class="fas fa-book"></i> 我的小说</h3><div id="my-novels"></div><h3 style="margin-top:15px;"><i class="fas fa-comment"></i> 我的评论</h3><div id="my-comments"></div><h3 style="margin-top:15px;"><i class="fas fa-star"></i> 我的评分</h3><div id="my-ratings"></div><h3 style="margin-top:15px;"><a onclick="navigate('#notifications')"><i class="fas fa-bell"></i> 我的消息</a></h3>`;
   container.appendChild(card);
+  const titlesCard=document.createElement('div');
+  titlesCard.className='card';
+  titlesCard.innerHTML='<h3><i class="fas fa-award" style="color:#eab308"></i> 我的标签</h3><p class="meta">查看已解锁的奖励称号，每次可以佩戴一个，也可以取消佩戴。</p><div id="my-reward-titles" style="margin-top:12px">正在加载...</div>';
+  container.appendChild(titlesCard);
+  await renderMyRewardTitles();
   const {data:novels}=await supabaseClient.from('novels').select('*').eq('author_id',user.id).order('updated_at',{ascending:false});
   document.getElementById('my-novels').innerHTML=novels?.length?novels.map(n=>`<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join(''):'<p>暂无</p>';
   const {data:comments}=await supabaseClient.from('comments').select('*,novels(title)').eq('user_id',user.id);
   document.getElementById('my-comments').innerHTML=comments?.length?comments.map(c=>`<p>《${esc(c.novels.title)}》：${esc(c.content)}</p>`).join(''):'<p>暂无</p>';
   const {data:ratings}=await supabaseClient.from('ratings').select('*,novels(title)').eq('user_id',user.id);
   document.getElementById('my-ratings').innerHTML=ratings?.length?ratings.map(r=>`<p>《${esc(r.novels.title)}》：${r.score}星</p>`).join(''):'<p>暂无</p>';
+}
+
+// ===== 我的奖励称号 / 佩戴 =====
+async function renderMyRewardTitles(){
+  if(!user)return;
+  const el=document.getElementById('my-reward-titles');
+  if(!el)return;
+  const [{data:owned,error},{data:equipped,error:equippedError}]=await Promise.all([
+    supabaseClient.from('user_reward_titles').select('reward_id,awarded_at,reward_titles(title,color,reward_date)').eq('user_id',user.id).order('awarded_at',{ascending:false}),
+    supabaseClient.from('user_equipped_titles').select('reward_id').eq('user_id',user.id).maybeSingle()
+  ]);
+  if(error||equippedError){
+    el.textContent='加载失败：'+(error||equippedError).message+'。请先执行新增的数据库升级 SQL。';return;
+  }
+  el.innerHTML='';
+  if(!owned?.length){el.textContent='还没有获得奖励称号，参加指定日期签到即可解锁。';return;}
+  const empty=document.createElement('button');
+  empty.className='outline';empty.textContent=equipped?'取消佩戴':'当前未佩戴称号';empty.disabled=!equipped;
+  empty.onclick=()=>equipRewardTitle(null);
+  el.appendChild(empty);
+  for(const item of owned){
+    const r=item.reward_titles;
+    if(!r)continue;
+    const row=document.createElement('div');row.className='flex-row';
+    const details=document.createElement('div');
+    const badge=document.createElement('span');badge.className='username-label';badge.textContent=r.title;
+    if(/^#[0-9a-fA-F]{6}$/.test(r.color)){badge.style.color=r.color;badge.style.background=r.color+'22';badge.style.border='1px solid '+r.color;}
+    const date=document.createElement('div');date.className='meta';date.textContent='奖励日期：'+r.reward_date;
+    details.append(badge,date);row.appendChild(details);
+    const btn=document.createElement('button');
+    const active=equipped?.reward_id===item.reward_id;
+    btn.textContent=active?'已佩戴':'佩戴';btn.disabled=active;
+    if(!active)btn.className='outline';
+    btn.onclick=()=>equipRewardTitle(item.reward_id);
+    row.appendChild(btn);el.appendChild(row);
+  }
+}
+async function equipRewardTitle(rewardId){
+  if(!user)return;
+  const result=rewardId
+    ?await supabaseClient.from('user_equipped_titles').upsert({user_id:user.id,reward_id:rewardId},{onConflict:'user_id'})
+    :await supabaseClient.from('user_equipped_titles').delete().eq('user_id',user.id);
+  if(result.error)return showToast('佩戴失败：'+result.error.message,'error');
+  rewardCache.delete(user.id);
+  showToast(rewardId?'已佩戴称号':'已取消佩戴','success');
+  await render();
 }
 
 // ===== 发布小说 =====
@@ -1696,28 +1733,6 @@ function editAnnouncement(){
     await supabaseClient.from('announcements').insert({content});
     showToast('公告已更新','success');
   });
-}
-
-// ===== AI =====
-function toggleAiChat(){document.getElementById('ai-chat').classList.toggle('show');}
-async function askAi(){
-  const input=document.getElementById('ai-input');
-  const question=input.value.trim();
-  if(!question)return;
-  const body=document.getElementById('ai-body');
-  body.innerHTML+=`<div style="text-align:right;margin:5px 0;"><span style="background:#334155;color:#fff;padding:6px 14px;border-radius:16px;display:inline-block;">${esc(question)}</span></div>`;
-  input.value='';
-  try{
-    const response=await fetch(ZHIPU_API_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${ZHIPU_API_KEY}`},
-      body:JSON.stringify({model:'glm-4',messages:[{role:'user',content:`你是一个书库助手小，你是一个叫lyc的人编写的，你需要读这个书库的所有书，请根据以下问题回答：${question}`}],temperature:0.7})
-    });
-    const data=await response.json();
-    const answer=data.choices?.[0]?.message?.content||'你问的这个东西很有意思，不过我不回。';
-    body.innerHTML+=`<div style="text-align:left;margin:5px 0;"><span style="background:#f1f5f9;padding:6px 14px;border-radius:16px;display:inline-block;">${esc(answer)}</span></div>`;
-  }catch(e){body.innerHTML+=`<div>请求失败：${e.message}</div>`;}
-  body.scrollTop=body.scrollHeight;
 }
 
 // ===== 通用工具 =====
