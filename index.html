@@ -200,7 +200,7 @@
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.ai-chat{width:90%;right:5%}.search-box select{min-width:60px;font-size:12px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/></head>
+<link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/><link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/></head>
 <body>
 <div class="container" id="app"></div>
 <nav class="bottom-nav" id="bottom-nav">
@@ -244,6 +244,8 @@ const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 let user = null, profile = null, rendering = false;
 let currentChatChannel = null;
 let searchTimeout = null;
+const isSuperAdmin=()=>!!user&&profile?.email==='18631167199@163.com'&&user.email==='18631167199@163.com';
+const rewardCache=new Map();
 
 const BANNED_WORDS = ['傻逼','赌博','色情','敏感词','违法','政治'];
 const ALL_PERMISSIONS = ['删除帖子','删除小说','管理评论','管理用户','编辑公告','设置管理员','通过帖子','通过小说'];
@@ -315,9 +317,15 @@ async function getUserNameColor(p){
 async function getUserLabel(p){
   if(!p)return '';
   if(isMuted(p))return '<span class="username-label label-violator">违规者</span>';
-  if(p.label) return `<span class="username-label label-admin">${esc(p.label)}</span>`;
-  if(p.role==='admin') return '<span class="username-label label-admin">管理员</span>';
-  return '';
+  let labels=p.label?`<span class="username-label label-admin">${esc(p.label)}</span>`:(p.role==='admin'?'<span class="username-label label-admin">管理员</span>':'');
+  if(p.id){
+    if(!rewardCache.has(p.id)){
+      const {data}=await supabaseClient.from('user_reward_titles').select('reward_titles(title,color)').eq('user_id',p.id);
+      rewardCache.set(p.id,(data||[]).map(x=>x.reward_titles).filter(Boolean));
+    }
+    for(const r of rewardCache.get(p.id))if(/^#[0-9a-fA-F]{6}$/.test(r.color))labels+=`<span class="username-label" style="background:${r.color}22;color:${r.color};border:1px solid ${r.color}">${esc(r.title)}</span>`;
+  }
+  return labels;
 }
 
 async function formatUsername(p,showLabel=true){
@@ -463,7 +471,8 @@ function closeModal(){document.getElementById('modal-container').innerHTML='';}
 async function savePermissions(userId){
   const checks=document.querySelectorAll('#modal-container input[type=checkbox]:checked');
   const perms=Array.from(checks).map(c=>c.value);
-  const {error}=await supabaseClient.from('profiles').update({permissions:perms}).eq('id',userId);
+  if(!isSuperAdmin())return document.getElementById('err').textContent='只有超级管理员能设置权限';
+  const {error}=await supabaseClient.from('profiles').update({permissions:perms}).eq('id',userId).select('id').single();
   if(error)return document.getElementById('err').textContent=error.message;
   showToast('权限已更新','success');
   closeModal();adminAdmins();
@@ -596,7 +605,10 @@ async function performCheckin(button){
   if(error)return showToast('签到失败','error');
   button.disabled=true;
   button.textContent=`已签到 (${points}积分，连续${consecutive}天)`;
-  showToast(`签到成功！获得 ${points} 积分`,'success');
+  const {data:rewards,error:rewardError}=await supabaseClient.rpc('claim_checkin_titles',{p_date:today});
+  rewardCache.delete(user.id);
+  showToast(`签到成功！获得 ${points} 积分${rewards?.length?'，解锁 '+rewards.map(r=>r.title).join('、'):''}`,'success');
+  if(rewardError)console.warn('奖励称号领取失败，请检查数据库迁移',rewardError);
 }
 
 // ===== 首页 =====
@@ -1501,7 +1513,7 @@ async function adminPanel(container){
   if(hasPermission('通过帖子'))buttons+=`<button onclick="adminPostApprovals()">审核帖子</button>`;
   if(hasPermission('通过小说'))buttons+=`<button onclick="adminNovelApprovals()">审核小说</button>`;
   if(hasPermission('管理用户'))buttons+=`<button onclick="adminUsers()" style="margin-left:6px;">管理用户</button>`;
-  if(profile?.email==='18631167199@163.com')buttons+=`<button onclick="adminAdmins()">管理管理员</button>`;
+  if(isSuperAdmin())buttons+=`<button onclick="adminAdmins()">管理管理员</button><button onclick="adminRewardTitles()">签到奖励称号</button>`;
   buttons+=`<button onclick="adminAds()">管理广告</button><button onclick="editAnnouncement()">编辑公告</button>`;
   if(profile?.email==='18631167199@163.com')buttons+=`<button onclick="adminMessages()" style="background:#ef4444;">私信监控</button>`;
   card.innerHTML=buttons;
@@ -1606,18 +1618,60 @@ async function adminPosts(){
 }
 
 async function adminAdmins(){
+  if(!isSuperAdmin())return showToast('无权操作','error');
   const c=document.getElementById('admin-content');c.innerHTML='';
-  const {data:profiles}=await supabaseClient.from('profiles').select('*');
-  if(profiles)profiles.forEach(p=>{
-    c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;">${esc(p.username)} (${p.role}) ${p.email!=='18631167199@163.com'&&p.id!==user.id?`<button onclick="toggleAdmin('${p.id}')">${p.role==='admin'?'撤销':'设为'}管理员</button>`:'<small>（超级管理员）</small>'} <button onclick="openModal('permissions', {id:'${p.id}',username:'${esc(p.username)}',permissions:${JSON.stringify(p.permissions||[])} })">权限</button></div>`;
-  });
+  const {data:profiles,error}=await supabaseClient.from('profiles').select('*');
+  if(error){c.textContent=error.message;return;}
+  for(const p of profiles||[]){
+    const row=document.createElement('div');row.className='flex-row';
+    const name=document.createElement('span');name.textContent=`${p.username} (${p.role})`;row.appendChild(name);
+    if(p.email!==user.email){const toggle=document.createElement('button');toggle.textContent=p.role==='admin'?'撤销管理员':'设为管理员';toggle.onclick=()=>toggleAdmin(p.id);row.appendChild(toggle);const btn=document.createElement('button');btn.textContent='反复编辑权限';btn.onclick=()=>openModal('permissions',p);row.appendChild(btn);}
+    else {const mark=document.createElement('small');mark.textContent='超级管理员';row.appendChild(mark);}
+    c.appendChild(row);
+  }
 }
 async function toggleAdmin(userId){
+  if(!isSuperAdmin())return showToast('无权操作','error');
   const {data:p}=await supabaseClient.from('profiles').select('role,email').eq('id',userId).single();
   if(p.email==='18631167199@163.com')return showToast('超级管理员不可更改','error');
-  await supabaseClient.from('profiles').update({role:p.role==='admin'?'user':'admin'}).eq('id',userId);
+  const {error}=await supabaseClient.from('profiles').update({role:p.role==='admin'?'user':'admin'}).eq('id',userId);
+  if(error)return showToast(error.message,'error');
   showToast('已更新','success');
   adminAdmins();
+}
+
+
+// ===== 指定日期签到奖励称号 =====
+async function adminRewardTitles(){
+  if(!isSuperAdmin())return showToast('只有超级管理员可以设置奖励','error');
+  const c=document.getElementById('admin-content');
+  c.innerHTML=`<div class="card"><h3>设置签到奖励称号</h3><p class="meta">用户在指定日期签到后自动获得称号，已领取的称号永久保留。</p><label>奖励日期<input id="reward-date" type="date"></label><label>称号文字<input id="reward-name" maxlength="30" placeholder="例如：周年纪念者"></label><label>称号颜色<input id="reward-color" type="color" value="#eab308" style="height:48px;padding:4px"></label><button onclick="saveRewardTitle()">添加奖励</button><div id="reward-list" style="margin-top:18px"></div></div>`;
+  document.getElementById('reward-date').value=new Date().toLocaleDateString('en-CA');
+  const {data,error}=await supabaseClient.from('reward_titles').select('*').order('reward_date',{ascending:false});
+  const list=document.getElementById('reward-list');
+  if(error){list.textContent='读取失败：'+error.message+'。请先执行配套 SQL。';return;}
+  for(const r of data||[]){
+    const row=document.createElement('div');row.className='flex-row';
+    const span=document.createElement('span');span.textContent=r.reward_date+' · '+r.title;span.style.color=r.color;row.appendChild(span);
+    const edit=document.createElement('button');edit.textContent='编辑';edit.onclick=()=>{document.getElementById('reward-date').value=r.reward_date;document.getElementById('reward-name').value=r.title;document.getElementById('reward-color').value=r.color;document.getElementById('reward-edit-id').value=r.id;};row.appendChild(edit);
+    const del=document.createElement('button');del.className='danger';del.textContent='删除';del.onclick=()=>deleteRewardTitle(r.id);row.appendChild(del);list.appendChild(row);
+  }
+  const hidden=document.createElement('input');hidden.type='hidden';hidden.id='reward-edit-id';c.appendChild(hidden);
+}
+async function saveRewardTitle(){
+  if(!isSuperAdmin())return;
+  const reward_date=document.getElementById('reward-date').value,title=document.getElementById('reward-name').value.trim(),color=document.getElementById('reward-color').value,id=document.getElementById('reward-edit-id').value;
+  if(!reward_date||!title||title.length>30||!/^#[0-9a-f]{6}$/i.test(color))return showToast('请填写日期、称号和颜色','error');
+  const query=id?supabaseClient.from('reward_titles').update({reward_date,title,color}).eq('id',id):supabaseClient.from('reward_titles').insert({reward_date,title,color});
+  const {error}=await query;
+  if(error)return showToast(error.message,'error');
+  rewardCache.clear();showToast('奖励已保存','success');adminRewardTitles();
+}
+async function deleteRewardTitle(id){
+  if(!isSuperAdmin()||!confirm('确定删除该奖励及已发放的对应称号？'))return;
+  const {error}=await supabaseClient.from('reward_titles').delete().eq('id',id);
+  if(error)return showToast(error.message,'error');
+  rewardCache.clear();adminRewardTitles();
 }
 
 async function adminMessages(){
@@ -1690,5 +1744,6 @@ initDarkMode();
 if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
 render();
 </script>
+<script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
 <script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script></body>
 </html>
