@@ -296,22 +296,34 @@ async function getUserNameColor(p){
   return '#1e293b';
 }
 
+// 管理员称号和签到称号使用完全一致的徽章样式，同时只能显示一个。
+function titleBadge(title,color){
+  const safe=/^#[0-9a-fA-F]{6}$/.test(color||'')?color:'#eab308';
+  return `<span class="username-label" style="background:${safe}22;color:${safe};border:1px solid ${safe};text-decoration:none">${esc(title)}</span>`;
+}
 async function getUserLabel(p){
   if(!p)return '';
   if(isMuted(p))return '<span class="username-label label-violator">违规者</span>';
-  let labels=p.label?`<span class="username-label label-admin">${esc(p.label)}</span>`:(p.role==='admin'?'<span class="username-label label-admin">管理员</span>':'');
-  if(p.id){
-    if(!rewardCache.has(p.id)){
-      const {data,error}=await supabaseClient.from('user_equipped_titles')
-        .select('reward_titles(title,color)').eq('user_id',p.id).maybeSingle();
-      if(error)console.warn('读取佩戴称号失败',error);
-      rewardCache.set(p.id,data?.reward_titles||null);
-    }
-    const r=rewardCache.get(p.id);
-    if(r && /^#[0-9a-fA-F]{6}$/.test(r.color))
-      labels+=`<span class="username-label" style="background:${r.color}22;color:${r.color};border:1px solid ${r.color}">${esc(r.title)}</span>`;
+  // 部分作者或评论查询只提供了 username，需要按用户名查找完整用户信息。
+  if(!p.id && p.username){
+    const {data}=await supabaseClient.from('profiles').select('id,role,label').eq('username',p.username).maybeSingle();
+    if(data)p={...p,...data};
   }
-  return labels;
+  if(!p.id)return p.role==='admin'?titleBadge(p.label||'管理员','#FFD700'):'';
+  if(!rewardCache.has(p.id)){
+    const {data,error}=await supabaseClient.from('user_equipped_titles')
+      .select('title_type,reward_titles(title,color)').eq('user_id',p.id).maybeSingle();
+    if(error)console.warn('读取佩戴称号失败',error);
+    rewardCache.set(p.id,data||null);
+  }
+  const equipped=rewardCache.get(p.id);
+  if(equipped?.title_type==='none')return '';
+  if(equipped?.title_type==='reward'){
+    const r=equipped.reward_titles;
+    return r?titleBadge(r.title,r.color):'';
+  }
+  if(p.role==='admin')return titleBadge(p.label||'管理员','#FFD700');
+  return '';
 }
 
 async function formatUsername(p,showLabel=true){
@@ -1121,7 +1133,7 @@ async function myProfile(container){
   container.appendChild(card);
   const titlesCard=document.createElement('div');
   titlesCard.className='card';
-  titlesCard.innerHTML='<h3><i class="fas fa-award" style="color:#eab308"></i> 我的标签</h3><p class="meta">查看已解锁的奖励称号，每次可以佩戴一个，也可以取消佩戴。</p><div id="my-reward-titles" style="margin-top:12px">正在加载...</div>';
+  titlesCard.innerHTML='<h3><i class="fas fa-award" style="color:#eab308"></i> 我的称号</h3><p class="meta">管理员称号和签到奖励称号统一管理，一次只能佩戴一个；社区、作者栏与个人主页展示相同样式。</p><div id="my-reward-titles" style="margin-top:12px">正在加载...</div>';
   container.appendChild(titlesCard);
   await renderMyRewardTitles();
   const {data:novels}=await supabaseClient.from('novels').select('*').eq('author_id',user.id).order('updated_at',{ascending:false});
@@ -1139,42 +1151,52 @@ async function renderMyRewardTitles(){
   if(!el)return;
   const [{data:owned,error},{data:equipped,error:equippedError}]=await Promise.all([
     supabaseClient.from('user_reward_titles').select('reward_id,awarded_at,reward_titles(title,color,reward_date)').eq('user_id',user.id).order('awarded_at',{ascending:false}),
-    supabaseClient.from('user_equipped_titles').select('reward_id').eq('user_id',user.id).maybeSingle()
+    supabaseClient.from('user_equipped_titles').select('reward_id,title_type').eq('user_id',user.id).maybeSingle()
   ]);
   if(error||equippedError){
-    el.textContent='加载失败：'+(error||equippedError).message+'。请先执行新增的数据库升级 SQL。';return;
+    el.textContent='加载失败：'+(error||equippedError).message+'。请执行新版「称号冲突修复 SQL」。';return;
   }
   el.innerHTML='';
-  if(!owned?.length){el.textContent='还没有获得奖励称号，参加指定日期签到即可解锁。';return;}
+  const current=equipped?.title_type||(profile.role==='admin'?'admin':'none');
   const empty=document.createElement('button');
-  empty.className='outline';empty.textContent=equipped?'取消佩戴':'当前未佩戴称号';empty.disabled=!equipped;
-  empty.onclick=()=>equipRewardTitle(null);
-  el.appendChild(empty);
-  for(const item of owned){
-    const r=item.reward_titles;
-    if(!r)continue;
+  empty.className='outline';empty.textContent=current==='none'?'当前未佩戴称号':'不佩戴任何称号';empty.disabled=current==='none';
+  empty.onclick=()=>equipUserTitle('none');el.appendChild(empty);
+  if(profile.role==='admin'){
     const row=document.createElement('div');row.className='flex-row';
     const details=document.createElement('div');
-    const badge=document.createElement('span');badge.className='username-label';badge.textContent=r.title;
-    if(/^#[0-9a-fA-F]{6}$/.test(r.color)){badge.style.color=r.color;badge.style.background=r.color+'22';badge.style.border='1px solid '+r.color;}
+    details.innerHTML=titleBadge(profile.label||'管理员','#FFD700')+'<div class="meta">管理员专属称号（与管理权限无关）</div>';
+    const btn=document.createElement('button');const active=current==='admin';
+    btn.textContent=active?'已佩戴':'佩戴';btn.disabled=active;if(!active)btn.className='outline';
+    btn.onclick=()=>equipUserTitle('admin');row.append(details,btn);el.appendChild(row);
+  }
+  if(!owned?.length){
+    const hint=document.createElement('p');hint.className='meta';hint.style.marginTop='12px';
+    hint.textContent='还没有签到奖励称号，参加指定日期签到即可解锁。';el.appendChild(hint);
+  }
+  for(const item of owned||[]){
+    const r=item.reward_titles;if(!r)continue;
+    const row=document.createElement('div');row.className='flex-row';
+    const details=document.createElement('div');
+    details.innerHTML=titleBadge(r.title,r.color);
     const date=document.createElement('div');date.className='meta';date.textContent='奖励日期：'+r.reward_date;
-    details.append(badge,date);row.appendChild(details);
+    details.appendChild(date);row.appendChild(details);
     const btn=document.createElement('button');
-    const active=equipped?.reward_id===item.reward_id;
-    btn.textContent=active?'已佩戴':'佩戴';btn.disabled=active;
-    if(!active)btn.className='outline';
-    btn.onclick=()=>equipRewardTitle(item.reward_id);
+    const active=current==='reward'&&equipped?.reward_id===item.reward_id;
+    btn.textContent=active?'已佩戴':'佩戴';btn.disabled=active;if(!active)btn.className='outline';
+    btn.onclick=()=>equipUserTitle('reward',item.reward_id);
     row.appendChild(btn);el.appendChild(row);
   }
 }
-async function equipRewardTitle(rewardId){
+async function equipUserTitle(type,rewardId=null){
   if(!user)return;
-  const result=rewardId
-    ?await supabaseClient.from('user_equipped_titles').upsert({user_id:user.id,reward_id:rewardId},{onConflict:'user_id'})
-    :await supabaseClient.from('user_equipped_titles').delete().eq('user_id',user.id);
+  if(type==='admin'&&profile?.role!=='admin')return showToast('你不是管理员','error');
+  // 数据库校验奖励归属，用户不能佩戴别人的奖励称号。
+  const result=await supabaseClient.from('user_equipped_titles').upsert({
+    user_id:user.id,title_type:type,reward_id:type==='reward'?rewardId:null
+  },{onConflict:'user_id'});
   if(result.error)return showToast('佩戴失败：'+result.error.message,'error');
   rewardCache.delete(user.id);
-  showToast(rewardId?'已佩戴称号':'已取消佩戴','success');
+  showToast(type==='none'?'已取消佩戴':'已切换称号','success');
   await render();
 }
 
