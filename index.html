@@ -96,6 +96,11 @@
     .chat-bubble .bubble{display:inline-block;max-width:75%;padding:10px 18px;border-radius:20px;font-size:15px;line-height:1.6;word-wrap:break-word;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
     .chat-bubble.mine .bubble{background:#334155;color:#fff;border-bottom-right-radius:6px}
     .chat-bubble.other .bubble{background:#fff;color:#1e293b;border:1px solid #e2e8f0;border-bottom-left-radius:6px}
+    .chat-bubble .bubble{white-space:pre-wrap;overflow-wrap:anywhere;}
+    .poll-choice{display:flex;align-items:center;gap:9px;margin:9px 0;}
+    .poll-track{height:9px;background:#e2e8f0;border-radius:20px;overflow:hidden;margin-top:5px;}
+    .poll-fill{height:100%;background:#10b981;border-radius:20px;}
+    .notice-unread{border-left:3px solid #ef4444;padding-left:10px;background:rgba(239,68,68,.05);}
     .chat-bubble .time{font-size:11px;color:#94a3b8;margin-top:4px;padding:0 4px}
     .ad-carousel{position:relative;overflow:hidden;border-radius:16px;margin-bottom:14px;background:#f1f5f9}
     .ad-carousel img{width:100%;height:180px;object-fit:cover;display:block;cursor:pointer}
@@ -197,16 +202,36 @@
     body.dark .ql-picker-options { background: #2d3748; border-color: #4a5568; }
     body.dark .ql-editor { background: #1a202c; color: #e2e8f0; border-color: #4a5568; }
     body.dark .ql-editor.ql-blank::before { color: #718096; }
+    /* 积分商城 */
+    .points-balance{font-size:29px;font-weight:800;color:#d49a00;line-height:1.35}
+    .points-info{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px}
+    .shop-card{border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+    .shop-card img{width:100%;height:170px;object-fit:cover;background:#f1f5f9}
+    .shop-no-image{height:170px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;background:linear-gradient(135deg,#f1f5f9,#fef9c3);color:#b45309}
+    .shop-no-image i{font-size:43px}
+    .shop-card-content{padding:14px;display:flex;flex:1;flex-direction:column;gap:7px}
+    .shop-card h3{font-size:17px;overflow-wrap:anywhere}
+    .shop-desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;color:#64748b;flex:1}
+    .shop-price{color:#b77905;font-weight:800;font-size:21px}
+    .points-transfer-bubble{border:1px solid #eab308!important;background:#fffbeb!important;color:#78350f!important}
+    .points-entry{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .bottom-nav{overflow-x:auto;scrollbar-width:none}
+    .bottom-nav button{flex-shrink:0;padding-left:8px;padding-right:8px}
+    body.dark .shop-card{background:#252f3e;border-color:#4a5568}
+    body.dark .shop-desc{color:#cbd5e1}
+    body.dark .points-transfer-bubble{background:#3a310c!important;color:#fde68a!important}
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.ai-chat{width:90%;right:5%}.search-box select{min-width:60px;font-size:12px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/><link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/></head>
+<link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/><link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/><link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/><link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/></head>
 <body>
 <div class="container" id="app"></div>
 <nav class="bottom-nav" id="bottom-nav">
   <button onclick="navigate('#home')" class="active"><i class="fas fa-home"></i><span>首页</span></button>
   <button onclick="navigate('#community')"><i class="fas fa-comment"></i><span>社区</span></button>
   <button onclick="navigate('#new-novel')"><i class="fas fa-pen"></i><span>发布</span></button>
+  <button onclick="navigate('#shop')"><i class="fas fa-store"></i><span>积分商城</span></button>
   <button onclick="navigate('#messages')" id="msg-nav-btn" style="position:relative;">
     <i class="fas fa-envelope"></i><span>私信</span>
     <span class="badge" id="msg-badge"></span>
@@ -226,11 +251,13 @@ const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/
 let user = null, profile = null, rendering = false;
 let currentChatChannel = null;
 let searchTimeout = null;
+let notificationChannel=null;
+let notificationPollingTimer=null;
 const isSuperAdmin=()=>!!user&&profile?.email==='18631167199@163.com'&&user.email==='18631167199@163.com';
 const rewardCache=new Map();
 
 const BANNED_WORDS = ['傻逼','赌博','色情','敏感词','违法','政治'];
-const ALL_PERMISSIONS = ['删除帖子','删除小说','管理评论','管理用户','编辑公告','设置管理员','通过帖子','通过小说'];
+const ALL_PERMISSIONS = ['删除帖子','删除小说','管理评论','管理用户','编辑公告','设置管理员','通过帖子','通过小说','上架积分商品'];
 
 // ===== 夜间模式 =====
 function initDarkMode() {
@@ -268,7 +295,7 @@ function showToast(message, type = 'info') {
 function containsBanned(t){return BANNED_WORDS.some(w=>t.includes(w));}
 function isContentValid(t,c){if(!t||t.length<1)return false;if(!c||c.length<3)return false;if(/^(.)\1+$/.test(c))return false;if(/^[\s\p{P}]+$/u.test(c))return false;return true;}
 function isMuted(p){return p?.muted_until&&new Date(p.muted_until)>new Date();}
-function hasPermission(perm){if(!profile)return false;if(profile.email==='18631167199@163.com')return true;return (profile.permissions||[]).includes(perm);}
+function hasPermission(perm){if(!profile||profile.role!=='admin')return false;if(isSuperAdmin())return true;return (profile.permissions||[]).includes(perm);}
 
 async function addViolation(userId,reason){
   await supabaseClient.from('user_violations').insert({user_id:userId,reason});
@@ -406,6 +433,7 @@ async function render(){
   const {data:{session}}=await supabaseClient.auth.getSession();
   if(session){user=session.user;await loadProfile();}else{user=null;profile=null;}
   updateMessageBadge();
+  updateNotificationBadge();
   const nav=document.createElement('div');nav.className='navbar';
   nav.innerHTML=`
     <span class="logo" onclick="navigate('#home')"><i class="fas fa-book-open"></i> lyc书库</span>
@@ -424,6 +452,13 @@ async function render(){
   app.appendChild(nav);
   document.getElementById('admin-nav').classList.toggle('hidden',profile?.role!=='admin');
   const hash=location.hash||'#home';
+  const activeHash=hash==='#shop-orders'?'#shop':hash==='#admin-shop'?'#admin':
+    hash.startsWith('#chat/')?'#messages':hash.startsWith('#post/')?'#community':
+    hash.startsWith('#novel/')||hash.startsWith('#chapter/')?'#home':
+    hash==='#notifications'||hash.startsWith('#user/')?'#profile':hash;
+  document.querySelectorAll('#bottom-nav button[onclick]').forEach(btn=>{
+    btn.classList.toggle('active',btn.getAttribute('onclick').includes(`navigate('${activeHash}')`));
+  });
   if(hash==='#home')await home(app);
   else if(hash==='#bookpile')await bookPile(app);
   else if(hash.startsWith('#novel/')){
@@ -434,11 +469,14 @@ async function render(){
   else if(hash.startsWith('#user/'))await userPage(app,hash.split('/')[1]);
   else if(hash==='#community')await communityList(app);
   else if(hash.startsWith('#post/'))await postDetail(app,hash.split('/')[1]);
+  else if(hash==='#shop')await pointsShop(app);
+  else if(hash==='#shop-orders')await pointsOrdersPage(app);
   else if(hash==='#messages')await messagesPage(app);
   else if(hash.startsWith('#chat/'))await chatPage(app,hash.split('/')[1]);
   else if(hash==='#new-novel')await newNovel(app);
   else if(hash==='#profile')await myProfile(app);
   else if(hash==='#notifications')await notificationsPage(app);
+  else if(hash==='#admin-shop'&&profile?.role==='admin'){await adminPanel(app);await adminPointsProducts();}
   else if(hash==='#admin'&&profile?.role==='admin')await adminPanel(app);
   else home(app);
   rendering=false;
@@ -585,28 +623,33 @@ async function updateLabel(){
 
 async function signOut(){await supabaseClient.auth.signOut();user=null;profile=null;render();showToast('已退出','info');}
 
+// 积分签到完全交由数据库执行（防重复、防前端伪造、原子入账）。
+async function fetchMyPoints(){
+  if(!user)return {balance:0,error:null};
+  const {data,error}=await supabaseClient.from('point_wallets').select('balance').eq('user_id',user.id).maybeSingle();
+  return {balance:Number(data?.balance||0),error};
+}
+function siteToday(){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+}
+function pointsError(error){
+  if(!error)return '未知错误';
+  if(error.code==='PGRST202'||error.code==='42P01'||error.code==='42883')return '积分系统尚未部署，请先在 Supabase 执行「积分系统升级.sql」';
+  return error.message||'操作失败';
+}
 async function performCheckin(button){
-  if(!user)return;
-  const today=new Date().toISOString().slice(0,10);
-  const {data:existing}=await supabaseClient.from('daily_checkins').select('*').eq('user_id',user.id).eq('checkin_date',today).maybeSingle();
-  if(existing)return;
-  const {data:recent}=await supabaseClient.from('daily_checkins').select('*').eq('user_id',user.id).order('checkin_date',{ascending:false}).limit(1);
-  let consecutive=1;
-  if(recent&&recent.length){
-    const lastDate=new Date(recent[0].checkin_date);
-    const diff=Math.floor((new Date(today)-lastDate)/(1000*60*60*24));
-    consecutive=(diff===1)?(recent[0].consecutive_days||0)+1:1;
-  }
-  let points=Math.floor(Math.random()*5)+5;
-  if(consecutive>=7)points*=2;
-  const {error}=await supabaseClient.from('daily_checkins').insert({user_id:user.id,checkin_date:today,points,consecutive_days:consecutive});
-  if(error)return showToast('签到失败','error');
+  if(!user)return showToast('请先登录','error');
+  if(button.disabled)return;
   button.disabled=true;
-  button.textContent=`已签到 (${points}积分，连续${consecutive}天)`;
-  const {data:rewards,error:rewardError}=await supabaseClient.rpc('claim_checkin_titles',{p_date:today});
+  const {data,error}=await supabaseClient.rpc('points_sign_in');
+  if(error){button.disabled=false;return showToast(pointsError(error),'error');}
+  button.textContent=`已签到 (+${data.points}积分，连续${data.consecutive_days}天)`;
+  const {data:rewards,error:rewardError}=await supabaseClient.rpc('claim_checkin_titles',{p_date:data.date});
   rewardCache.delete(user.id);
-  showToast(`签到成功！获得 ${points} 积分${rewards?.length?'，解锁 '+rewards.map(r=>r.title).join('、'):''}`,'success');
-  if(rewardError)console.warn('奖励称号领取失败，请检查数据库迁移',rewardError);
+  showToast(`签到成功！+${data.points} 积分，余额 ${data.balance}${rewards?.length?'，解锁 '+rewards.map(r=>r.title).join('、'):''}`,'success');
+  if(rewardError)console.warn('签到奖励称号领取失败',rewardError);
+  const balanceEl=document.getElementById('home-point-balance');
+  if(balanceEl)balanceEl.textContent=data.balance;
 }
 
 // ===== 首页 =====
@@ -668,18 +711,26 @@ async function home(container){
     setInterval(()=>{if(ads.length>1){currentAd=(currentAd+1)%ads.length;img.src=ads[currentAd].ad_image_url||PLACEHOLDER_IMAGE;img.onclick=()=>navigate(`#post/${ads[currentAd].id}`);updateDots();}},5000);
   }
   if(user){
-    const today=new Date().toISOString().slice(0,10);
-    const {data:checkin}=await supabaseClient.from('daily_checkins').select('*').eq('user_id',user.id).eq('checkin_date',today).maybeSingle();
+    const today=siteToday();
+    const [{data:checkin,error:checkinError},{balance,error:balanceError}]=await Promise.all([
+      supabaseClient.from('point_checkins').select('points,consecutive_days').eq('user_id',user.id).eq('checkin_date',today).maybeSingle(),
+      fetchMyPoints()
+    ]);
     const checkinDiv=document.createElement('div');checkinDiv.className='card';
-    checkinDiv.innerHTML=`<h3><i class="fas fa-calendar-check"></i> 每日签到</h3>`;
-    if(checkin){
-      checkinDiv.innerHTML+=`<p>今日已签到，获得 ${checkin.points} 积分，连续 ${checkin.consecutive_days} 天</p>`;
+    checkinDiv.innerHTML=`<div class="points-info"><div><h3><i class="fas fa-calendar-check"></i> 每日签到</h3><p class="meta">北京时间每天刷新 · 第1–3天 3分 · 第4–10天 7分 · 第11天起 10分${profile?.role==='admin'?' · 管理员额外+3分':''}</p></div><div><div class="meta">我的积分余额</div><div class="points-balance"><i class="fas fa-coins"></i> <span id="home-point-balance">${balance}</span></div></div></div>`;
+    if(checkinError||balanceError){
+      checkinDiv.innerHTML+=`<p style="color:#ef4444">积分功能尚未初始化，请先执行配套 SQL：${esc(pointsError(checkinError||balanceError))}</p>`;
+    }else if(checkin){
+      checkinDiv.innerHTML+=`<p style="margin-top:10px">今日已签到，获得 <b>${checkin.points}</b> 积分，连续 <b>${checkin.consecutive_days}</b> 天</p>`;
     }else{
-      const btn=document.createElement('button');btn.className='checkin-btn';btn.textContent='签到领积分';btn.onclick=function(){performCheckin(btn);};
+      const btn=document.createElement('button');btn.className='checkin-btn';btn.style.marginTop='10px';btn.textContent='签到领积分';btn.onclick=()=>performCheckin(btn);
       checkinDiv.appendChild(btn);
     }
+    const shopBtn=document.createElement('button');shopBtn.className='outline';shopBtn.style.margin='10px 0 0 8px';shopBtn.innerHTML='<i class="fas fa-store"></i> 进入积分商城';shopBtn.onclick=()=>navigate('#shop');
+    checkinDiv.appendChild(shopBtn);
     container.appendChild(checkinDiv);
   }
+
   // 最近阅读
   if(user){
     const progressMap=getReadingProgressMap();
@@ -1125,17 +1176,18 @@ async function toggleFollowUser(userId){
 // ===== 个人中心 =====
 async function myProfile(container){
   if(!user)return navigate('#home');
-  const {data:checkins}=await supabaseClient.from('daily_checkins').select('points');
-  const totalPoints=checkins?.reduce((s,c)=>s+c.points,0)||0;
+  const {balance:totalPoints,error:walletError}=await fetchMyPoints();
   const card=document.createElement('div');card.className='card';
   const formatted=await formatUsername(profile,true);
-  card.innerHTML=`<div style="display:flex;gap:15px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url?`<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:profile.username[0]}</div><div><h2>${formatted}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;"><i class="fas fa-pen"></i></a></p><p><i class="fas fa-star" style="color:#eab308;"></i> 我的积分：${totalPoints}</p><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>${profile.role==='admin'?`<button onclick="openModal('edit-label')" class="outline" style="margin-top:6px;">编辑标签</button>`:''}</div></div><h3 style="margin-top:15px;"><i class="fas fa-book"></i> 我的小说</h3><div id="my-novels"></div><h3 style="margin-top:15px;"><i class="fas fa-comment"></i> 我的评论</h3><div id="my-comments"></div><h3 style="margin-top:15px;"><i class="fas fa-star"></i> 我的评分</h3><div id="my-ratings"></div><h3 style="margin-top:15px;"><a onclick="navigate('#notifications')"><i class="fas fa-bell"></i> 我的消息</a></h3>`;
+  card.innerHTML=`<div style="display:flex;gap:15px;align-items:center;"><div class="avatar-circle" style="width:60px;height:60px;font-size:24px;cursor:pointer;" onclick="openModal('upload-avatar')">${profile?.avatar_url?`<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`:profile.username[0]}</div><div><h2>${formatted}</h2><p>${esc(profile.bio||'编辑个人简介')} <a onclick="openModal('edit-bio')" style="font-size:12px;"><i class="fas fa-pen"></i></a></p><p><i class="fas fa-coins" style="color:#eab308;"></i> 我的积分：<b>${walletError?'暂不可用':totalPoints}</b></p><button class="gold" onclick="navigate('#shop')" style="margin-top:6px;">积分商城</button><button class="outline" onclick="navigate('#shop-orders')" style="margin-top:6px;">交易订单</button><button onclick="openModal('change-password')" class="outline" style="margin-top:6px;">修改密码</button>${profile.role==='admin'?`<button onclick="openModal('edit-label')" class="outline" style="margin-top:6px;">编辑标签</button>`:''}</div></div><h3 style="margin-top:15px;"><i class="fas fa-book"></i> 我的小说</h3><div id="my-novels"></div><h3 style="margin-top:15px;"><i class="fas fa-comment"></i> 我的评论</h3><div id="my-comments"></div><h3 style="margin-top:15px;"><i class="fas fa-star"></i> 我的评分</h3><div id="my-ratings"></div><h3 style="margin-top:15px;"><a onclick="navigate('#notifications')"><i class="fas fa-bell"></i> 我的消息 <span id="profile-notif-badge" class="notification-count"></span></a></h3>`;
   container.appendChild(card);
+  await renderPointsHistory(container);
   const titlesCard=document.createElement('div');
   titlesCard.className='card';
   titlesCard.innerHTML='<h3><i class="fas fa-award" style="color:#eab308"></i> 我的称号</h3><p class="meta">管理员称号和签到奖励称号统一管理，一次只能佩戴一个；社区、作者栏与个人主页展示相同样式。</p><div id="my-reward-titles" style="margin-top:12px">正在加载...</div>';
   container.appendChild(titlesCard);
   await renderMyRewardTitles();
+  updateNotificationBadge();
   const {data:novels}=await supabaseClient.from('novels').select('*').eq('author_id',user.id).order('updated_at',{ascending:false});
   document.getElementById('my-novels').innerHTML=novels?.length?novels.map(n=>`<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join(''):'<p>暂无</p>';
   const {data:comments}=await supabaseClient.from('comments').select('*,novels(title)').eq('user_id',user.id);
@@ -1249,12 +1301,26 @@ function openNewPostModal(){
       <h3>发布帖子</h3>
       <input id="post-title" placeholder="标题（至少2个字）">
       <div id="quill-editor-post" class="quill-editor"></div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;"><input type="checkbox" id="create-poll-toggle" style="width:auto;margin:0"> 添加投票</label>
+      <div id="create-poll-fields" class="hidden" style="margin-top:8px;">
+        <input id="poll-question" maxlength="150" placeholder="投票问题（可留空，默认使用帖子标题）">
+        <div id="poll-options"><input maxlength="100" placeholder="选项 1"><input maxlength="100" placeholder="选项 2"></div>
+        <button type="button" class="outline" id="add-poll-option" style="margin-top:8px;">+ 添加选项</button>
+        <small class="meta">单选，每人仅能投一次；最少2项，最多10项。</small>
+      </div>
       <button id="post-submit" style="width:100%;margin-top:12px;">提交</button>
       <div id="err" style="color:red;"></div>
     </div></div>
   `;
   document.getElementById('modal-container').innerHTML = modalHtml;
   const quill = initQuill('quill-editor-post', '');
+  const pollToggle=document.getElementById('create-poll-toggle');
+  pollToggle.onchange=()=>document.getElementById('create-poll-fields').classList.toggle('hidden',!pollToggle.checked);
+  document.getElementById('add-poll-option').onclick=()=>{
+    const el=document.getElementById('poll-options');
+    if(el.children.length>=10)return showToast('最多10个选项','warning');
+    const input=document.createElement('input');input.maxLength=100;input.placeholder='选项 '+(el.children.length+1);el.appendChild(input);
+  };
   document.getElementById('post-submit').onclick = async function() {
     const title = document.getElementById('post-title').value.trim();
     const content = quill.root.innerHTML;
@@ -1264,8 +1330,18 @@ function openNewPostModal(){
       document.getElementById('err').textContent = '内容违规，已记录违规';
       return;
     }
-    const { error } = await supabaseClient.from('posts').insert({ author_id: user.id, title, content, approval_status: 'pending' });
-    if (error) { document.getElementById('err').textContent = error.message; return; }
+    const pollEnabled=pollToggle.checked;
+    const options=pollEnabled?Array.from(document.querySelectorAll('#poll-options input')).map(i=>i.value.trim()):[];
+    if(pollEnabled&&(options.length<2||options.some(o=>!o)||new Set(options).size!==options.length))return document.getElementById('err').textContent='请填写至少两个不重复的投票选项';
+    if(pollEnabled&&(containsBanned(options.join(' '))||containsBanned(document.getElementById('poll-question').value)))return document.getElementById('err').textContent='投票包含违规词';
+    const submit=document.getElementById('post-submit');submit.disabled=true;
+    const {data:newPost,error}=await supabaseClient.from('posts').insert({ author_id: user.id, title, content, approval_status: 'pending' }).select('id').single();
+    if(error){submit.disabled=false;document.getElementById('err').textContent=error.message;return;}
+    if(pollEnabled){
+      const question=document.getElementById('poll-question').value.trim()||title;
+      const {error:pollError}=await supabaseClient.rpc('create_community_poll',{p_post_id:newPost.id,p_question:question,p_options:options});
+      if(pollError){submit.disabled=false;document.getElementById('err').textContent='帖子已创建，但投票创建失败：'+pollError.message;return;}
+    }
     showToast('提交成功，等待审核','success');
     closeModal();
     navigate('#community');
@@ -1303,6 +1379,7 @@ async function postDetail(container,postId){
     </div>
   `;
   container.appendChild(card);
+  await renderCommunityPoll(container,postId);
   const {data:replies}=await supabaseClient.from('post_replies').select('*,profiles(username,role,muted_until,label)').eq('post_id',postId).order('created_at',{ascending:true});
   const replyCard=document.createElement('div');replyCard.className='card';
   replyCard.innerHTML='<h3><i class="fas fa-reply-all"></i> 回复</h3>';
@@ -1389,180 +1466,406 @@ async function togglePin(postId){
 
 async function deletePost(postId){if(!confirm('删除帖子？'))return;await supabaseClient.from('posts').delete().eq('id',postId);showToast('已删除','success');navigate('#community');}
 
-// ===== 私信 =====
-async function updateMessageBadge(){
+// ===== 新积分钱包、积分商城、订单与私信转账 =====
+async function renderPointsHistory(container){
   if(!user)return;
-  const {count}=await supabaseClient.from('pm').select('*',{count:'exact',head:true}).eq('receiver_id',user.id).eq('is_read',false);
-  const badge=document.getElementById('msg-badge');
-  if(badge){if(count>0){badge.textContent=count;badge.classList.add('show');}else badge.classList.remove('show');}
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML='<div class="points-info"><h3><i class="fas fa-receipt"></i> 积分明细</h3><button class="outline" onclick="navigate(\'#shop-orders\')">我的订单</button></div><div id="points-history-rows" style="margin-top:8px"><p class="meta">正在读取...</p></div>';
+  container.appendChild(card);
+  const el=card.querySelector('#points-history-rows');
+  const {data,error}=await supabaseClient.from('point_transactions')
+    .select('amount,kind,description,created_at').eq('user_id',user.id)
+    .order('created_at',{ascending:false}).limit(20);
+  if(error){el.innerHTML='<p class="meta">积分流水读取失败：'+esc(pointsError(error))+'</p>';return;}
+  if(!data?.length){el.innerHTML='<p class="meta">新积分系统启用后，暂无积分变动。</p>';return;}
+  const kinds={checkin:'每日签到',transfer_in:'收到转账',transfer_out:'转出积分',purchase:'商城购买',sale:'出售商品'};
+  el.innerHTML=data.map(x=>`<div class="flex-row"><div><b>${kinds[x.kind]||'积分变动'}</b><div class="meta">${esc(x.description||'')} · ${new Date(x.created_at).toLocaleString()}</div></div><strong style="color:${Number(x.amount)>=0?'#10b981':'#ef4444'}">${Number(x.amount)>0?'+':''}${Number(x.amount)}</strong></div>`).join('');
 }
 
+async function pointsShop(container){
+  const top=document.createElement('div');top.className='card';
+  top.innerHTML='<div class="points-info"><div><h2><i class="fas fa-store" style="color:#eab308"></i> 积分商城</h2><p class="meta">使用积分购买商品，购买成功后积分立即进入商品发布者的账户。</p></div><div><div class="meta">我的可用积分</div><div class="points-balance" id="shop-balance">—</div></div></div><div class="btn-group"><button class="outline" onclick="navigate(\'#shop-orders\')"><i class="fas fa-list"></i> 我的订单</button><span id="shop-admin-quick"></span></div>';
+  container.appendChild(top);
+  if(user){
+    const {balance,error}=await fetchMyPoints();
+    top.querySelector('#shop-balance').textContent=error?'暂不可用':balance;
+    if(hasPermission('上架积分商品')){
+      top.querySelector('#shop-admin-quick').innerHTML='<button class="gold">管理我上架的商品</button>';
+      top.querySelector('#shop-admin-quick button').onclick=()=>navigate('#admin-shop');
+    }
+  }else top.querySelector('#shop-balance').textContent='登录后查看';
+  const {data:products,error}=await supabaseClient.from('point_products').select('*')
+    .eq('is_active',true).order('created_at',{ascending:false}).limit(100);
+  if(error){const e=document.createElement('div');e.className='card';e.textContent='商城加载失败：'+pointsError(error);container.appendChild(e);return;}
+  if(!products?.length){const empty=document.createElement('div');empty.className='card';empty.textContent='商城暂无上架商品，欢迎有权限的管理员发布。';container.appendChild(empty);return;}
+  const sellers=[...new Set(products.map(x=>x.seller_id))];
+  const {data:people}=await supabaseClient.from('profiles').select('id,username').in('id',sellers);
+  const sellerNames=new Map((people||[]).map(x=>[x.id,x.username]));
+  const grid=document.createElement('div');grid.className='shop-grid';container.appendChild(grid);
+  const {balance:balanceNow}=user?await fetchMyPoints():{balance:0};
+  for(const product of products){
+    const card=document.createElement('div');card.className='shop-card';
+    const imageHtml=product.image_url?`<img loading="lazy" src="${esc(product.image_url)}" alt="${esc(product.title)}" onerror="this.src='${PLACEHOLDER_IMAGE}'">`:'<div class="shop-no-image"><i class="fas fa-gift"></i><span>积分兑换好物</span></div>';
+    card.innerHTML=`${imageHtml}<div class="shop-card-content"><h3>${esc(product.title)}</h3><div class="shop-desc">${esc(product.description||'暂无商品描述')}</div><p class="meta">发布者：${esc(sellerNames.get(product.seller_id)||'管理员')} · ${product.stock===null?'不限库存':Number(product.stock)===0?'已售罄':'剩余 '+product.stock+' 件'}</p><div class="points-info"><span class="shop-price"><i class="fas fa-coins"></i> ${product.price} 积分</span><button class="gold shop-buy-btn">${user?.id===product.seller_id?'我的商品':'立即兑换'}</button></div></div>`;
+    const btn=card.querySelector('.shop-buy-btn');
+    if(user?.id===product.seller_id||product.stock===0){btn.disabled=true;if(product.stock===0)btn.textContent='已售罄';}
+    else if(user&&balanceNow<product.price){btn.textContent='积分不足';btn.className='outline shop-buy-btn';btn.disabled=true;}
+    btn.onclick=()=>{
+      if(!user)return showToast('请先登录再购买商品','warning');
+      showConfirm(`确认花费 <b>${product.price}</b> 积分购买「${esc(product.title)}」？积分会直接转入上架管理员账户。`,()=>buyPointsProduct(product.id));
+    };
+    grid.appendChild(card);
+  }
+}
+
+async function buyPointsProduct(productId){
+  if(!user)return showToast('请先登录','error');
+  const {data,error}=await supabaseClient.rpc('points_buy_product',{p_product_id:productId});
+  if(error)return showToast('购买失败：'+pointsError(error),'error');
+  showToast(`购买成功！扣除 ${data.paid} 积分，当前余额 ${data.balance}`,'success');
+  await render();
+}
+
+async function pointsOrdersPage(container){
+  if(!user){container.innerHTML+='<div class="card">请先登录查看积分订单。</div>';return;}
+  const head=document.createElement('div');head.className='card';
+  head.innerHTML='<h2><i class="fas fa-shopping-bag"></i> 积分商城订单</h2><p class="meta">购买后积分即时结算给发布商品的管理员；商品交付事宜可通过私信联系。</p><button class="outline" onclick="navigate(\'#shop\')">返回商城</button>';
+  container.appendChild(head);
+  const {data:orders,error}=await supabaseClient.from('point_orders').select('*')
+    .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+    .order('created_at',{ascending:false}).limit(100);
+  const card=document.createElement('div');card.className='card';container.appendChild(card);
+  if(error){card.textContent='订单读取失败：'+pointsError(error);return;}
+  if(!orders?.length){card.textContent='还没有购买或出售记录。';return;}
+  const otherIds=[...new Set(orders.map(o=>o.buyer_id===user.id?o.seller_id:o.buyer_id))];
+  const {data:people}=await supabaseClient.from('profiles').select('id,username').in('id',otherIds);
+  const names=new Map((people||[]).map(p=>[p.id,p.username]));
+  for(const order of orders){
+    const isBuyer=order.buyer_id===user.id;
+    const contact=isBuyer?order.seller_id:order.buyer_id;
+    const row=document.createElement('div');row.className='flex-row';
+    row.innerHTML=`<div><b>${esc(order.product_title)}</b> · ${isBuyer?'已购买':'已售出'}<p class="meta">${new Date(order.created_at).toLocaleString()} · ${isBuyer?'发布者':'购买者'}：${esc(names.get(contact)||'未知用户')}</p><p class="meta">订单号：${esc(order.id)}</p></div><div><strong style="color:${isBuyer?'#ef4444':'#10b981'}">${isBuyer?'-':'+'}${order.paid_points}积分</strong><div style="margin-top:6px"><button class="outline">联系${isBuyer?'卖家':'买家'}</button></div></div>`;
+    row.querySelector('button').onclick=()=>navigate(`#chat/${contact}`);
+    card.appendChild(row);
+  }
+}
+
+async function adminPointsProducts(){
+  if(!hasPermission('上架积分商品'))return showToast('你没有上架积分商品的权限','error');
+  const c=document.getElementById('admin-content');if(!c)return;
+  c.innerHTML='<div class="card"><h3><i class="fas fa-store"></i> 我的积分商品</h3><p class="meta">只有被授予「上架积分商品」权限的管理员可发布、定价、编辑和下架自己的商品。收入自动计入积分余额。</p><button class="gold" id="create-points-product"><i class="fas fa-plus"></i> 发布新商品</button> <button class="outline" onclick="navigate(\'#shop\')">查看积分商城</button></div><div id="admin-points-product-list"></div>';
+  document.getElementById('create-points-product').onclick=()=>openPointsProductEditor();
+  const {data:products,error}=await supabaseClient.from('point_products').select('*')
+    .eq('seller_id',user.id).order('created_at',{ascending:false});
+  const list=document.getElementById('admin-points-product-list');
+  if(error){list.textContent='商品读取失败：'+pointsError(error);return;}
+  if(!products?.length){list.innerHTML='<div class="card">还没有发布商品。</div>';return;}
+  for(const p of products){
+    const row=document.createElement('div');row.className='card';
+    row.innerHTML=`<div class="points-entry"><img style="width:80px;height:85px;object-fit:cover;border-radius:10px" src="${esc(p.image_url||PLACEHOLDER_IMAGE)}" onerror="this.src='${PLACEHOLDER_IMAGE}'"><div style="flex:1"><b>${esc(p.title)}</b><div class="meta">售价 ${p.price} 积分 · ${p.stock===null?'无限库存':'库存 '+p.stock} · ${p.is_active?'上架中':'已下架'}</div></div><button class="outline edit-shop-product">编辑</button><button class="${p.is_active?'danger':'gold'} toggle-shop-product">${p.is_active?'下架':'重新上架'}</button></div>`;
+    row.querySelector('.edit-shop-product').onclick=()=>openPointsProductEditor(p);
+    row.querySelector('.toggle-shop-product').onclick=async()=>{
+      const {error:e}=await supabaseClient.rpc('points_save_product',{
+        p_product_id:p.id,p_title:p.title,p_description:p.description||'',p_price:p.price,
+        p_image_url:p.image_url,p_stock:p.stock,p_active:!p.is_active
+      });
+      if(e)return showToast(pointsError(e),'error');
+      showToast('商品状态已更新','success');await adminPointsProducts();
+    };
+    list.appendChild(row);
+  }
+}
+
+function openPointsProductEditor(product=null){
+  if(!hasPermission('上架积分商品'))return showToast('无权上架商品','error');
+  openGenericForm(product?'编辑积分商品':'发布积分商品',`
+    <label>商品名称<input id="pp-name" maxlength="100" value="${esc(product?.title||'')}" placeholder="商品名称"></label>
+    <label>详细介绍<textarea id="pp-desc" maxlength="2000" rows="4" placeholder="描述兑换内容和交付方式">${esc(product?.description||'')}</textarea></label>
+    <label>积分价格<input id="pp-price" type="number" min="1" max="100000000" step="1" value="${product?.price||''}" placeholder="例如：100"></label>
+    <label>商品库存<input id="pp-stock" type="number" min="0" max="1000000" step="1" value="${product?.stock??''}" placeholder="留空表示不限库存"></label>
+    <label>上传商品图片（可选，最大5MB）<input id="pp-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+    <label>或填写图片 HTTPS 链接<input id="pp-image" maxlength="2000" value="${esc(product?.image_url||'')}" placeholder="https://..."></label>
+    <label style="display:flex;align-items:center;gap:10px;margin-top:10px"><input id="pp-active" type="checkbox" style="width:auto;margin:0" ${product?.is_active===false?'':'checked'}> 立即上架</label>
+  `,async()=>{
+    const title=document.getElementById('pp-name').value.trim();
+    const desc=document.getElementById('pp-desc').value.trim();
+    const priceText=document.getElementById('pp-price').value.trim();
+    const stockText=document.getElementById('pp-stock').value.trim();
+    const price=Number(priceText);
+    const stock=stockText===''?null:Number(stockText);
+    if(!title||title.length>100)throw new Error('请输入1至100字的商品名称');
+    if(!/^\d+$/.test(priceText)||price<1||price>100000000)throw new Error('请输入有效的积分价格');
+    if(stock!==null&&(!/^\d+$/.test(stockText)||stock>1000000))throw new Error('库存需为非负整数，留空表示不限库存');
+    let imageUrl=document.getElementById('pp-image').value.trim()||null;
+    const file=document.getElementById('pp-file').files[0];
+    if(file){
+      const extension={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'}[file.type];
+      if(!extension||file.size>5*1024*1024)throw new Error('仅支持 JPG/PNG/WebP/GIF，最大5MB');
+      const path=`${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+      const {error:upError}=await supabaseClient.storage.from('point-products').upload(path,file,{contentType:file.type,upsert:false});
+      if(upError)throw new Error('商品图片上传失败：'+upError.message);
+      imageUrl=supabaseClient.storage.from('point-products').getPublicUrl(path).data.publicUrl;
+    }
+    const {error}=await supabaseClient.rpc('points_save_product',{
+      p_product_id:product?.id||null,p_title:title,p_description:desc,p_price:price,
+      p_stock:stock,p_image_url:imageUrl,p_active:document.getElementById('pp-active').checked
+    });
+    if(error)throw new Error('保存失败：'+pointsError(error));
+    showToast(product?'商品修改成功':'商品发布成功','success');
+    await adminPointsProducts();
+  });
+}
+
+async function openPointsTransfer(partnerId,partnerName){
+  if(!user)return showToast('请先登录','error');
+  if(partnerId===user.id)return showToast('不能给自己转账','error');
+  const {balance,error}=await fetchMyPoints();
+  if(error)return showToast('无法读取积分余额：'+pointsError(error),'error');
+  openGenericForm(`转积分给 ${esc(partnerName)}`,`
+    <p class="meta">当前可用积分：<b>${balance}</b>，转账确认后立即到账，不可撤销。</p>
+    <label>转账积分<input id="pt-amount" type="number" min="1" step="1" max="100000000" placeholder="输入积分数量"></label>
+    <label>备注（选填）<input id="pt-note" maxlength="100" placeholder="想对TA说的话"></label>
+  `,async()=>{
+    const amountText=document.getElementById('pt-amount').value.trim();
+    const amount=Number(amountText),note=document.getElementById('pt-note').value.trim();
+    if(!/^\d+$/.test(amountText)||amount<1||amount>100000000)throw new Error('请输入有效的正整数积分');
+    if(amount>balance)throw new Error('积分余额不足');
+    const {data,error:e}=await supabaseClient.rpc('points_transfer',{
+      p_receiver_id:partnerId,p_amount:amount,p_note:note
+    });
+    if(e)throw new Error(pointsError(e));
+    showToast(`转账成功！已发送 ${data.amount} 积分，剩余 ${data.balance} 积分`,'success');
+    await render();
+  });
+}
+
+// ===== 私信 =====
+async function updateMessageBadge(){
+  const badge=document.getElementById('msg-badge');
+  if(!user){if(badge)badge.classList.remove('show');return;}
+  const {count,error}=await supabaseClient.from('pm').select('id',{count:'exact',head:true}).eq('receiver_id',user.id).eq('is_read',false);
+  if(!error&&badge){badge.textContent=count>99?'99+':count||'';badge.classList.toggle('show',count>0);}
+}
 async function messagesPage(container){
   if(!user)return container.innerHTML='<p>请先登录</p>';
   const searchCard=document.createElement('div');searchCard.className='card';
   searchCard.innerHTML=`<h2><i class="fas fa-envelope"></i> 私信</h2><input id="msg-search" placeholder="搜索用户名发起私信..."><div id="msg-search-results" style="margin-top:10px;"></div>`;
   container.appendChild(searchCard);
-  const {data:msgs}=await supabaseClient.from('pm').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at',{ascending:false});
-  const conversations=new Map();
-  if(msgs){
-    msgs.forEach(m=>{
-      const otherId=m.sender_id===user.id?m.receiver_id:m.sender_id;
-      if(!conversations.has(otherId)||new Date(m.created_at)>new Date(conversations.get(otherId).created_at)){
-        conversations.set(otherId,m);
-      }
-    });
-  }
-  const userIds=Array.from(conversations.keys());
-  if(userIds.length>0){
-    const {data:profiles}=await supabaseClient.from('profiles').select('*').in('id',userIds);
-    const listCard=document.createElement('div');listCard.className='card';
-    listCard.innerHTML='<h3>最近会话</h3>';
-    if(profiles){
-      for(const p of profiles){
-        const lastMsg=conversations.get(p.id);
-        const unread=lastMsg&&!lastMsg.is_read&&lastMsg.receiver_id===user.id;
-        const avatarHtml=p.avatar_url?`<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">`:p.username[0];
-        const div=document.createElement('div');
-        div.className='msg-list-item';
-        div.onclick=()=>navigate(`#chat/${p.id}`);
-        div.innerHTML=`
-          <div class="msg-avatar">${avatarHtml}</div>
-          <div class="msg-content">
-            <div class="username" style="display:flex;align-items:center;">${esc(p.username)} ${unread?'<span class="unread-dot"></span>':''}</div>
-            <div class="last-msg">${esc(lastMsg?.content?.substring(0,40)||'')}</div>
-          </div>
-          <div class="msg-time">${lastMsg?new Date(lastMsg.created_at).toLocaleTimeString():''}</div>
-        `;
-        listCard.appendChild(div);
-      }
+  const {data:msgs,error}=await supabaseClient.from('pm').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at',{ascending:false}).limit(500);
+  if(error){container.innerHTML+='<p>加载私信失败：'+esc(error.message)+'</p>';return;}
+  const conversations=new Map();const unreadCounts=new Map();
+  (msgs||[]).forEach(m=>{
+    const otherId=m.sender_id===user.id?m.receiver_id:m.sender_id;
+    if(!conversations.has(otherId))conversations.set(otherId,m);
+    if(m.receiver_id===user.id&&!m.is_read)unreadCounts.set(otherId,(unreadCounts.get(otherId)||0)+1);
+  });
+  const ids=Array.from(conversations.keys());
+  const listCard=document.createElement('div');listCard.className='card';listCard.innerHTML='<h3>最近会话</h3>';
+  if(ids.length){
+    const {data:people}=await supabaseClient.from('profiles').select('*').in('id',ids);
+    const byId=new Map((people||[]).map(p=>[p.id,p]));
+    for(const id of ids){
+      const p=byId.get(id);if(!p)continue;
+      const m=conversations.get(id),unread=unreadCounts.get(id)||0;
+      const div=document.createElement('div');div.className='msg-list-item';div.onclick=()=>navigate(`#chat/${id}`);
+      const avatar=p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="头像">`:esc((p.username||'?')[0]);
+      div.innerHTML=`<div class="msg-avatar">${avatar}</div><div class="msg-content"><div class="username">${esc(p.username)} ${unread?'<span class="unread-dot"></span>':''}</div><div class="last-msg">${m.sender_id===user.id?'我：':''}${esc((m.content||'').slice(0,60))}</div></div><div class="msg-time">${new Date(m.created_at).toLocaleString()}${unread?`<div style="color:#ef4444">${unread}条未读</div>`:''}</div>`;
+      listCard.appendChild(div);
     }
-    container.appendChild(listCard);
-  }else{
-    container.innerHTML+='<p style="text-align:center;color:#94a3b8;">暂无消息</p>';
-  }
+  }else listCard.innerHTML+='<p class="meta">暂无消息</p>';
+  container.appendChild(listCard);
   const inp=document.getElementById('msg-search');
-  if(inp){
-    inp.addEventListener('input',async ()=>{
-      const kw=inp.value.trim();
-      const resultsDiv=document.getElementById('msg-search-results');
-      if(!kw){resultsDiv.innerHTML='';return;}
-      const {data:users}=await supabaseClient.from('profiles').select('*').ilike('username',`%${kw}%`).neq('id',user.id).limit(5);
-      resultsDiv.innerHTML='';
-      if(users){
-        users.forEach(u=>{
-          resultsDiv.innerHTML+=`<div class="msg-list-item" onclick="navigate('#chat/${u.id}')"><div class="msg-avatar">${u.username[0]}</div><div class="msg-content"><div class="username">${esc(u.username)}</div></div></div>`;
-        });
-      }
-    });
-  }
+  inp.addEventListener('input',async()=>{
+    const kw=inp.value.trim(),results=document.getElementById('msg-search-results');
+    if(!kw){results.innerHTML='';return;}
+    const {data:people}=await supabaseClient.from('profiles').select('id,username').ilike('username',`%${kw}%`).neq('id',user.id).limit(8);
+    if(inp.value.trim()!==kw)return;
+    results.innerHTML=(people||[]).map(p=>`<div class="msg-list-item" onclick="navigate('#chat/${p.id}')">${esc(p.username)}</div>`).join('')||'<p class="meta">没有找到用户</p>';
+  });
 }
 
-// ===== 私信聊天（含 Realtime） =====
 async function chatPage(container,partnerId){
   if(!user)return container.innerHTML='<p>请先登录</p>';
-  const {data:partner}=await supabaseClient.from('profiles').select('*').eq('id',partnerId).single();
-  if(!partner)return container.innerHTML+='<p>用户不存在</p>';
-  const {data:unreadMsgs}=await supabaseClient.from('pm').select('id').eq('sender_id',partnerId).eq('receiver_id',user.id).eq('is_read',false);
-  if(unreadMsgs?.length){await supabaseClient.from('pm').update({is_read:true}).in('id',unreadMsgs.map(m=>m.id));}
-  const {data:msgs}=await supabaseClient.from('pm').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at',{ascending:true});
-  const avatarHtml=partner.avatar_url?`<img src="${partner.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`:partner.username[0];
+  const {data:partner}=await supabaseClient.from('profiles').select('*').eq('id',partnerId).maybeSingle();
+  if(!partner)return container.innerHTML='<p>用户不存在</p>';
+  const {error:readError}=await supabaseClient.from('pm').update({is_read:true}).eq('sender_id',partnerId).eq('receiver_id',user.id).eq('is_read',false);
+  if(readError)console.warn('更新私信已读状态失败',readError);
+  updateMessageBadge();
+  const {data:msgs,error}=await supabaseClient.from('pm').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(500);
+  if(error)return container.innerHTML='<p>加载聊天失败：'+esc(error.message)+'</p>';
   const header=document.createElement('div');header.className='chat-header';
-  header.innerHTML=`<div class="msg-avatar" style="width:40px;height:40px;font-size:16px;margin-right:10px;">${avatarHtml}</div><div style="font-weight:bold;font-size:18px;">${esc(partner.username)}</div><button onclick="navigate('#messages')" style="margin-left:auto;">返回</button>`;
+  header.innerHTML=`<div class="msg-avatar" style="width:40px;height:40px;margin-right:10px">${partner.avatar_url?`<img src="${esc(partner.avatar_url)}">`:esc(partner.username[0])}</div><b>${esc(partner.username)}</b><div style="margin-left:auto;display:flex;gap:6px;"><button class="gold" id="transfer-points-btn"><i class="fas fa-coins"></i> 转积分</button><button onclick="navigate('#messages')">返回</button></div>`;
+  header.querySelector('#transfer-points-btn').onclick=()=>openPointsTransfer(partner.id,partner.username);
   container.appendChild(header);
-  const body=document.createElement('div');body.className='chat-body';body.id=`chat-body-${partnerId}`;
-  function appendMessage(msg,isMine){
-    const outerDiv=document.createElement('div');outerDiv.className=`chat-bubble ${isMine?'mine':'other'}`;
-    const innerDiv=document.createElement('div');
-    const bubbleSpan=document.createElement('span');bubbleSpan.className='bubble';
-    bubbleSpan.innerHTML=esc(msg.content).replace(/\n/g,'<br>');
-    const timeSpan=document.createElement('div');timeSpan.className='time';
-    timeSpan.textContent=new Date(msg.created_at||Date.now()).toLocaleTimeString();
-    innerDiv.appendChild(bubbleSpan);innerDiv.appendChild(timeSpan);
-    outerDiv.appendChild(innerDiv);
-    body.appendChild(outerDiv);
-    body.scrollTop=body.scrollHeight;
+  const body=document.createElement('div');body.className='chat-body';container.appendChild(body);
+  const {data:transferRecords,error:transferError}=await supabaseClient.from('point_transfers')
+    .select('pm_id,sender_id,receiver_id,amount,note')
+    .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
+    .limit(500);
+  if(transferError)console.warn('加载积分转账凭证失败',transferError);
+  const verifiedTransfers=new Map((transferRecords||[]).map(t=>[String(t.pm_id),t]));
+  const ids=new Set();
+  function appendMessage(m){
+    if(m.id!=null&&ids.has(String(m.id)))return;
+    if(m.id!=null)ids.add(String(m.id));
+    const empty=body.querySelector('[data-empty-chat]');if(empty)empty.remove();
+    const outer=document.createElement('div');outer.className='chat-bubble '+(m.sender_id===user.id?'mine':'other');
+    const bubble=document.createElement('span');bubble.className='bubble';
+    const t=verifiedTransfers.get(String(m.id));
+    if(t&&t.sender_id===m.sender_id&&t.receiver_id===m.receiver_id){
+      bubble.classList.add('points-transfer-bubble');
+      bubble.textContent=`✓ 已验证积分转账：${t.amount} 积分${t.note?'\n备注：'+t.note:''}`;
+    }else bubble.textContent=m.content||'';
+    const time=document.createElement('div');time.className='time';time.textContent=new Date(m.created_at||Date.now()).toLocaleString();
+    outer.append(bubble,time);body.appendChild(outer);body.scrollTop=body.scrollHeight;
   }
-  if(msgs?.length){msgs.forEach(m=>{const isMe=m.sender_id===user.id;appendMessage(m,isMe);});}else{body.innerHTML='<p style="text-align:center;color:#94a3b8;">暂无消息</p>';}
-  container.appendChild(body);
-  if(currentChatChannel){await supabaseClient.removeChannel(currentChatChannel);currentChatChannel=null;}
-  const channel=supabaseClient.channel(`pm-${user.id}-${partnerId}`)
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'pm',filter:`receiver_id=eq.${user.id}`},(payload)=>{
-      const newMsg=payload.new;
-      if(newMsg.sender_id===partnerId){
-        const placeholder=body.querySelector('p');
-        if(placeholder&&placeholder.style.textAlign==='center')placeholder.remove();
-        appendMessage(newMsg,false);
-        supabaseClient.from('pm').update({is_read:true}).eq('id',newMsg.id);
-        updateMessageBadge();
-      }
-    })
-    .subscribe();
+  if(msgs?.length)msgs.forEach(appendMessage);
+  else body.innerHTML='<p data-empty-chat style="text-align:center;color:#94a3b8">暂无消息</p>';
+  const channel=supabaseClient.channel(`pm-chat-${user.id}-${partnerId}-${Date.now()}`)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'pm',filter:`receiver_id=eq.${user.id}`},async payload=>{
+      const m=payload.new;
+      if(m.sender_id!==partnerId||location.hash!==`#chat/${partnerId}`)return;
+      const {data:t}=await supabaseClient.from('point_transfers').select('pm_id,sender_id,receiver_id,amount,note').eq('pm_id',String(m.id)).maybeSingle();
+      if(t)verifiedTransfers.set(String(t.pm_id),t);
+      appendMessage(m);
+      await supabaseClient.from('pm').update({is_read:true}).eq('id',m.id).eq('receiver_id',user.id);
+      updateMessageBadge();
+    }).subscribe();
   currentChatChannel=channel;
-  const inputArea=document.createElement('div');inputArea.className='chat-input-area';
-  inputArea.innerHTML=`<textarea id="msg-input" rows="2" placeholder="输入消息..."></textarea><button id="send-btn" style="margin-left:8px;padding:10px 20px;"><i class="fas fa-paper-plane"></i> 发送</button>`;
-  container.appendChild(inputArea);
-  document.getElementById('send-btn').onclick=async ()=>{
-    const content=document.getElementById('msg-input').value.trim();
-    if(!content)return;
-    const tempMsg={content,sender_id:user.id,receiver_id:partnerId,created_at:new Date().toISOString()};
-    const placeholder=body.querySelector('p');
-    if(placeholder&&placeholder.style.textAlign==='center')placeholder.remove();
-    appendMessage(tempMsg,true);
-    document.getElementById('msg-input').value='';
-    body.scrollTop=body.scrollHeight;
-    const {error}=await supabaseClient.from('pm').insert({sender_id:user.id,receiver_id:partnerId,content});
-    if(error){showToast('发送失败：'+error.message,'error');}
+  const area=document.createElement('div');area.className='chat-input-area';
+  area.innerHTML='<textarea id="msg-input" rows="2" placeholder="输入消息...（Shift+Enter换行）"></textarea><button id="send-btn"><i class="fas fa-paper-plane"></i> 发送</button>';
+  container.appendChild(area);
+  const input=area.querySelector('textarea'),btn=area.querySelector('button');
+  btn.onclick=async()=>{
+    const content=input.value.trim();if(!content||btn.disabled)return;
+    btn.disabled=true;
+    const {data,error:sendError}=await supabaseClient.from('pm').insert({sender_id:user.id,receiver_id:partnerId,content}).select('*').single();
+    btn.disabled=false;
+    if(sendError){showToast('发送失败：'+sendError.message,'error');return;}
+    input.value='';appendMessage(data);input.focus();
   };
-  document.getElementById('msg-input').addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('send-btn').click();}});
-  setTimeout(()=>{body.scrollTop=body.scrollHeight;},100);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();btn.click();}});
+  body.scrollTop=body.scrollHeight;
 }
 
-// ===== 通知 =====
+// ===== 社区单选投票 =====
+async function renderCommunityPoll(container,postId){
+  const {data:poll,error}=await supabaseClient.from('community_polls').select('id,question').eq('post_id',postId).maybeSingle();
+  if(error){console.warn('读取社区投票失败，请执行 SQL',error);return;}
+  if(!poll)return;
+  const card=document.createElement('div');card.className='card';container.appendChild(card);
+  async function refresh(){
+    const [{data:options,error:optError},{data:votes,error:voteError}]=await Promise.all([
+      supabaseClient.from('community_poll_options').select('id,label,position').eq('poll_id',poll.id).order('position'),
+      supabaseClient.from('community_poll_votes').select('option_id,user_id').eq('poll_id',poll.id)
+    ]);
+    if(optError||voteError){card.textContent='投票加载失败，请检查数据库权限：'+(optError||voteError).message;return;}
+    const mine=(votes||[]).find(v=>v.user_id===user?.id),total=(votes||[]).length;
+    card.innerHTML=`<h3><i class="fas fa-poll"></i> ${esc(poll.question)}</h3><p class="meta">单选 · ${total}人参与${mine?' · 你已投票':''}</p>`;
+    for(const opt of options||[]){
+      const count=(votes||[]).filter(v=>v.option_id===opt.id).length,pct=total?Math.round(count/total*100):0;
+      const line=document.createElement('div');line.style.margin='12px 0';
+      if(user&&!mine){
+        const btn=document.createElement('button');btn.className='outline';btn.style.width='100%';btn.textContent=opt.label;
+        btn.onclick=async()=>{
+          btn.disabled=true;
+          const {error:e}=await supabaseClient.from('community_poll_votes').insert({poll_id:poll.id,option_id:opt.id,user_id:user.id});
+          if(e)showToast('投票失败：'+e.message,'error');
+          await refresh();
+        };line.appendChild(btn);
+      }else{
+        const text=document.createElement('div');text.textContent=`${opt.label} — ${count}票（${pct}%）${mine?.option_id===opt.id?' ✓':''}`;line.appendChild(text);
+      }
+      const track=document.createElement('div');track.className='poll-track';track.innerHTML=`<div class="poll-fill" style="width:${pct}%"></div>`;line.appendChild(track);card.appendChild(line);
+    }
+    if(!user){const hint=document.createElement('p');hint.className='meta';hint.textContent='登录后即可参与投票';card.appendChild(hint);}
+  }
+  await refresh();
+}
+
+// ===== 个人消息中心 =====
+async function getNotificationItems(){
+  if(!user)return [];
+  const uid=user.id,items=[];
+  const [{data:myPosts},{data:myReplies},{data:myNovels},{data:favorites}]=await Promise.all([
+    supabaseClient.from('posts').select('id,title').eq('author_id',uid),
+    supabaseClient.from('post_replies').select('id,post_id').eq('author_id',uid),
+    supabaseClient.from('novels').select('id,title').eq('author_id',uid),
+    supabaseClient.from('favorites').select('novel_id,novels(title)').eq('user_id',uid)
+  ]);
+  const posts=myPosts||[],replies=myReplies||[],novels=myNovels||[];
+  if(posts.length){
+    const {data:rows}=await supabaseClient.from('post_replies').select('id,post_id,author_id,created_at,content').in('post_id',posts.map(x=>x.id)).neq('author_id',uid).order('created_at',{ascending:false}).limit(150);
+    const titles=new Map(posts.map(x=>[String(x.id),x.title]));
+    (rows||[]).forEach(r=>items.push({key:'postreply:'+r.id,created_at:r.created_at,text:`你的帖子《${titles.get(String(r.post_id))||'帖子'}》有新回复：${(r.content||'').slice(0,70)}`,href:`#post/${r.post_id}`}));
+  }
+  if(replies.length){
+    const {data:rows}=await supabaseClient.from('post_replies').select('id,post_id,author_id,created_at,content').in('parent_id',replies.map(x=>x.id)).neq('author_id',uid).order('created_at',{ascending:false}).limit(150);
+    (rows||[]).forEach(r=>items.push({key:'replyreply:'+r.id,created_at:r.created_at,text:'你的回复收到新回复：'+(r.content||'').slice(0,70),href:`#post/${r.post_id}`}));
+  }
+  if(novels.length){
+    const {data:rows}=await supabaseClient.from('comments').select('id,novel_id,user_id,content,created_at').in('novel_id',novels.map(x=>x.id)).neq('user_id',uid).order('created_at',{ascending:false}).limit(150);
+    const titles=new Map(novels.map(x=>[String(x.id),x.title]));
+    (rows||[]).forEach(r=>items.push({key:'novelcomment:'+r.id,created_at:r.created_at,text:`你的小说《${titles.get(String(r.novel_id))||'小说'}》有新评论：${(r.content||'').slice(0,70)}`,href:`#novel/${r.novel_id}`}));
+  }
+  const seen=getFavoriteSeenMap();
+  for(const fav of favorites||[]){
+    const {data:last}=await supabaseClient.from('chapters').select('id,chapter_number,title').eq('novel_id',fav.novel_id).order('chapter_number',{ascending:false}).limit(1).maybeSingle();
+    if(!last)continue;
+    if(seen[fav.novel_id]===undefined){seen[fav.novel_id]=Number(last.chapter_number)||0;continue;}
+    if(Number(last.chapter_number)>Number(seen[fav.novel_id]))items.push({key:`chapter:${fav.novel_id}:${last.chapter_number}`,created_at:new Date().toISOString(),text:`收藏的《${fav.novels?.title||'小说'}》更新：第${last.chapter_number}章 ${last.title}`,href:`#chapter/${last.id}`});
+  }
+  saveFavoriteSeenMap(seen);
+  const dedup=new Map(items.map(i=>[i.key,i]));
+  return [...dedup.values()].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+}
+async function getReadNotificationKeys(){
+  if(!user)return new Set();
+  const {data,error}=await supabaseClient.from('user_notification_reads').select('notification_key').eq('user_id',user.id).limit(1000);
+  if(error){console.warn('请执行通知升级 SQL',error);return new Set();}
+  return new Set((data||[]).map(x=>x.notification_key));
+}
+async function updateNotificationBadge(){
+  const badge=document.getElementById('profile-notif-badge');
+  if(!badge||!user)return;
+  try{
+    const [items,read]=await Promise.all([getNotificationItems(),getReadNotificationKeys()]);
+    const n=items.filter(x=>!read.has(x.key)).length;
+    badge.textContent=n?`(${n}条未读)`:'（暂无未读）';badge.style.color=n?'#ef4444':'#94a3b8';
+  }catch(e){console.warn('统计消息失败',e);}
+}
+async function markNotificationRead(key,href){
+  if(!user)return;
+  const {error}=await supabaseClient.from('user_notification_reads').upsert({user_id:user.id,notification_key:key},{onConflict:'user_id,notification_key'});
+  if(error)showToast('标记已读失败：'+error.message,'error');
+  else if(href)navigate(href);
+  else notificationsPage(document.getElementById('app'));
+}
+async function markAllNotificationsRead(){
+  const items=await getNotificationItems();const read=await getReadNotificationKeys();
+  const rows=items.filter(x=>!read.has(x.key)).map(x=>({user_id:user.id,notification_key:x.key}));
+  if(rows.length){const {error}=await supabaseClient.from('user_notification_reads').upsert(rows,{onConflict:'user_id,notification_key'});if(error)return showToast(error.message,'error');}
+  render();
+}
 async function notificationsPage(container){
   if(!user)return container.innerHTML='<p>请先登录</p>';
-  const back=document.createElement('div');back.className='back-link';back.textContent='← 返回';back.onclick=()=>navigate('#profile');
-  container.appendChild(back);
   const card=document.createElement('div');card.className='card';
-  card.innerHTML='<h2><i class="fas fa-bell"></i> 我的消息</h2><div id="notif-list">加载中...</div>';
+  card.innerHTML='<h2><i class="fas fa-bell"></i> 我的消息</h2><p class="meta">新回复、小说评论和收藏更新都会出现在这里。</p><button class="outline" onclick="markAllNotificationsRead()">全部标为已读</button><div id="notif-list" style="margin-top:12px">加载中...</div>';
   container.appendChild(card);
-  const {data:votes}=await supabaseClient.from('post_votes').select('post_id,vote_type,created_at').eq('user_id',user.id).order('created_at',{ascending:false});
-  const {data:replies}=await supabaseClient.from('post_replies').select('id,post_id,content,created_at').eq('author_id',user.id);
-  const {data:myReplies}=await supabaseClient.from('post_replies').select('id,post_id,content,parent_id,created_at').in('parent_id',replies.map(r=>r.id));
-  const {data:myNovels}=await supabaseClient.from('novels').select('id,title').eq('author_id',user.id);
-  const novelIds=myNovels?.map(n=>n.id)||[];
-  const {data:novelComms}=await supabaseClient.from('comments').select('*,novels(title)').in('novel_id',novelIds).order('created_at',{ascending:false});
-
-  const {data:favorites}=await supabaseClient.from('favorites').select('novel_id,novels(id,title)').eq('user_id',user.id);
-  const seenMap=getFavoriteSeenMap();
-  const favoriteUpdates=[];
-  let seenChanged=false;
-  for(const fav of (favorites||[])){
-    const {data:latest}=await supabaseClient.from('chapters').select('id,title,chapter_number').eq('novel_id',fav.novel_id).order('chapter_number',{ascending:false}).limit(1).maybeSingle();
-    if(!latest)continue;
-    if(seenMap[fav.novel_id]===undefined){
-      seenMap[fav.novel_id]=Number(latest.chapter_number)||0;
-      seenChanged=true;
-      continue;
-    }
-    if((Number(latest.chapter_number)||0)>(Number(seenMap[fav.novel_id])||0)){
-      favoriteUpdates.push({novel_id:fav.novel_id,novel_title:fav.novels?.title||'未知小说',chapter_id:latest.id,chapter_title:latest.title,chapter_number:latest.chapter_number});
-    }
+  const [items,read]=await Promise.all([getNotificationItems(),getReadNotificationKeys()]);
+  const list=card.querySelector('#notif-list');list.innerHTML='';
+  if(!items.length){list.innerHTML='<p class="meta">暂无消息</p>';return;}
+  for(const item of items){
+    const unread=!read.has(item.key);const row=document.createElement('div');
+    row.className='msg-list-item'+(unread?' notice-unread':'');
+    const txt=document.createElement('div');txt.className='msg-content';
+    const title=document.createElement('div');title.textContent=item.text;txt.appendChild(title);
+    const time=document.createElement('div');time.className='msg-time';time.textContent=new Date(item.created_at).toLocaleString();txt.appendChild(time);
+    row.appendChild(txt);
+    if(unread){const dot=document.createElement('span');dot.className='unread-dot';row.appendChild(dot);}
+    row.onclick=()=>markNotificationRead(item.key,item.href);
+    list.appendChild(row);
   }
-  if(seenChanged)saveFavoriteSeenMap(seenMap);
-
-  let html='';
-  if(favoriteUpdates.length){
-    html+='<h4><i class="fas fa-book-open"></i> 收藏更新</h4>';
-    favoriteUpdates.forEach(u=>{
-      html+=`<div class="notification-item"><a onclick="navigate('#chapter/${u.chapter_id}')" style="font-weight:600;">《${esc(u.novel_title)}》更新到第${u.chapter_number}章：${esc(u.chapter_title)}</a></div>`;
-    });
-  }
-  if(votes?.length){html+='<h4>帖子投票</h4>';votes.forEach(v=>html+=`<div class="notification-item">你的帖子被${v.vote_type==='like'?'赞':'踩'}了 <small class="meta">${new Date(v.created_at).toLocaleString()}</small></div>`);}
-  if(replies?.length){html+='<h4>帖子回复</h4>';for(const r of replies){const {data:post}=await supabaseClient.from('posts').select('title').eq('id',r.post_id).single();html+=`<div class="notification-item">你的帖子《${esc(post?.title||'')}》有新回复 <small class="meta">${new Date(r.created_at).toLocaleString()}</small></div>`;}}
-  if(myReplies?.length){html+='<h4>回复被引用</h4>';myReplies.forEach(r=>html+=`<div class="notification-item">你的回复被回复了 <small class="meta">${new Date(r.created_at).toLocaleString()}</small></div>`);}
-  if(novelComms?.length){html+='<h4>小说评论</h4>';novelComms.forEach(c=>html+=`<div class="notification-item">你的小说《${esc(c.novels.title)}》有新评论 <small class="meta">${new Date(c.created_at).toLocaleString()}</small></div>`);}
-  if(!html)html='<p>暂无新消息</p>';
-  document.getElementById('notif-list').innerHTML=html;
 }
 
 // ===== 管理员后台 =====
@@ -1572,6 +1875,7 @@ async function adminPanel(container){
   if(hasPermission('通过帖子'))buttons+=`<button onclick="adminPostApprovals()">审核帖子</button>`;
   if(hasPermission('通过小说'))buttons+=`<button onclick="adminNovelApprovals()">审核小说</button>`;
   if(hasPermission('管理用户'))buttons+=`<button onclick="adminUsers()" style="margin-left:6px;">管理用户</button>`;
+  if(hasPermission('上架积分商品'))buttons+=`<button class="gold" onclick="adminPointsProducts()"><i class="fas fa-store"></i> 积分商品管理</button>`;
   if(isSuperAdmin())buttons+=`<button onclick="adminAdmins()">管理管理员</button><button onclick="adminRewardTitles()">签到奖励称号</button>`;
   buttons+=`<button onclick="adminAds()">管理广告</button><button onclick="editAnnouncement()">编辑公告</button>`;
   if(profile?.email==='18631167199@163.com')buttons+=`<button onclick="adminMessages()" style="background:#ef4444;">私信监控</button>`;
@@ -1781,6 +2085,8 @@ initDarkMode();
 if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
 render();
 </script>
+<script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
+<script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
 <script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
 <script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script></body>
 </html>
