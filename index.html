@@ -224,7 +224,7 @@
     @media(max-width:400px){.novel-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.ai-chat{width:90%;right:5%}.search-box select{min-width:60px;font-size:12px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/><link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/><link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/><link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/></head>
+<link rel="stylesheet" href="/Static/css/Global.css"/><link rel="stylesheet" href="/Web/css/Global.css"/><link rel="stylesheet" href="/Web/css/XYChatGPT.css"/></head>
 <body>
 <div class="container" id="app"></div>
 <nav class="bottom-nav" id="bottom-nav">
@@ -248,7 +248,13 @@ const SUPABASE_ANON_KEY = 'sb_publishable_8ET2ng5O0n6phqCtoz3bxA_xTn2cTsi';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22180%22%3E%3Crect fill=%22%23f1f5f9%22 width=%22150%22 height=%22180%22/%3E%3C/svg%3E';
 
-let user = null, profile = null, rendering = false;
+let user = null, profile = null, rendering = false, pendingRender = false;
+let profileLoadedAt = 0, profileForId = null;
+let adCarouselTimer = null;
+const DISPLAY_CACHE_MS = 120000;
+const userColorCache = new Map();
+const userColorInflight = new Map();
+let notificationItemsCache = {userId:null, at:0, promise:null};
 let currentChatChannel = null;
 let searchTimeout = null;
 let notificationChannel=null;
@@ -306,21 +312,63 @@ async function addViolation(userId,reason){
   await supabaseClient.from('profiles').update({violation_count:count,muted_until}).eq('id',userId);
 }
 
+function computedUserColor(nCount,days,total){
+  const score=nCount*10+days*2+total;
+  return score>=100?'#eab308':score>=50?'#3b82f6':score>=20?'#10b981':'#1e293b';
+}
+
+// 在用户列表渲染前批量查询一次，避免每位作者独立发起 4~5 次网络请求。
+async function primeUserDisplayCache(people){
+  const now=Date.now();
+  const ids=[...new Set((people||[]).filter(Boolean).map(p=>p.id).filter(Boolean))]
+    .filter(id=>!userColorCache.has(id)||now-userColorCache.get(id).at>DISPLAY_CACHE_MS);
+  if(!ids.length)return;
+  // Supabase 默认返回上限为 1000 行，达到上限时回退为按用户精确统计，避免算错等级。
+  for(let offset=0;offset<ids.length;offset+=40){
+    const batch=ids.slice(offset,offset+40);
+    const [n,c,r,t]=await Promise.all([
+      supabaseClient.from('novels').select('author_id').in('author_id',batch).eq('approval_status','approved'),
+      supabaseClient.from('daily_checkins').select('user_id').in('user_id',batch),
+      supabaseClient.from('ratings').select('user_id,score').in('user_id',batch),
+      supabaseClient.from('user_equipped_titles').select('user_id,title_type,reward_titles(title,color)').in('user_id',batch)
+    ]);
+    if(!t.error){
+      const equipped=new Map((t.data||[]).map(x=>[x.user_id,x]));
+      for(const id of batch)if(!rewardCache.has(id))rewardCache.set(id,equipped.get(id)||null);
+    }
+    if(n.error||c.error||r.error||[n.data?.length,c.data?.length,r.data?.length].some(v=>v>=1000))continue;
+    const novels=new Map(),days=new Map(),rating=new Map();
+    for(const item of n.data||[])novels.set(item.author_id,(novels.get(item.author_id)||0)+1);
+    for(const item of c.data||[])days.set(item.user_id,(days.get(item.user_id)||0)+1);
+    for(const item of r.data||[])rating.set(item.user_id,(rating.get(item.user_id)||0)+Number(item.score||0));
+    for(const id of batch)userColorCache.set(id,{
+      at:Date.now(),color:computedUserColor(novels.get(id)||0,days.get(id)||0,rating.get(id)||0)
+    });
+  }
+  if(userColorCache.size>1000){
+    for(const [id,item] of userColorCache)if(Date.now()-item.at>DISPLAY_CACHE_MS)userColorCache.delete(id);
+  }
+}
 async function getUserNameColor(p){
   if(!p)return '#1e293b';
   if(isMuted(p))return '#8B6914';
   if(p.role==='admin')return '#FFD700';
-  const {data:novels}=await supabaseClient.from('novels').select('id').eq('author_id',p.id).eq('approval_status','approved');
-  const nCount=novels?.length||0;
-  const {count:checkinCount}=await supabaseClient.from('daily_checkins').select('*',{count:'exact',head:true}).eq('user_id',p.id);
-  const days=checkinCount||0;
-  const {data:ratings}=await supabaseClient.from('ratings').select('score').eq('user_id',p.id);
-  const total=ratings?.reduce((s,r)=>s+r.score,0)||0;
-  const points=nCount*10+days*2+total;
-  if(points>=100)return '#eab308';
-  if(points>=50)return '#3b82f6';
-  if(points>=20)return '#10b981';
-  return '#1e293b';
+  if(!p.id)return '#1e293b';
+  const cached=userColorCache.get(p.id);
+  if(cached&&Date.now()-cached.at<DISPLAY_CACHE_MS)return cached.color;
+  if(userColorInflight.has(p.id))return userColorInflight.get(p.id);
+  const request=(async()=>{
+    const [n,c,r]=await Promise.all([
+      supabaseClient.from('novels').select('id',{count:'exact',head:true}).eq('author_id',p.id).eq('approval_status','approved'),
+      supabaseClient.from('daily_checkins').select('user_id',{count:'exact',head:true}).eq('user_id',p.id),
+      supabaseClient.from('ratings').select('score').eq('user_id',p.id)
+    ]);
+    const color=computedUserColor(n.count||0,c.count||0,(r.data||[]).reduce((sum,row)=>sum+Number(row.score||0),0));
+    userColorCache.set(p.id,{color,at:Date.now()});
+    return color;
+  })().finally(()=>userColorInflight.delete(p.id));
+  userColorInflight.set(p.id,request);
+  return request;
 }
 
 // 管理员称号和签到称号使用完全一致的徽章样式，同时只能显示一个。
@@ -426,12 +474,17 @@ function statusBadge(status){
 
 // ===== 渲染 =====
 async function render(){
-  if(rendering)return;
+  if(rendering){pendingRender=true;return;}
   rendering=true;
-  if(currentChatChannel){await supabaseClient.removeChannel(currentChatChannel);currentChatChannel=null;}
+  try{
+  if(adCarouselTimer){clearInterval(adCarouselTimer);adCarouselTimer=null;}
+  if(currentChatChannel){const oldChannel=currentChatChannel;currentChatChannel=null;supabaseClient.removeChannel(oldChannel).catch(e=>console.warn('清理私信订阅失败',e));}
   const app=document.getElementById('app');app.innerHTML='';
   const {data:{session}}=await supabaseClient.auth.getSession();
-  if(session){user=session.user;await loadProfile();}else{user=null;profile=null;}
+  if(session){
+    if(user?.id!==session.user.id){profile=null;profileLoadedAt=0;userColorCache.clear();rewardCache.clear();notificationItemsCache={userId:null,at:0,promise:null};}
+    user=session.user;await loadProfile(false);
+  }else{user=null;profile=null;profileLoadedAt=0;}
   updateMessageBadge();
   updateNotificationBadge();
   const nav=document.createElement('div');nav.className='navbar';
@@ -479,10 +532,24 @@ async function render(){
   else if(hash==='#admin-shop'&&profile?.role==='admin'){await adminPanel(app);await adminPointsProducts();}
   else if(hash==='#admin'&&profile?.role==='admin')await adminPanel(app);
   else home(app);
-  rendering=false;
+  }catch(e){
+    console.error('页面渲染失败',e);
+    const target=document.getElementById('app');
+    if(target&&!target.children.length)target.innerHTML='<div class="card">页面加载失败，请刷新重试。</div>';
+  }finally{
+    rendering=false;
+    if(pendingRender){pendingRender=false;queueMicrotask(()=>render());}
+  }
 }
 
-async function loadProfile(){if(!user)return;const {data}=await supabaseClient.from('profiles').select('*').eq('id',user.id).single();profile=data||null;}
+// 路由切换只读缓存，不再每次重新下载整个个人资料；主动编辑后仍强制刷新。
+async function loadProfile(force=true){
+  if(!user)return;
+  if(!force&&profile&&profileForId===user.id&&Date.now()-profileLoadedAt<30000)return;
+  const {data,error}=await supabaseClient.from('profiles').select('*').eq('id',user.id).single();
+  if(!error&&data){profile=data;profileForId=user.id;profileLoadedAt=Date.now();}
+  else if(!profile)console.warn('加载个人资料失败',error);
+}
 
 // ===== 模态框 =====
 function openModal(type,data){
@@ -653,24 +720,49 @@ async function performCheckin(button){
 }
 
 // ===== 首页 =====
+let homeLeaderboardCache={at:0,promise:null};
+async function loadHomeLeaderboard(){
+  if(homeLeaderboardCache.promise&&Date.now()-homeLeaderboardCache.at<30000)return homeLeaderboardCache.promise;
+  const promise=(async()=>{
+    const {data:allNovels,error}=await supabaseClient.from('novels')
+      .select('id,title,cover_url,profiles(id,username)').eq('approval_status','approved');
+    if(error||!allNovels?.length)return [];
+    // 查询评分只下载必要字段，且合并多本小说的请求。
+    const ids=allNovels.map(n=>n.id),scoreMap=new Map();
+    for(let start=0;start<ids.length;start+=150){
+      const {data:ratings}=await supabaseClient.from('ratings').select('novel_id,score').in('novel_id',ids.slice(start,start+150));
+      (ratings||[]).forEach(r=>{
+        const stat=scoreMap.get(r.novel_id)||{sum:0,count:0};
+        stat.sum+=Number(r.score||0);stat.count++;
+        scoreMap.set(r.novel_id,stat);
+      });
+    }
+    return allNovels.map(n=>{
+      const {sum=0,count=0}=scoreMap.get(n.id)||{};
+      return {...n,count,avg:count?Number((sum/count).toFixed(1)):0};
+    }).sort((a,b)=>b.avg-a.avg).slice(0,5);
+  })().catch(e=>{console.warn('排行榜加载失败',e);return [];});
+  homeLeaderboardCache={at:Date.now(),promise};
+  return promise;
+}
 async function home(container){
-  const {data:ann}=await supabaseClient.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);
+  // 并行发起独立请求，避免首页逐个等待数据库往返。
+  const annRequest=supabaseClient.from('announcements').select('content').order('created_at',{ascending:false}).limit(1);
+  const rankRequest=loadHomeLeaderboard();
+  const adsRequest=supabaseClient.from('posts').select('id,ad_image_url').eq('is_ad',true).limit(12);
+  const novelsRequest=supabaseClient.from('novels').select('id,title,status,cover_url,description,updated_at,profiles(id,username,role,muted_until,label)')
+    .eq('approval_status','approved').order('updated_at',{ascending:false}).limit(30);
+  const today=user?siteToday():null;
+  const checkinRequest=user?supabaseClient.from('point_checkins').select('points,consecutive_days').eq('user_id',user.id).eq('checkin_date',today).maybeSingle():null;
+  const balanceRequest=user?fetchMyPoints():null;
+  const {data:ann}=await annRequest;
   if(ann?.length){
     const div=document.createElement('div');div.className='card';
     div.innerHTML=`<strong><i class="fas fa-bullhorn"></i> 公告</strong><br>${marked.parse(ann[0].content)}`;
     container.appendChild(div);
   }
-  const {data:allNovels}=await supabaseClient.from('novels').select('id,title,author_id,cover_url,description,profiles(username)').eq('approval_status','approved');
-  if(allNovels&&allNovels.length>0){
-    const novelIds=allNovels.map(n=>n.id);
-    const {data:ratings}=await supabaseClient.from('ratings').select('novel_id,score').in('novel_id',novelIds);
-    const scoreMap={};
-    ratings?.forEach(r=>{if(!scoreMap[r.novel_id])scoreMap[r.novel_id]=[];scoreMap[r.novel_id].push(r.score);});
-    const ranked=allNovels.map(n=>{
-      const scores=scoreMap[n.id]||[];
-      const avg=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):0;
-      return {...n,avg:parseFloat(avg),count:scores.length};
-    }).sort((a,b)=>b.avg-a.avg).slice(0,5);
+  const ranked=await rankRequest;
+  if(ranked.length){
     if(ranked.length>0&&ranked[0].avg>0){
       const rankCard=document.createElement('div');rankCard.className='card';
       rankCard.innerHTML=`<h3><i class="fas fa-trophy" style="color:#eab308;"></i> 巅峰榜 · 评分前五</h3>`;
@@ -683,18 +775,19 @@ async function home(container){
             <div class="rank-title">${esc(n.title)}</div>
             <div class="rank-meta">${esc(n.profiles?.username||'未知')} · ⭐ <span class="rank-score">${n.avg}</span> (${n.count}人)</div>
           </div>
-          <img src="${n.cover_url||PLACEHOLDER_IMAGE}" style="width:40px;height:56px;object-fit:cover;border-radius:6px;background:#f1f5f9;" onerror="this.src='${PLACEHOLDER_IMAGE}'">
+          <img loading="lazy" src="${n.cover_url||PLACEHOLDER_IMAGE}" style="width:40px;height:56px;object-fit:cover;border-radius:6px;background:#f1f5f9;" onerror="this.src='${PLACEHOLDER_IMAGE}'">
         `;
         rankCard.appendChild(div);
       });
       container.appendChild(rankCard);
     }
   }
-  const {data:ads}=await supabaseClient.from('posts').select('id,ad_image_url').eq('is_ad',true);
+  const {data:ads}=await adsRequest;
   if(ads&&ads.length>0){
     const adContainer=document.createElement('div');adContainer.className='ad-carousel';
     let currentAd=0;
     const img=document.createElement('img');
+    img.loading='lazy';
     img.src=ads[0].ad_image_url||PLACEHOLDER_IMAGE;
     img.onclick=()=>navigate(`#post/${ads[0].id}`);
     adContainer.appendChild(img);
@@ -708,13 +801,18 @@ async function home(container){
     function updateDots(){const dots=dotsContainer.querySelectorAll('.ad-dot');dots.forEach((d,i)=>d.classList.toggle('active',i===currentAd));}
     adContainer.appendChild(dotsContainer);
     container.appendChild(adContainer);
-    setInterval(()=>{if(ads.length>1){currentAd=(currentAd+1)%ads.length;img.src=ads[currentAd].ad_image_url||PLACEHOLDER_IMAGE;img.onclick=()=>navigate(`#post/${ads[currentAd].id}`);updateDots();}},5000);
+    if(ads.length>1)adCarouselTimer=setInterval(()=>{
+      if(!img.isConnected||location.hash!=='#home'){clearInterval(adCarouselTimer);adCarouselTimer=null;return;}
+      if(document.hidden)return;
+      currentAd=(currentAd+1)%ads.length;
+      img.src=ads[currentAd].ad_image_url||PLACEHOLDER_IMAGE;
+      img.onclick=()=>navigate(`#post/${ads[currentAd].id}`);
+      updateDots();
+    },5000);
   }
   if(user){
-    const today=siteToday();
     const [{data:checkin,error:checkinError},{balance,error:balanceError}]=await Promise.all([
-      supabaseClient.from('point_checkins').select('points,consecutive_days').eq('user_id',user.id).eq('checkin_date',today).maybeSingle(),
-      fetchMyPoints()
+      checkinRequest,balanceRequest
     ]);
     const checkinDiv=document.createElement('div');checkinDiv.className='card';
     checkinDiv.innerHTML=`<div class="points-info"><div><h3><i class="fas fa-calendar-check"></i> 每日签到</h3><p class="meta">北京时间每天刷新 · 第1–3天 3分 · 第4–10天 7分 · 第11天起 10分${profile?.role==='admin'?' · 管理员额外+3分':''}</p></div><div><div class="meta">我的积分余额</div><div class="points-balance"><i class="fas fa-coins"></i> <span id="home-point-balance">${balance}</span></div></div></div>`;
@@ -772,7 +870,7 @@ async function home(container){
     let novelResults=[],userResults=[];
     if(type==='all'||type==='novel'){
       const {data:novels}=await supabaseClient.from('novels')
-        .select('*,profiles(username)')
+        .select('*,profiles(id,username,role,muted_until,label)')
         .eq('approval_status','approved')
         .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,genre.ilike.%${kw}%`)
         .limit(10);
@@ -806,8 +904,9 @@ async function home(container){
   searchInput.addEventListener('input',()=>{clearTimeout(searchTimeout);searchTimeout=setTimeout(performSearch,500);});
   searchType.addEventListener('change',performSearch);
   document.getElementById('search-btn').onclick=performSearch;
-  const {data:novels}=await supabaseClient.from('novels').select('*,profiles(username,role,muted_until,label)').eq('approval_status','approved').order('updated_at',{ascending:false}).limit(30);
+  const {data:novels}=await novelsRequest;
   const grid=document.createElement('div');grid.className='novel-grid';
+  if(novels?.length)await primeUserDisplayCache(novels.map(n=>n.profiles));
   if(novels?.length){
     for(const n of novels){
       const authorFormatted=n.profiles?await formatUsername(n.profiles,true):'未知';
@@ -829,7 +928,7 @@ async function bookPile(container){
     return;
   }
   const novelIds=favorites.map(f=>f.novel_id);
-  const {data:novels}=await supabaseClient.from('novels').select('*,profiles(username)').in('id',novelIds).eq('approval_status','approved');
+  const {data:novels}=await supabaseClient.from('novels').select('*,profiles(id,username,role,muted_until,label)').in('id',novelIds).eq('approval_status','approved');
   if(!novels||novels.length===0){
     container.innerHTML=`<div class="card"><h3><i class="fas fa-bookmark"></i> 我的书堆</h3><p>暂无收藏</p></div>`;
     return;
@@ -850,10 +949,10 @@ async function bookPile(container){
 
 // ===== 小说详情 =====
 async function novelDetail(container,novelId){
-  const {data:novel}=await supabaseClient.from('novels').select('*,profiles(username,role,muted_until,label)').eq('id',novelId).single();
+  const {data:novel}=await supabaseClient.from('novels').select('*,profiles(id,username,role,muted_until,label)').eq('id',novelId).single();
   if(!novel)return container.innerHTML+='<p>不存在</p>';
   const authorFormatted=novel.profiles?await formatUsername(novel.profiles,true):'未知';
-  const {data:ratings}=await supabaseClient.from('ratings').select('score').eq('novel_id',novelId);
+  const {data:ratings}=await supabaseClient.from('ratings').select('score,user_id').eq('novel_id',novelId);
   const avg=ratings?.length?(ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1):'-';
   const userRating=user?ratings?.find(r=>r.user_id===user.id):null;
   let isFollowing=false;
@@ -886,10 +985,11 @@ async function novelDetail(container,novelId){
       </div>
     </div>`;
   container.appendChild(infoCard);
-  const {data:comments}=await supabaseClient.from('comments').select('*,profiles(username,role,muted_until,label)').eq('novel_id',novelId).is('chapter_id',null).order('created_at',{ascending:false});
+  const {data:comments}=await supabaseClient.from('comments').select('*,profiles(id,username,role,muted_until,label)').eq('novel_id',novelId).is('chapter_id',null).order('created_at',{ascending:false});
   const commCard=document.createElement('div');commCard.className='card';
   commCard.innerHTML='<h3><i class="fas fa-comment-dots"></i> 小说评论区</h3>';
   if(comments?.length){
+    await primeUserDisplayCache(comments.map(c=>c.profiles));
     for(const c of comments){
       const commentUserFormatted=c.profiles?await formatUsername(c.profiles,true):'匿名';
       commCard.innerHTML+=`<div style="margin-bottom:8px;"><strong>${commentUserFormatted}</strong>：${esc(c.content)} <small class="meta">${new Date(c.created_at).toLocaleString()}</small></div>`;
@@ -963,13 +1063,11 @@ async function toggleFavorite(novelId){
 async function chapterList(container,novelId){
   const {data:novel}=await supabaseClient.from('novels').select('*').eq('id',novelId).maybeSingle();
   if(!novel)return container.innerHTML+='<p>小说不存在</p>';
-  const {data:chapters}=await supabaseClient.from('chapters').select('*').eq('novel_id',novelId).order('chapter_number');
+  const {data:chapters}=await supabaseClient.from('chapters').select('id,title,chapter_number').eq('novel_id',novelId).order('chapter_number');
   const card=document.createElement('div');card.className='card';
   card.innerHTML=`<a onclick="navigate('#novel/${novelId}')" style="font-size:12px;"><i class="fas fa-arrow-left"></i> 详情</a><h2>${esc(novel.title)} · 章节</h2>`;
   if(chapters?.length){
-    for(const ch of chapters){
-      card.innerHTML+=`<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>${user?.id===novel.author_id?`<div><button class="outline" style="padding:2px 12px;font-size:12px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 12px;font-size:12px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>`:''}</div>`;
-    }
+    card.insertAdjacentHTML('beforeend',chapters.map(ch=>`<div class="chapter-item"><a onclick="navigate('#chapter/${ch.id}')">第${ch.chapter_number}章 ${esc(ch.title)}</a>${user?.id===novel.author_id?`<div><button class="outline" style="padding:2px 12px;font-size:12px;" onclick="editChapter(${ch.id},${novelId})">编辑</button><button class="danger" style="padding:2px 12px;font-size:12px;" onclick="deleteChapter(${ch.id},${novelId})">删除</button></div>`:''}</div>`).join(''));
   }else card.innerHTML+='<p>暂无章节</p>';
   if(user?.id===novel.author_id)card.innerHTML+=`<button onclick="addChapter(${novelId})" style="margin-top:10px;"><i class="fas fa-plus"></i> 新章节</button>`;
   container.appendChild(card);
@@ -986,7 +1084,7 @@ async function uploadQuillImage(file) {
   return publicUrl;
 }
 function initQuill(containerId, initialContent = '') {
-  if (quillInstance) { quillInstance.destroy(); quillInstance = null; }
+  if (quillInstance) { if(typeof quillInstance.destroy==='function')quillInstance.destroy(); quillInstance = null; }
   const container = document.getElementById(containerId);
   if (!container) return null;
   const toolbarOptions = [
@@ -1103,7 +1201,7 @@ async function chapterContent(container,chapterId){
   const prev=idx>0?list[idx-1]:null;
   const next=idx<list.length-1?list[idx+1]:null;
   if(user)saveReadingProgress(novel,chapter);
-  const {data:comments}=await supabaseClient.from('comments').select('*,profiles(username,role,muted_until,label)').eq('novel_id',novel.id).eq('chapter_id',chapterId).order('created_at',{ascending:true});
+  const {data:comments}=await supabaseClient.from('comments').select('*,profiles(id,username,role,muted_until,label)').eq('novel_id',novel.id).eq('chapter_id',chapterId).order('created_at',{ascending:true});
   const contentCard=document.createElement('div');contentCard.className='card';
   let contentHtml = chapter.content;
   const isHtml = /<[a-z][\s\S]*>/i.test(contentHtml);
@@ -1126,6 +1224,7 @@ async function chapterContent(container,chapterId){
   const commCard=document.createElement('div');commCard.className='card';
   commCard.innerHTML='<h3><i class="fas fa-comment-dots"></i> 本章评论区</h3>';
   if(comments?.length){
+    await primeUserDisplayCache(comments.map(c=>c.profiles));
     for(const c of comments){
       const commentUserFormatted=c.profiles?await formatUsername(c.profiles,true):'匿名';
       commCard.innerHTML+=`<div style="margin-bottom:8px;"><strong>${commentUserFormatted}</strong>：${esc(c.content)} <small class="meta">${new Date(c.created_at).toLocaleString()}</small></div>`;
@@ -1188,12 +1287,15 @@ async function myProfile(container){
   container.appendChild(titlesCard);
   await renderMyRewardTitles();
   updateNotificationBadge();
-  const {data:novels}=await supabaseClient.from('novels').select('*').eq('author_id',user.id).order('updated_at',{ascending:false});
+  const [novelsResult,commentsResult,ratingsResult]=await Promise.all([
+    supabaseClient.from('novels').select('id,title').eq('author_id',user.id).order('updated_at',{ascending:false}).limit(80),
+    supabaseClient.from('comments').select('content,novels(title)').eq('user_id',user.id).order('created_at',{ascending:false}).limit(60),
+    supabaseClient.from('ratings').select('score,novels(title)').eq('user_id',user.id).limit(60)
+  ]);
+  const novels=novelsResult.data,comments=commentsResult.data,ratings=ratingsResult.data;
   document.getElementById('my-novels').innerHTML=novels?.length?novels.map(n=>`<p><a onclick="navigate('#novel/${n.id}')">${esc(n.title)}</a></p>`).join(''):'<p>暂无</p>';
-  const {data:comments}=await supabaseClient.from('comments').select('*,novels(title)').eq('user_id',user.id);
-  document.getElementById('my-comments').innerHTML=comments?.length?comments.map(c=>`<p>《${esc(c.novels.title)}》：${esc(c.content)}</p>`).join(''):'<p>暂无</p>';
-  const {data:ratings}=await supabaseClient.from('ratings').select('*,novels(title)').eq('user_id',user.id);
-  document.getElementById('my-ratings').innerHTML=ratings?.length?ratings.map(r=>`<p>《${esc(r.novels.title)}》：${r.score}星</p>`).join(''):'<p>暂无</p>';
+  document.getElementById('my-comments').innerHTML=comments?.length?comments.map(c=>`<p>《${esc(c.novels?.title||'已删除的小说')}》：${esc((c.content||'').slice(0,200))}</p>`).join(''):'<p>暂无</p>';
+  document.getElementById('my-ratings').innerHTML=ratings?.length?ratings.map(r=>`<p>《${esc(r.novels?.title||'已删除的小说')}》：${r.score}星</p>`).join(''):'<p>暂无</p>';
 }
 
 // ===== 我的奖励称号 / 佩戴 =====
@@ -1276,20 +1378,41 @@ async function publishNovel(){
 
 // ===== 社区 =====
 async function communityList(container){
-  const {data:posts}=await supabaseClient.from('posts').select('*,profiles(username,role,muted_until,label)').eq('approval_status','approved').order('is_pinned',{ascending:false}).order('created_at',{ascending:false});
   const card=document.createElement('div');card.className='card';
   card.innerHTML='<h2><i class="fas fa-comments"></i> 社区</h2>';
   if(user&&!isMuted(profile))card.innerHTML+=`<button onclick="openNewPostModal()" style="margin-bottom:10px;"><i class="fas fa-plus"></i> 发帖</button>`;
   else if(isMuted(profile))card.innerHTML+='<p style="color:red;">你已被禁言</p>';
-  if(posts?.length){
+  const postList=document.createElement('div');card.appendChild(postList);
+  const more=document.createElement('button');more.className='outline';more.style.marginTop='14px';
+  more.textContent='加载更多帖子';card.appendChild(more);
+  container.appendChild(card);
+  let offset=0;
+  async function loadMore(){
+    more.disabled=true;more.textContent='加载中...';
+    const {data:posts,error}=await supabaseClient.from('posts')
+      .select('id,title,created_at,like_count,dislike_count,is_pinned,profiles(id,username,role,muted_until,label)')
+      .eq('approval_status','approved').order('is_pinned',{ascending:false}).order('created_at',{ascending:false})
+      .range(offset,offset+49);
+    if(error){more.disabled=false;more.textContent='加载失败，点击重试';return;}
+    if(!posts?.length){
+      if(!offset)postList.innerHTML='<p>暂无帖子</p>';
+      more.remove();return;
+    }
+    await primeUserDisplayCache(posts.map(p=>p.profiles));
+    const fragment=document.createDocumentFragment();
     for(const p of posts){
       const authorFormatted=p.profiles?await formatUsername(p.profiles,true):'未知';
       const div=document.createElement('div');div.className='post-item';
       div.innerHTML=`${p.is_pinned?'<span style="background:#0f172a;color:#fff;padding:2px 10px;border-radius:40px;font-size:11px;margin-right:6px;">置顶</span> ':''}<a onclick="navigate('#post/${p.id}')" class="post-title">${esc(p.title)}</a><div class="post-meta">${authorFormatted} · ${new Date(p.created_at).toLocaleString()} · <i class="fas fa-thumbs-up"></i> ${p.like_count||0} · <i class="fas fa-thumbs-down"></i> ${p.dislike_count||0}</div>`;
-      card.appendChild(div);
+      fragment.appendChild(div);
     }
-  }else card.innerHTML+='<p>暂无帖子</p>';
-  container.appendChild(card);
+    postList.appendChild(fragment);
+    offset+=posts.length;
+    if(posts.length<50)more.remove();
+    else{more.disabled=false;more.textContent='加载更多帖子';}
+  }
+  more.onclick=loadMore;
+  await loadMore();
 }
 
 // ===== 发帖（富文本） =====
@@ -1350,7 +1473,7 @@ function openNewPostModal(){
 
 // ===== 帖子详情 =====
 async function postDetail(container,postId){
-  const {data:post}=await supabaseClient.from('posts').select('*,profiles(username,role,muted_until,label)').eq('id',postId).single();
+  const {data:post}=await supabaseClient.from('posts').select('*,profiles(id,username,role,muted_until,label)').eq('id',postId).single();
   if(!post)return container.innerHTML+='<p>帖子不存在</p>';
   const authorFormatted=post.profiles?await formatUsername(post.profiles,true):'未知';
   let userVote=null;
@@ -1380,12 +1503,18 @@ async function postDetail(container,postId){
   `;
   container.appendChild(card);
   await renderCommunityPoll(container,postId);
-  const {data:replies}=await supabaseClient.from('post_replies').select('*,profiles(username,role,muted_until,label)').eq('post_id',postId).order('created_at',{ascending:true});
+  const {data:replies}=await supabaseClient.from('post_replies').select('*,profiles(id,username,role,muted_until,label)').eq('post_id',postId).order('created_at',{ascending:true});
   const replyCard=document.createElement('div');replyCard.className='card';
   replyCard.innerHTML='<h3><i class="fas fa-reply-all"></i> 回复</h3>';
   if(replies?.length){
-    const rootReplies=replies.filter(r=>!r.parent_id);
-    for(const r of rootReplies)replyCard.appendChild(await renderReply(r,replies));
+    await primeUserDisplayCache(replies.map(r=>r.profiles));
+    const childrenByParent=new Map();
+    for(const reply of replies){
+      const parentId=reply.parent_id==null?null:String(reply.parent_id);
+      if(!childrenByParent.has(parentId))childrenByParent.set(parentId,[]);
+      childrenByParent.get(parentId).push(reply);
+    }
+    for(const r of childrenByParent.get(null)||[])replyCard.appendChild(await renderReply(r,childrenByParent));
   }else replyCard.innerHTML+='<p>暂无回复</p>';
   if(user&&!isMuted(profile))replyCard.innerHTML+=`<textarea id="reply-content" placeholder="写下你的回复..." rows="3" style="margin-top:10px;"></textarea><button onclick="window.addTopReply(${post.id})" style="margin-top:6px;"><i class="fas fa-paper-plane"></i> 回复</button>`;
   else if(isMuted(profile))replyCard.innerHTML+='<p style="color:red;">你已被禁言</p>';
@@ -1409,7 +1538,7 @@ async function renderReply(reply,allReplies,depth=0){
   div.className='reply-item';
   div.style.marginLeft=depth>0?'20px':'0';
   div.innerHTML=`<strong>${authorFormatted}</strong> <small class="meta">${new Date(reply.created_at).toLocaleString()}</small><div>${esc(reply.content).replace(/\n/g,'<br>')}</div>${user&&!isMuted(profile)?`<a onclick="window.openReplyForm(${reply.id})" style="font-size:12px;cursor:pointer;">回复</a>`:''}${profile?.role==='admin'?`<a onclick="window.deleteReply(${reply.id})" class="danger" style="font-size:12px;cursor:pointer;margin-left:8px;">删除</a>`:''}<div id="reply-form-${reply.id}" style="display:none;margin-top:6px;"></div>`;
-  const children=allReplies.filter(r=>r.parent_id===reply.id);
+  const children=allReplies instanceof Map?(allReplies.get(String(reply.id))||[]):allReplies.filter(r=>r.parent_id===reply.id);
   for(const ch of children){
     div.appendChild(await renderReply(ch,allReplies,depth+1));
   }
@@ -1486,8 +1615,9 @@ async function pointsShop(container){
   const top=document.createElement('div');top.className='card';
   top.innerHTML='<div class="points-info"><div><h2><i class="fas fa-store" style="color:#eab308"></i> 积分商城</h2><p class="meta">使用积分购买商品，购买成功后积分立即进入商品发布者的账户。</p></div><div><div class="meta">我的可用积分</div><div class="points-balance" id="shop-balance">—</div></div></div><div class="btn-group"><button class="outline" onclick="navigate(\'#shop-orders\')"><i class="fas fa-list"></i> 我的订单</button><span id="shop-admin-quick"></span></div>';
   container.appendChild(top);
+  const wallet=user?await fetchMyPoints():{balance:0,error:null};
   if(user){
-    const {balance,error}=await fetchMyPoints();
+    const {balance,error}=wallet;
     top.querySelector('#shop-balance').textContent=error?'暂不可用':balance;
     if(hasPermission('上架积分商品')){
       top.querySelector('#shop-admin-quick').innerHTML='<button class="gold">管理我上架的商品</button>';
@@ -1502,7 +1632,7 @@ async function pointsShop(container){
   const {data:people}=await supabaseClient.from('profiles').select('id,username').in('id',sellers);
   const sellerNames=new Map((people||[]).map(x=>[x.id,x.username]));
   const grid=document.createElement('div');grid.className='shop-grid';container.appendChild(grid);
-  const {balance:balanceNow}=user?await fetchMyPoints():{balance:0};
+  const balanceNow=wallet.balance;
   for(const product of products){
     const card=document.createElement('div');card.className='shop-card';
     const imageHtml=product.image_url?`<img loading="lazy" src="${esc(product.image_url)}" alt="${esc(product.title)}" onerror="this.src='${PLACEHOLDER_IMAGE}'">`:'<div class="shop-no-image"><i class="fas fa-gift"></i><span>积分兑换好物</span></div>';
@@ -1640,9 +1770,12 @@ async function openPointsTransfer(partnerId,partnerName){
 }
 
 // ===== 私信 =====
-async function updateMessageBadge(){
+let messageBadgeLastAt=0,messageBadgeUserId=null;
+async function updateMessageBadge(force=false){
   const badge=document.getElementById('msg-badge');
-  if(!user){if(badge)badge.classList.remove('show');return;}
+  if(!user){if(badge)badge.classList.remove('show');messageBadgeUserId=null;return;}
+  if(!force&&messageBadgeUserId===user.id&&Date.now()-messageBadgeLastAt<10000)return;
+  messageBadgeUserId=user.id;messageBadgeLastAt=Date.now();
   const {count,error}=await supabaseClient.from('pm').select('id',{count:'exact',head:true}).eq('receiver_id',user.id).eq('is_read',false);
   if(!error&&badge){badge.textContent=count>99?'99+':count||'';badge.classList.toggle('show',count>0);}
 }
@@ -1651,7 +1784,7 @@ async function messagesPage(container){
   const searchCard=document.createElement('div');searchCard.className='card';
   searchCard.innerHTML=`<h2><i class="fas fa-envelope"></i> 私信</h2><input id="msg-search" placeholder="搜索用户名发起私信..."><div id="msg-search-results" style="margin-top:10px;"></div>`;
   container.appendChild(searchCard);
-  const {data:msgs,error}=await supabaseClient.from('pm').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at',{ascending:false}).limit(500);
+  const {data:msgs,error}=await supabaseClient.from('pm').select('*').or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order('created_at',{ascending:false}).limit(200);
   if(error){container.innerHTML+='<p>加载私信失败：'+esc(error.message)+'</p>';return;}
   const conversations=new Map();const unreadCounts=new Map();
   (msgs||[]).forEach(m=>{
@@ -1675,12 +1808,17 @@ async function messagesPage(container){
   }else listCard.innerHTML+='<p class="meta">暂无消息</p>';
   container.appendChild(listCard);
   const inp=document.getElementById('msg-search');
-  inp.addEventListener('input',async()=>{
+  let searchSequence=0;
+  inp.addEventListener('input',()=>{
     const kw=inp.value.trim(),results=document.getElementById('msg-search-results');
+    const request=++searchSequence;
+    clearTimeout(searchTimeout);
     if(!kw){results.innerHTML='';return;}
-    const {data:people}=await supabaseClient.from('profiles').select('id,username').ilike('username',`%${kw}%`).neq('id',user.id).limit(8);
-    if(inp.value.trim()!==kw)return;
-    results.innerHTML=(people||[]).map(p=>`<div class="msg-list-item" onclick="navigate('#chat/${p.id}')">${esc(p.username)}</div>`).join('')||'<p class="meta">没有找到用户</p>';
+    searchTimeout=setTimeout(async()=>{
+      const {data:people}=await supabaseClient.from('profiles').select('id,username').ilike('username',`%${kw}%`).neq('id',user.id).limit(8);
+      if(request!==searchSequence||inp.value.trim()!==kw||!results.isConnected)return;
+      results.innerHTML=(people||[]).map(p=>`<div class="msg-list-item" onclick="navigate('#chat/${p.id}')">${esc(p.username)}</div>`).join('')||'<p class="meta">没有找到用户</p>';
+    },350);
   });
 }
 
@@ -1690,8 +1828,8 @@ async function chatPage(container,partnerId){
   if(!partner)return container.innerHTML='<p>用户不存在</p>';
   const {error:readError}=await supabaseClient.from('pm').update({is_read:true}).eq('sender_id',partnerId).eq('receiver_id',user.id).eq('is_read',false);
   if(readError)console.warn('更新私信已读状态失败',readError);
-  updateMessageBadge();
-  const {data:msgs,error}=await supabaseClient.from('pm').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at',{ascending:true}).limit(500);
+  updateMessageBadge(true);
+  const {data:msgs,error}=await supabaseClient.from('pm').select('*').or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`).order('created_at',{ascending:false}).limit(200);
   if(error)return container.innerHTML='<p>加载聊天失败：'+esc(error.message)+'</p>';
   const header=document.createElement('div');header.className='chat-header';
   header.innerHTML=`<div class="msg-avatar" style="width:40px;height:40px;margin-right:10px">${partner.avatar_url?`<img src="${esc(partner.avatar_url)}">`:esc(partner.username[0])}</div><b>${esc(partner.username)}</b><div style="margin-left:auto;display:flex;gap:6px;"><button class="gold" id="transfer-points-btn"><i class="fas fa-coins"></i> 转积分</button><button onclick="navigate('#messages')">返回</button></div>`;
@@ -1719,7 +1857,7 @@ async function chatPage(container,partnerId){
     const time=document.createElement('div');time.className='time';time.textContent=new Date(m.created_at||Date.now()).toLocaleString();
     outer.append(bubble,time);body.appendChild(outer);body.scrollTop=body.scrollHeight;
   }
-  if(msgs?.length)msgs.forEach(appendMessage);
+  if(msgs?.length)[...msgs].reverse().forEach(appendMessage);
   else body.innerHTML='<p data-empty-chat style="text-align:center;color:#94a3b8">暂无消息</p>';
   const channel=supabaseClient.channel(`pm-chat-${user.id}-${partnerId}-${Date.now()}`)
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'pm',filter:`receiver_id=eq.${user.id}`},async payload=>{
@@ -1729,7 +1867,7 @@ async function chatPage(container,partnerId){
       if(t)verifiedTransfers.set(String(t.pm_id),t);
       appendMessage(m);
       await supabaseClient.from('pm').update({is_read:true}).eq('id',m.id).eq('receiver_id',user.id);
-      updateMessageBadge();
+      updateMessageBadge(true);
     }).subscribe();
   currentChatChannel=channel;
   const area=document.createElement('div');area.className='chat-input-area';
@@ -1784,7 +1922,7 @@ async function renderCommunityPoll(container,postId){
 }
 
 // ===== 个人消息中心 =====
-async function getNotificationItems(){
+async function fetchNotificationItemsUncached(){
   if(!user)return [];
   const uid=user.id,items=[];
   const [{data:myPosts},{data:myReplies},{data:myNovels},{data:favorites}]=await Promise.all([
@@ -1809,15 +1947,33 @@ async function getNotificationItems(){
     (rows||[]).forEach(r=>items.push({key:'novelcomment:'+r.id,created_at:r.created_at,text:`你的小说《${titles.get(String(r.novel_id))||'小说'}》有新评论：${(r.content||'').slice(0,70)}`,href:`#novel/${r.novel_id}`}));
   }
   const seen=getFavoriteSeenMap();
-  for(const fav of favorites||[]){
-    const {data:last}=await supabaseClient.from('chapters').select('id,chapter_number,title').eq('novel_id',fav.novel_id).order('chapter_number',{ascending:false}).limit(1).maybeSingle();
-    if(!last)continue;
-    if(seen[fav.novel_id]===undefined){seen[fav.novel_id]=Number(last.chapter_number)||0;continue;}
-    if(Number(last.chapter_number)>Number(seen[fav.novel_id]))items.push({key:`chapter:${fav.novel_id}:${last.chapter_number}`,created_at:new Date().toISOString(),text:`收藏的《${fav.novels?.title||'小说'}》更新：第${last.chapter_number}章 ${last.title}`,href:`#chapter/${last.id}`});
+  // 分批并发查询最新章节，避免收藏 30 本书时串行等待 30 次网络延迟。
+  const favList=favorites||[];
+  for(let offset=0;offset<favList.length;offset+=8){
+    const group=favList.slice(offset,offset+8);
+    const latest=await Promise.all(group.map(fav=>supabaseClient.from('chapters').select('id,chapter_number,title').eq('novel_id',fav.novel_id).order('chapter_number',{ascending:false}).limit(1).maybeSingle()));
+    group.forEach((fav,index)=>{
+      const last=latest[index]?.data;
+      if(!last)return;
+      if(seen[fav.novel_id]===undefined){seen[fav.novel_id]=Number(last.chapter_number)||0;return;}
+      if(Number(last.chapter_number)>Number(seen[fav.novel_id]))items.push({key:`chapter:${fav.novel_id}:${last.chapter_number}`,created_at:new Date().toISOString(),text:`收藏的《${fav.novels?.title||'小说'}》更新：第${last.chapter_number}章 ${last.title}`,href:`#chapter/${last.id}`});
+    });
   }
   saveFavoriteSeenMap(seen);
   const dedup=new Map(items.map(i=>[i.key,i]));
   return [...dedup.values()].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+}
+async function getNotificationItems(){
+  if(!user)return [];
+  const cached=notificationItemsCache;
+  if(cached.userId===user.id&&cached.promise&&Date.now()-cached.at<60000)return cached.promise;
+  const id=user.id;
+  const promise=fetchNotificationItemsUncached().catch(e=>{
+    if(notificationItemsCache.userId===id)notificationItemsCache={userId:null,at:0,promise:null};
+    throw e;
+  });
+  notificationItemsCache={userId:id,at:Date.now(),promise};
+  return promise;
 }
 async function getReadNotificationKeys(){
   if(!user)return new Set();
@@ -1887,7 +2043,7 @@ async function adminPanel(container){
 
 async function adminPostApprovals(){
   const c=document.getElementById('admin-content');c.innerHTML='';
-  const {data:posts}=await supabaseClient.from('posts').select('*,profiles(username)').eq('approval_status','pending').order('created_at',{ascending:false});
+  const {data:posts}=await supabaseClient.from('posts').select('*,profiles(id,username,role,muted_until,label)').eq('approval_status','pending').order('created_at',{ascending:false});
   if(!posts?.length){c.innerHTML='<p>暂无待审核帖子</p>';return;}
   posts.forEach(p=>{
     const div=document.createElement('div');div.style.borderBottom='1px solid #f1f5f9';div.style.padding='8px 0';
@@ -1900,7 +2056,7 @@ async function rejectPost(id){await supabaseClient.from('posts').delete().eq('id
 
 async function adminNovelApprovals(){
   const c=document.getElementById('admin-content');c.innerHTML='';
-  const {data:novels}=await supabaseClient.from('novels').select('*,profiles(username)').eq('approval_status','pending').order('created_at',{ascending:false});
+  const {data:novels}=await supabaseClient.from('novels').select('*,profiles(id,username,role,muted_until,label)').eq('approval_status','pending').order('created_at',{ascending:false});
   if(!novels?.length){c.innerHTML='<p>暂无待审核小说</p>';return;}
   novels.forEach(n=>{
     const div=document.createElement('div');div.style.borderBottom='1px solid #f1f5f9';div.style.padding='8px 0';
@@ -1959,7 +2115,7 @@ async function resetViolations(userId){await supabaseClient.from('profiles').upd
 
 async function adminComments(){
   const c=document.getElementById('admin-content');c.innerHTML='';
-  const {data}=await supabaseClient.from('comments').select('*,profiles(username),novels(title)').order('created_at',{ascending:false});
+  const {data}=await supabaseClient.from('comments').select('*,profiles(id,username,role,muted_until,label),novels(title)').order('created_at',{ascending:false});
   if(data?.length)data.forEach(d=>c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;">${esc(d.profiles?.username)} 评《${esc(d.novels.title)}》：${esc(d.content)} <button class="danger" onclick="deleteComment(${d.id})">删除</button></div>`);
   else c.innerHTML='<p>暂无评论</p>';
 }
@@ -1967,7 +2123,7 @@ async function deleteComment(id){if(confirm('删除？')){await supabaseClient.f
 
 async function adminNovels(){
   const c=document.getElementById('admin-content');c.innerHTML='';
-  const {data}=await supabaseClient.from('novels').select('*,profiles(username)').order('updated_at',{ascending:false});
+  const {data}=await supabaseClient.from('novels').select('*,profiles(id,username,role,muted_until,label)').order('updated_at',{ascending:false});
   if(data?.length)data.forEach(d=>c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;"><b>${esc(d.title)}</b> 作者：${esc(d.profiles?.username)} <button class="danger" style="float:right;" onclick="deleteNovelAdmin('${d.id}')">删除</button></div>`);
   else c.innerHTML='<p>暂无小说</p>';
 }
@@ -1975,7 +2131,7 @@ async function deleteNovelAdmin(id){if(confirm('强制删除？')){await supabas
 
 async function adminPosts(){
   const c=document.getElementById('admin-content');c.innerHTML='';
-  const {data:posts}=await supabaseClient.from('posts').select('*,profiles(username)').order('created_at',{ascending:false});
+  const {data:posts}=await supabaseClient.from('posts').select('*,profiles(id,username,role,muted_until,label)').order('created_at',{ascending:false});
   if(posts?.length)posts.forEach(p=>c.innerHTML+=`<div style="border-bottom:1px solid #f1f5f9;padding:8px 0;"><b>${esc(p.title)}</b> 作者：${esc(p.profiles?.username)} <button class="danger" onclick="deletePost(${p.id})">删除</button></div>`);
   else c.innerHTML='<p>暂无帖子</p>';
 }
@@ -2085,8 +2241,7 @@ initDarkMode();
 if(typeof marked!=='undefined')marked.setOptions({breaks:true,gfm:true});
 render();
 </script>
-<script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
-<script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
-<script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
+
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","spa":2}' crossorigin="anonymous"></script>
 <script src="/Static/js/jquery.js"></script><script src="/Static/js/Global.js"></script><script src="/Web/js/Global.js"></script><script src="/Web/js/XYChatGPT.js"></script></body>
 </html>
